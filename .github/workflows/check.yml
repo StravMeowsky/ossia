@@ -80,8 +80,6 @@ jobs:
             target: aarch64-apple-darwin
           - os: windows-2022
             target: x86_64-pc-windows-msvc
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -102,12 +100,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install Linux bundle dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
-            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev rpm
       - run: pnpm install --frozen-lockfile
       - name: Check release version
         if: inputs.tag != ''
@@ -126,8 +118,6 @@ jobs:
       - name: Native watcher isolation
         run: cargo test -p ossia-backend --test watch watcher_debounces_atomic_saves_and_recovers_deleted_file -- --test-threads=1
       - name: Install browser test runtime
-        if: runner.os == 'Linux'
-        run: pnpm --filter @ossia/ui exec playwright install --with-deps chrome
+        run: pnpm --filter @ossia/ui exec playwright install chrome
       - name: Browser regression
-        if: runner.os == 'Linux'
         run: pnpm test:ui

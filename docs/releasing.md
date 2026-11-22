@@ -52,8 +52,8 @@ unwanted stable tag.
 ## Release flow
 
 1. Set the release version with `node scripts/release/version.mjs set <tag>` and commit
-   the manifests and lockfile. `Check` validates on macOS arm64, Windows x86_64
-   and Linux x86_64; Linux also runs browser regression tests.
+   the manifests and lockfile. `Check` validates on macOS arm64 and Windows
+   x86_64, including browser regression tests on both platforms.
 2. `Release` validates the annotated tag and current version.
 3. Verification, DeepSeek notes and the two platform builds run in parallel.
 4. Each build installs or extracts its installable artifacts and runs the same
