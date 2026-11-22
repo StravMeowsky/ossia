@@ -1,0 +1,29 @@
+body {
+  overflow: auto;
+}
+.library-shell {
+  container-type: inline-size;
+  width: min(100% - 48px, 1100px);
+  margin: 0 auto;
+  padding: 40px 0 80px;
+}
+.library-shell .scores-page {
+  gap: 24px;
+}
+.library-shell .page-intro h1 {
+  font-size: 28px;
+}
+.library-shell .score-search {
+  width: min(400px, 46%);
+}
+@media (max-width: 720px) {
+  .library-shell .score-search {
+    width: 100%;
+  }
+}
+@media (max-width: 600px) {
+  .library-shell {
+    width: calc(100% - 32px);
+    padding-top: 24px;
+  }
+}

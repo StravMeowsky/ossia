@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="840" viewBox="0 0 660 420">
+  <title>Ossia disk image background</title>
+  <defs>
+    <radialGradient id="warm-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#f2b91e" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#f2b91e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper-wash" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffefb"/>
+      <stop offset=".58" stop-color="#fcfaf5"/>
+      <stop offset="1" stop-color="#f7f3e9"/>
+    </linearGradient>
+    <g id="beamed-note-pair">
+      <ellipse cx="0" cy="0" rx="5.2" ry="3.6" transform="rotate(-20)"/>
+      <path d="M4.3-1V-18h2.2V.7c-1.2 0-2.2-.8-2.2-1.7z"/>
+      <ellipse cx="22" cy="-8" rx="5.2" ry="3.6" transform="rotate(-20 22 -8)"/>
+      <path d="M26.3-9V-26h2.2V-8.3c-1.2 0-2.2-.8-2.2-1.7z"/>
+      <path d="M4.3-18L28.5-26v4.2L4.3-13.8z"/>
+    </g>
+    <filter id="arrow-shadow" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="1.6"/>
+    </filter>
+  </defs>
+
+  <rect width="660" height="420" fill="url(#paper-wash)"/>
+  <circle cx="486" cy="166" r="128" fill="url(#warm-glow)"/>
+  <circle cx="174" cy="166" r="116" fill="url(#warm-glow)" opacity=".55"/>
+
+  <g fill="none" stroke="#2b251a" stroke-opacity=".055" stroke-width="1">
+    <path d="M54 55H606M54 63H606M54 71H606M54 79H606M54 87H606"/>
+    <path d="M54 378H606M54 386H606M54 394H606M54 402H606M54 410H606"/>
+  </g>
+
+  <g fill="#2b251a" fill-opacity=".075">
+    <use href="#beamed-note-pair" transform="translate(65 83)"/>
+    <use href="#beamed-note-pair" transform="translate(565 406)"/>
+  </g>
+
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(-14 0)">
+    <path d="M247 167C285 135 333 136 390 165" stroke="#2b251a" stroke-opacity=".13" stroke-width="7" filter="url(#arrow-shadow)"/>
+    <path d="M247 164C286 132 333 133 391 162" stroke="#2b251a" stroke-width="4.5"/>
+    <path d="M372 145L393 162L368 176" stroke="#2b251a" stroke-width="4.5" transform="rotate(12 393 162)"/>
+  </g>
+
+  <g stroke="#d69b00" stroke-width="3.2" stroke-linecap="round" fill="none" transform="translate(0 10) rotate(-10 538 132)">
+    <path d="M522 120L532 104"/>
+    <path d="M530 133L554 127"/>
+    <path d="M524 146L541 160"/>
+  </g>
+
+  <text
+    x="330"
+    y="309"
+    fill="#2b251a"
+    font-family="PingFang SC, Hiragino Sans GB, Heiti SC, -apple-system, sans-serif"
+    font-size="21.5"
+    font-weight="600"
+    letter-spacing=".2"
+    text-anchor="middle"
+  >将 Ossia 拖入「应用程序」</text>
+  <text
+    x="330"
+    y="332"
+    fill="#4d463a"
+    font-family="-apple-system, BlinkMacSystemFont, Helvetica Neue, sans-serif"
+    font-size="14.5"
+    font-weight="600"
+    letter-spacing=".1"
+    text-anchor="middle"
+  >Drag Ossia into Applications</text>
+  <text
+    x="330"
+    y="356"
+    fill="#7b7365"
+    font-family="PingFang SC, Hiragino Sans GB, Heiti SC, -apple-system, sans-serif"
+    font-size="11.5"
+    font-weight="400"
+    letter-spacing=".1"
+    text-anchor="middle"
+  >安装后从「启动台」或「应用程序」打开 · Open from Launchpad or Applications</text>
+</svg>

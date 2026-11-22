@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scores": [
+    {
+      "id": "praeludium-i",
+      "title": "Piano: Praeludium I (BWV 846)",
+      "file": "praeludium-i.ly",
+      "format": "ly"
+    },
+    {
+      "id": "sor-op35-no14",
+      "title": "Guitar: Sor — Etude Op. 35 No. 14",
+      "file": "sor-op35-no14.ly",
+      "format": "ly"
+    },
+    {
+      "id": "ukulele-minuet-bwv-anh114",
+      "title": "Ukulele: Petzold — Minuet (BWV Anh. 114)",
+      "file": "ukulele-minuet-bwv-anh114.ly",
+      "format": "ly"
+    },
+    {
+      "id": "bach-bwv1002-01-allemanda",
+      "title": "Violin: Bach — Partita No. 1, Allemanda (BWV 1002)",
+      "file": "bach-bwv1002-01-allemanda.ly",
+      "format": "ly"
+    }
+  ]
+}

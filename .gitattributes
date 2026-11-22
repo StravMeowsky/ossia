@@ -1,0 +1,7 @@
+* text=auto eol=lf
+tests/fixtures/inputs/unicode-crlf-bom.ly -text whitespace=cr-at-eol
+tests/fixtures/inputs/raw-emoji.ly -text whitespace=cr-at-eol
+tests/fixtures/rendered/columns-bom-crlf/score.ly -text whitespace=cr-at-eol
+*.png binary
+*.icns binary
+*.ico binary

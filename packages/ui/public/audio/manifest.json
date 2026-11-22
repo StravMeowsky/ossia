@@ -1,0 +1,535 @@
+{
+  "version": 1,
+  "instruments": {
+    "piano": {
+      "name": "Salamander Grand Piano V2",
+      "source": "https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html",
+      "license": "CC-BY-3.0",
+      "range": [21, 108],
+      "samples": [
+        {
+          "name": "A0",
+          "pitch": 21,
+          "ogg": "salamander/A0.ogg",
+          "mp3": "salamander/A0.mp3"
+        },
+        {
+          "name": "C1",
+          "pitch": 24,
+          "ogg": "salamander/C1.ogg",
+          "mp3": "salamander/C1.mp3"
+        },
+        {
+          "name": "Ds1",
+          "pitch": 27,
+          "ogg": "salamander/Ds1.ogg",
+          "mp3": "salamander/Ds1.mp3"
+        },
+        {
+          "name": "Fs1",
+          "pitch": 30,
+          "ogg": "salamander/Fs1.ogg",
+          "mp3": "salamander/Fs1.mp3"
+        },
+        {
+          "name": "A1",
+          "pitch": 33,
+          "ogg": "salamander/A1.ogg",
+          "mp3": "salamander/A1.mp3"
+        },
+        {
+          "name": "C2",
+          "pitch": 36,
+          "ogg": "salamander/C2.ogg",
+          "mp3": "salamander/C2.mp3"
+        },
+        {
+          "name": "Ds2",
+          "pitch": 39,
+          "ogg": "salamander/Ds2.ogg",
+          "mp3": "salamander/Ds2.mp3"
+        },
+        {
+          "name": "Fs2",
+          "pitch": 42,
+          "ogg": "salamander/Fs2.ogg",
+          "mp3": "salamander/Fs2.mp3"
+        },
+        {
+          "name": "A2",
+          "pitch": 45,
+          "ogg": "salamander/A2.ogg",
+          "mp3": "salamander/A2.mp3"
+        },
+        {
+          "name": "C3",
+          "pitch": 48,
+          "ogg": "salamander/C3.ogg",
+          "mp3": "salamander/C3.mp3"
+        },
+        {
+          "name": "Ds3",
+          "pitch": 51,
+          "ogg": "salamander/Ds3.ogg",
+          "mp3": "salamander/Ds3.mp3"
+        },
+        {
+          "name": "Fs3",
+          "pitch": 54,
+          "ogg": "salamander/Fs3.ogg",
+          "mp3": "salamander/Fs3.mp3"
+        },
+        {
+          "name": "A3",
+          "pitch": 57,
+          "ogg": "salamander/A3.ogg",
+          "mp3": "salamander/A3.mp3"
+        },
+        {
+          "name": "C4",
+          "pitch": 60,
+          "ogg": "salamander/C4.ogg",
+          "mp3": "salamander/C4.mp3"
+        },
+        {
+          "name": "Ds4",
+          "pitch": 63,
+          "ogg": "salamander/Ds4.ogg",
+          "mp3": "salamander/Ds4.mp3"
+        },
+        {
+          "name": "Fs4",
+          "pitch": 66,
+          "ogg": "salamander/Fs4.ogg",
+          "mp3": "salamander/Fs4.mp3"
+        },
+        {
+          "name": "A4",
+          "pitch": 69,
+          "ogg": "salamander/A4.ogg",
+          "mp3": "salamander/A4.mp3"
+        },
+        {
+          "name": "C5",
+          "pitch": 72,
+          "ogg": "salamander/C5.ogg",
+          "mp3": "salamander/C5.mp3"
+        },
+        {
+          "name": "Ds5",
+          "pitch": 75,
+          "ogg": "salamander/Ds5.ogg",
+          "mp3": "salamander/Ds5.mp3"
+        },
+        {
+          "name": "Fs5",
+          "pitch": 78,
+          "ogg": "salamander/Fs5.ogg",
+          "mp3": "salamander/Fs5.mp3"
+        },
+        {
+          "name": "A5",
+          "pitch": 81,
+          "ogg": "salamander/A5.ogg",
+          "mp3": "salamander/A5.mp3"
+        },
+        {
+          "name": "C6",
+          "pitch": 84,
+          "ogg": "salamander/C6.ogg",
+          "mp3": "salamander/C6.mp3"
+        },
+        {
+          "name": "Ds6",
+          "pitch": 87,
+          "ogg": "salamander/Ds6.ogg",
+          "mp3": "salamander/Ds6.mp3"
+        },
+        {
+          "name": "Fs6",
+          "pitch": 90,
+          "ogg": "salamander/Fs6.ogg",
+          "mp3": "salamander/Fs6.mp3"
+        },
+        {
+          "name": "A6",
+          "pitch": 93,
+          "ogg": "salamander/A6.ogg",
+          "mp3": "salamander/A6.mp3"
+        },
+        {
+          "name": "C7",
+          "pitch": 96,
+          "ogg": "salamander/C7.ogg",
+          "mp3": "salamander/C7.mp3"
+        },
+        {
+          "name": "Ds7",
+          "pitch": 99,
+          "ogg": "salamander/Ds7.ogg",
+          "mp3": "salamander/Ds7.mp3"
+        },
+        {
+          "name": "Fs7",
+          "pitch": 102,
+          "ogg": "salamander/Fs7.ogg",
+          "mp3": "salamander/Fs7.mp3"
+        },
+        {
+          "name": "A7",
+          "pitch": 105,
+          "ogg": "salamander/A7.ogg",
+          "mp3": "salamander/A7.mp3"
+        },
+        {
+          "name": "C8",
+          "pitch": 108,
+          "ogg": "salamander/C8.ogg",
+          "mp3": "salamander/C8.mp3"
+        }
+      ],
+      "author": "Alexander Holm",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "processing": "Selected piano notes in OGG and MP3 formats."
+    },
+    "guitar": {
+      "gain": 3.0,
+      "name": "Meta Nylon Guitar",
+      "source": "https://github.com/facebookincubator/Meta-open-sound",
+      "license": "CC0-1.0",
+      "processing": "Fingerstyle recordings, minor-third subset, converted to OGG Vorbis and MP3.",
+      "range": [40, 83],
+      "samples": [
+        {
+          "name": "E2",
+          "pitch": 40,
+          "ogg": "guitar/E2.ogg",
+          "mp3": "guitar/E2.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringLowE_Vel01Finger_E2_01.ogg"
+        },
+        {
+          "name": "G2",
+          "pitch": 43,
+          "ogg": "guitar/G2.ogg",
+          "mp3": "guitar/G2.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringLowE_Vel01Finger_G2_01.ogg"
+        },
+        {
+          "name": "As2",
+          "pitch": 46,
+          "ogg": "guitar/As2.ogg",
+          "mp3": "guitar/As2.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringA_Vel01Finger_As2_01.ogg"
+        },
+        {
+          "name": "Cs3",
+          "pitch": 49,
+          "ogg": "guitar/Cs3.ogg",
+          "mp3": "guitar/Cs3.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringA_Vel01Finger_Cs3_01.ogg"
+        },
+        {
+          "name": "E3",
+          "pitch": 52,
+          "ogg": "guitar/E3.ogg",
+          "mp3": "guitar/E3.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringA_Vel01Finger_E3_01.ogg"
+        },
+        {
+          "name": "G3",
+          "pitch": 55,
+          "ogg": "guitar/G3.ogg",
+          "mp3": "guitar/G3.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringA_Vel01Finger_G3_01.ogg"
+        },
+        {
+          "name": "As3",
+          "pitch": 58,
+          "ogg": "guitar/As3.ogg",
+          "mp3": "guitar/As3.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringA_Vel01Finger_As3_01.ogg"
+        },
+        {
+          "name": "Cs4",
+          "pitch": 61,
+          "ogg": "guitar/Cs4.ogg",
+          "mp3": "guitar/Cs4.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringA_Vel01Finger_Cs4_01.ogg"
+        },
+        {
+          "name": "E4",
+          "pitch": 64,
+          "ogg": "guitar/E4.ogg",
+          "mp3": "guitar/E4.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringB_Vel01Finger_E4_01.ogg"
+        },
+        {
+          "name": "G4",
+          "pitch": 67,
+          "ogg": "guitar/G4.ogg",
+          "mp3": "guitar/G4.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringB_Vel01Finger_G4_01.ogg"
+        },
+        {
+          "name": "As4",
+          "pitch": 70,
+          "ogg": "guitar/As4.ogg",
+          "mp3": "guitar/As4.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringB_Vel01Finger_As4_01.ogg"
+        },
+        {
+          "name": "Cs5",
+          "pitch": 73,
+          "ogg": "guitar/Cs5.ogg",
+          "mp3": "guitar/Cs5.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringB_Vel01Finger_Cs5_01.ogg"
+        },
+        {
+          "name": "E5",
+          "pitch": 76,
+          "ogg": "guitar/E5.ogg",
+          "mp3": "guitar/E5.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringB_Vel01Finger_E5_01.ogg"
+        },
+        {
+          "name": "G5",
+          "pitch": 79,
+          "ogg": "guitar/G5.ogg",
+          "mp3": "guitar/G5.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringHighE_Vel01Finger_G5_01.ogg"
+        },
+        {
+          "name": "As5",
+          "pitch": 82,
+          "ogg": "guitar/As5.ogg",
+          "mp3": "guitar/As5.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringHighE_Vel01Finger_As5_01.ogg"
+        },
+        {
+          "name": "B5",
+          "pitch": 83,
+          "ogg": "guitar/B5.ogg",
+          "mp3": "guitar/B5.mp3",
+          "sourceFile": "https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-nylon-guitar/ogg/INSGuitarNylon_StringHighE_Vel01Finger_B5_01.ogg"
+        }
+      ],
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "ukulele": {
+      "name": "FreePats Ukulele",
+      "source": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html",
+      "license": "CC0-1.0",
+      "processing": "All pitched samples, converted from WAV to OGG Vorbis and MP3.",
+      "range": [60, 84],
+      "samples": [
+        {
+          "name": "C4",
+          "pitch": 60,
+          "ogg": "ukulele/C4.ogg",
+          "mp3": "ukulele/C4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "D4",
+          "pitch": 62,
+          "ogg": "ukulele/D4.ogg",
+          "mp3": "ukulele/D4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "E4",
+          "pitch": 64,
+          "ogg": "ukulele/E4.ogg",
+          "mp3": "ukulele/E4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "Fs4",
+          "pitch": 66,
+          "ogg": "ukulele/Fs4.ogg",
+          "mp3": "ukulele/Fs4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "G4",
+          "pitch": 67,
+          "ogg": "ukulele/G4.ogg",
+          "mp3": "ukulele/G4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "A4",
+          "pitch": 69,
+          "ogg": "ukulele/A4.ogg",
+          "mp3": "ukulele/A4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "B4",
+          "pitch": 71,
+          "ogg": "ukulele/B4.ogg",
+          "mp3": "ukulele/B4.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "Cs5",
+          "pitch": 73,
+          "ogg": "ukulele/Cs5.ogg",
+          "mp3": "ukulele/Cs5.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "Ds5",
+          "pitch": 75,
+          "ogg": "ukulele/Ds5.ogg",
+          "mp3": "ukulele/Ds5.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "F5",
+          "pitch": 77,
+          "ogg": "ukulele/F5.ogg",
+          "mp3": "ukulele/F5.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "G5",
+          "pitch": 79,
+          "ogg": "ukulele/G5.ogg",
+          "mp3": "ukulele/G5.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "A5",
+          "pitch": 81,
+          "ogg": "ukulele/A5.ogg",
+          "mp3": "ukulele/A5.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        },
+        {
+          "name": "C6",
+          "pitch": 84,
+          "ogg": "ukulele/C6.ogg",
+          "mp3": "ukulele/C6.mp3",
+          "sourceFile": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html"
+        }
+      ],
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "violin": {
+      "name": "University of Iowa Solo Violin (2012)",
+      "source": "https://theremin.music.uiowa.edu/MISviolin2012.html",
+      "license": "Unrestricted use",
+      "processing": "Solo violin arco forte samples recorded in an anechoic chamber, normalized to -20 LUFS and converted to OGG Vorbis and MP3.",
+      "range": [55, 96],
+      "samples": [
+        {
+          "name": "G3",
+          "pitch": 55,
+          "ogg": "violin/G3.ogg",
+          "mp3": "violin/G3.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.G3.stereo.aif"
+        },
+        {
+          "name": "A3",
+          "pitch": 57,
+          "ogg": "violin/A3.ogg",
+          "mp3": "violin/A3.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.A3.stereo.aif"
+        },
+        {
+          "name": "C4",
+          "pitch": 60,
+          "ogg": "violin/C4.ogg",
+          "mp3": "violin/C4.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.C4.stereo.aif"
+        },
+        {
+          "name": "E4",
+          "pitch": 64,
+          "ogg": "violin/E4.ogg",
+          "mp3": "violin/E4.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.E4.stereo.aif"
+        },
+        {
+          "name": "G4",
+          "pitch": 67,
+          "ogg": "violin/G4.ogg",
+          "mp3": "violin/G4.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.G4.stereo.aif"
+        },
+        {
+          "name": "A4",
+          "pitch": 69,
+          "ogg": "violin/A4.ogg",
+          "mp3": "violin/A4.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.A4.stereo.aif"
+        },
+        {
+          "name": "C5",
+          "pitch": 72,
+          "ogg": "violin/C5.ogg",
+          "mp3": "violin/C5.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulG.C5.stereo.aif"
+        },
+        {
+          "name": "E5",
+          "pitch": 76,
+          "ogg": "violin/E5.ogg",
+          "mp3": "violin/E5.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulD.E5.stereo.aif"
+        },
+        {
+          "name": "G5",
+          "pitch": 79,
+          "ogg": "violin/G5.ogg",
+          "mp3": "violin/G5.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulD.G5.stereo.aif"
+        },
+        {
+          "name": "A5",
+          "pitch": 81,
+          "ogg": "violin/A5.ogg",
+          "mp3": "violin/A5.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulD.A5.stereo.aif"
+        },
+        {
+          "name": "C6",
+          "pitch": 84,
+          "ogg": "violin/C6.ogg",
+          "mp3": "violin/C6.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulD.C6.stereo.aif"
+        },
+        {
+          "name": "E6",
+          "pitch": 88,
+          "ogg": "violin/E6.ogg",
+          "mp3": "violin/E6.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulA.E6.stereo.aif"
+        },
+        {
+          "name": "G6",
+          "pitch": 91,
+          "ogg": "violin/G6.ogg",
+          "mp3": "violin/G6.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulA.G6.stereo.aif"
+        },
+        {
+          "name": "A6",
+          "pitch": 93,
+          "ogg": "violin/A6.ogg",
+          "mp3": "violin/A6.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulE.A6.stereo.aif"
+        },
+        {
+          "name": "C7",
+          "pitch": 96,
+          "ogg": "violin/C7.ogg",
+          "mp3": "violin/C7.mp3",
+          "sourceFile": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Strings/Violin/Violin.arco.ff.sulE.C7.stereo.aif"
+        }
+      ],
+      "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html"
+    }
+  }
+}

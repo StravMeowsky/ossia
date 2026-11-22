@@ -1,0 +1,101 @@
+use super::*;
+
+pub(super) fn status(
+    ctx: &AgentContext,
+    record: Option<&ManagedRecord>,
+) -> Result<AgentInspection, AppError> {
+    let plugin = plugin_entry(ctx)?;
+    let marketplace = marketplace_entry(ctx)?;
+    let expected_plugin = plugin_dir(ctx.shared_root());
+    let expected_marketplace = marketplace_root(ctx.shared_root());
+    let mut conflicts = Vec::new();
+    if let Some(marketplace) = marketplace.as_ref() {
+        if !marketplace
+            .get("root")
+            .and_then(Value::as_str)
+            .is_some_and(|path| same_path(path, &expected_marketplace))
+        {
+            conflicts.push(conflict(
+                "codex:marketplace:ossia-local",
+                "user-config",
+                "the local marketplace name belongs to another source",
+            ));
+        }
+    }
+    if let Some(plugin) = plugin.as_ref() {
+        if !plugin
+            .get("source")
+            .and_then(|value| value.get("path"))
+            .and_then(Value::as_str)
+            .is_some_and(|path| same_path(path, &expected_plugin))
+        {
+            conflicts.push(conflict(
+                PLUGIN_ID,
+                "user-config",
+                "the installed plugin source no longer matches the managed marketplace",
+            ));
+        }
+        if record.is_none() {
+            conflicts.push(conflict(
+                PLUGIN_ID,
+                "unmanaged",
+                "the plugin exists without an ownership record",
+            ));
+        }
+    }
+    if let Some(record) = record {
+        conflicts.extend(record_file_conflicts(&record.entries));
+    }
+    let missing_files = record.is_some_and(|record| record_files_missing(&record.entries));
+    let plugin_matches = plugin.as_ref().is_some_and(|plugin| {
+        plugin
+            .get("source")
+            .and_then(|value| value.get("path"))
+            .and_then(Value::as_str)
+            .is_some_and(|path| same_path(path, &expected_plugin))
+    });
+    let marketplace_matches = marketplace.as_ref().is_some_and(|marketplace| {
+        marketplace
+            .get("root")
+            .and_then(Value::as_str)
+            .is_some_and(|path| same_path(path, &expected_marketplace))
+    });
+    let installed = plugin_matches && marketplace_matches;
+    let enabled = plugin
+        .as_ref()
+        .and_then(|value| value.get("enabled"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let mcp_loaded = mcp_entry_exists(ctx)?;
+    let managed = record.is_some();
+    let state = if !conflicts.is_empty() {
+        AgentState::Conflict
+    } else if missing_files {
+        AgentState::Broken
+    } else if installed && enabled && mcp_loaded {
+        AgentState::Installed
+    } else if installed && enabled {
+        AgentState::Broken
+    } else if installed {
+        AgentState::Disabled
+    } else if managed {
+        AgentState::Broken
+    } else {
+        AgentState::Available
+    };
+    let message = match state {
+        AgentState::Disabled => Some(AgentNotice::CodexPluginDisabled),
+        AgentState::Broken => Some(AgentNotice::CodexPluginMissing),
+        AgentState::Conflict => Some(AgentNotice::CodexUnmanagedConfig),
+        _ => None,
+    };
+    Ok(AgentInspection {
+        state,
+        installed,
+        enabled,
+        managed,
+        path: Some(path_text(&expected_plugin)),
+        message,
+        conflicts,
+    })
+}

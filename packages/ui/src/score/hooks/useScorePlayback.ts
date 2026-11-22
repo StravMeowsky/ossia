@@ -1,0 +1,493 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import type {
+  PlaybackNoteGroup,
+  RenderReference,
+  ScorePlayback,
+  ScoreSettings,
+} from '../../generated/protocol.ts';
+import { scoreAudio } from '../scoreAudio.ts';
+import { ApiError } from '../utils/api.ts';
+import type { Api } from '../utils/api.ts';
+import { scheduleWindow } from '../utils/playbackSchedule.ts';
+import {
+  auditionDuration,
+  auditionMembers,
+  combinedAuditionGroup,
+  groupAt,
+  measureSpanAt,
+  playheadAt,
+  playheadKey,
+  sameNoteGroup,
+  sameOnset,
+  sameVoice,
+} from '../utils/playbackTimeline.ts';
+import type { PlaybackPlayhead } from '../utils/playbackTimeline.ts';
+import { loadScorePlayback, peekScorePlayback } from '../utils/renderCache.ts';
+
+export type { PlaybackPlayhead } from '../utils/playbackTimeline.ts';
+
+export type PlaybackPhase = 'idle' | 'loading' | 'playing' | 'paused' | 'unavailable';
+
+interface PlaybackState {
+  phase: PlaybackPhase;
+  available: boolean;
+  timeline: ScorePlayback | null;
+  position: number;
+  activeGroup: PlaybackNoteGroup | null;
+  playheadGroup: PlaybackNoteGroup | null;
+  playhead: PlaybackPlayhead | null;
+}
+
+const EMPTY_STATE: PlaybackState = {
+  phase: 'idle',
+  available: false,
+  timeline: null,
+  position: 0,
+  activeGroup: null,
+  playheadGroup: null,
+  playhead: null,
+};
+
+const LOOKAHEAD_SECONDS = 0.18;
+const START_LEAD_SECONDS = 0.03;
+
+/** Own score playback timing, audio scheduling, audition state and the playhead. */
+export function useScorePlayback(
+  api: Api,
+  render: RenderReference | null,
+  enabled: boolean,
+  onError: (error: unknown) => void,
+  settings: ScoreSettings | null,
+) {
+  const [state, setState] = useState<PlaybackState>(EMPTY_STATE);
+  const timelineRef = useRef<ScorePlayback | null>(null);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const phaseRef = useRef<PlaybackPhase>('idle');
+  const positionRef = useRef(0);
+  // Audio scheduling starts slightly early; the playhead must never paint before the selected note.
+  const positionFloorRef = useRef(0);
+  const anchorRef = useRef(0);
+  const scheduledIndexRef = useRef(0);
+  const auditionRef = useRef<number | null>(null);
+  const auditionGroupRef = useRef<PlaybackNoteGroup | null>(null);
+  const playheadGroupRef = useRef<PlaybackNoteGroup | null>(null);
+  const resumeReadyRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const starting = useRef<Promise<void> | null>(null);
+  const seekRef = useRef<Promise<void> | null>(null);
+  const seekTargetRef = useRef<number | null>(null);
+
+  const setPhase = useCallback((phase: PlaybackPhase) => {
+    phaseRef.current = phase;
+    setState((current) => ({ ...current, phase }));
+  }, []);
+
+  const publishPosition = useCallback((position: number) => {
+    positionRef.current = position;
+    const timeline = timelineRef.current;
+    if (!timeline) {
+      setState((current) => ({ ...current, position, playhead: null }));
+      return;
+    }
+    const playheadGroup = groupAt(timeline, position) ?? playheadGroupRef.current;
+    playheadGroupRef.current = playheadGroup;
+    setState((current) => ({
+      ...current,
+      position,
+      playheadGroup,
+      playhead: playheadAt(timeline, position),
+    }));
+  }, []);
+
+  const clearScheduler = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  }, []);
+
+  const finish = useCallback(() => {
+    clearScheduler();
+    scoreAudio.stopAll();
+    playheadGroupRef.current = null;
+    positionRef.current = 0;
+    positionFloorRef.current = 0;
+    scheduledIndexRef.current = 0;
+    seekRef.current = null;
+    seekTargetRef.current = null;
+    resumeReadyRef.current = false;
+    setState((current) => ({
+      ...current,
+      phase: 'idle',
+      position: 0,
+      playheadGroup: null,
+      playhead: null,
+    }));
+    phaseRef.current = 'idle';
+  }, [clearScheduler]);
+
+  const schedule = useCallback(() => {
+    const timeline = timelineRef.current;
+    if (!timeline || phaseRef.current !== 'playing') return;
+    const now = scoreAudio.now();
+    const position = now - anchorRef.current;
+    if (position >= timeline.durationSeconds + 0.02) {
+      finish();
+      return;
+    }
+    const horizon = position + LOOKAHEAD_SECONDS;
+    const batch = scheduleWindow(timeline.notes, scheduledIndexRef.current, position, horizon);
+    for (const note of batch.notes) {
+      void scoreAudio
+        .play(
+          [note.pitch],
+          anchorRef.current + note.startSeconds,
+          Math.max(0.05, note.durationSeconds),
+          settingsRef.current?.instruments[note.partId] ?? note.instrument,
+        )
+        .catch(onError);
+    }
+    scheduledIndexRef.current = batch.nextIndex;
+    timerRef.current = window.setTimeout(schedule, 60);
+  }, [finish, onError]);
+
+  const tick = useCallback(() => {
+    if (phaseRef.current !== 'playing') return;
+    const position = Math.max(positionFloorRef.current, scoreAudio.now() - anchorRef.current);
+    publishPosition(position);
+    frameRef.current = window.requestAnimationFrame(tick);
+  }, [publishPosition]);
+
+  const beginAt = useCallback(
+    async (offset: number, keepPlaying = true) => {
+      const timeline = timelineRef.current;
+      if (!timeline || !enabled) return;
+      const instruments = JSON.stringify(settingsRef.current?.instruments ?? {});
+      clearScheduler();
+      scoreAudio.stopAll();
+      await scoreAudio.resume();
+      if (instruments !== JSON.stringify(settingsRef.current?.instruments ?? {})) {
+        setPhase('paused');
+        return;
+      }
+      const safeOffset = Math.min(
+        Math.max(0, Number.isFinite(offset) ? offset : 0),
+        timeline.durationSeconds,
+      );
+      anchorRef.current = scoreAudio.now() + START_LEAD_SECONDS - safeOffset;
+      positionFloorRef.current = safeOffset;
+      const index = timeline.notes.findIndex((note) => note.startSeconds >= safeOffset - 0.0001);
+      scheduledIndexRef.current = index < 0 ? timeline.notes.length : index;
+      resumeReadyRef.current = false;
+      publishPosition(safeOffset);
+      if (!keepPlaying) return;
+      setPhase('playing');
+      schedule();
+      tick();
+    },
+    [clearScheduler, enabled, publishPosition, schedule, setPhase, tick],
+  );
+
+  const play = useCallback(async () => {
+    if (starting.current) return starting.current;
+    const timeline = timelineRef.current;
+    if (!timeline || !enabled) return;
+    const run = (async () => {
+      try {
+        const wasPaused = phaseRef.current === 'paused';
+        const canResume = resumeReadyRef.current;
+        const fallbackOffset = wasPaused ? positionRef.current : (auditionRef.current ?? 0);
+        const instruments = JSON.stringify(settingsRef.current?.instruments ?? {});
+        setPhase('loading');
+        await scoreAudio.load(
+          timeline.notes.map(
+            (note) => settingsRef.current?.instruments[note.partId] ?? note.instrument,
+          ),
+        );
+        if (instruments !== JSON.stringify(settingsRef.current?.instruments ?? {})) {
+          publishPosition(fallbackOffset);
+          setPhase('paused');
+          return;
+        }
+        if (wasPaused && canResume) {
+          await scoreAudio.resume();
+          setPhase('playing');
+          schedule();
+          tick();
+        } else {
+          await beginAt(fallbackOffset);
+        }
+      } catch (error) {
+        setPhase('idle');
+        onError(error);
+      }
+    })();
+    starting.current = run.finally(() => {
+      starting.current = null;
+    });
+    return starting.current;
+  }, [beginAt, enabled, onError, publishPosition, schedule, setPhase, tick]);
+
+  const pause = useCallback(async () => {
+    if (phaseRef.current !== 'playing') return;
+    const position = Math.max(positionFloorRef.current, scoreAudio.now() - anchorRef.current);
+    clearScheduler();
+    publishPosition(position);
+    resumeReadyRef.current = true;
+    setPhase('paused');
+    await scoreAudio.suspend().catch(onError);
+  }, [clearScheduler, onError, publishPosition, setPhase]);
+
+  const instrumentSettingsKey = JSON.stringify(settings?.instruments ?? {});
+  const previousSettingsKey = useRef(instrumentSettingsKey);
+  useEffect(() => {
+    if (previousSettingsKey.current === instrumentSettingsKey) return;
+    previousSettingsKey.current = instrumentSettingsKey;
+    if (phaseRef.current === 'playing') {
+      void pause();
+      scoreAudio.stopAll();
+      resumeReadyRef.current = false;
+    } else {
+      scoreAudio.stopAll();
+      resumeReadyRef.current = false;
+    }
+  }, [instrumentSettingsKey, pause]);
+
+  const clearAuditionHighlight = useCallback(() => {
+    setState((current) => (current.activeGroup ? { ...current, activeGroup: null } : current));
+  }, []);
+
+  const toggle = useCallback(async () => {
+    if (!timelineRef.current || !enabled) return;
+    if (phaseRef.current === 'playing') {
+      await pause();
+      return;
+    }
+    if (phaseRef.current === 'loading') return;
+    await play();
+  }, [enabled, pause, play]);
+
+  const audition = useCallback(
+    async (
+      group: PlaybackNoteGroup,
+      options?: { simultaneous?: boolean; highlightElementId?: string },
+    ) => {
+      if (!enabled) return;
+      const members = auditionMembers(timelineRef.current, group, options?.simultaneous ?? false);
+      const combined = combinedAuditionGroup(members, group);
+      const activeGroup =
+        options?.highlightElementId && !options.simultaneous
+          ? { ...combined, elementIds: [options.highlightElementId] }
+          : combined;
+      auditionGroupRef.current = group;
+      setState((current) => ({ ...current, activeGroup }));
+      const start = group.startSeconds;
+      if (start !== null) {
+        auditionRef.current = start;
+        if (phaseRef.current === 'playing') {
+          await beginAt(start);
+          return;
+        }
+        resumeReadyRef.current = false;
+        scoreAudio.stopAll();
+        positionRef.current = start;
+      } else if (phaseRef.current === 'paused') {
+        resumeReadyRef.current = false;
+        scoreAudio.stopAll();
+      }
+      if (members.some((member) => member.pitches.length)) {
+        try {
+          const instruments = members.map((member) => {
+            const note = timelineRef.current?.notes.find(
+              (candidate) =>
+                candidate.partId === member.partId &&
+                member.pitches.includes(candidate.pitch) &&
+                member.startSeconds !== null &&
+                Math.abs(candidate.startSeconds - member.startSeconds) < 0.001,
+            );
+            return (
+              (member.partId && settingsRef.current?.instruments[member.partId]) ||
+              note?.instrument ||
+              'piano'
+            );
+          });
+          await scoreAudio.load(instruments);
+          await scoreAudio.resume();
+          const now = scoreAudio.now();
+          await Promise.all(
+            members.map((member, index) =>
+              scoreAudio.play(member.pitches, now, auditionDuration(member), instruments[index]!),
+            ),
+          );
+        } catch (error) {
+          onError(error);
+        }
+      }
+    },
+    [beginAt, enabled, onError],
+  );
+
+  const auditionAdjacent = useCallback(
+    (direction: 'previous' | 'next', options?: { simultaneous?: boolean }) => {
+      const timeline = timelineRef.current;
+      if (!enabled || !timeline || !timeline.groups.length) return false;
+      const simultaneous = options?.simultaneous ?? false;
+      const anchor = auditionGroupRef.current;
+      if (!anchor) {
+        void audition(timeline.groups[0]!, { simultaneous });
+        return true;
+      }
+      const groups = timeline.groups.filter((group) => sameVoice(group, anchor));
+      const current = groups.findIndex((group) => sameNoteGroup(group, anchor));
+      if (current < 0) {
+        void audition(timeline.groups[0]!, { simultaneous });
+        return true;
+      }
+      const onsetGroups = simultaneous
+        ? groups.filter(
+            (group, index) =>
+              group.startSeconds !== null &&
+              !groups.slice(0, index).some((candidate) => sameOnset(candidate, group)),
+          )
+        : groups;
+      const onsetCurrent = simultaneous
+        ? onsetGroups.findIndex((group) => sameOnset(group, anchor))
+        : current;
+      const next = onsetGroups[onsetCurrent + (direction === 'next' ? 1 : -1)];
+      if (next) void audition(next, { simultaneous });
+      return true;
+    },
+    [audition, enabled],
+  );
+
+  const seekMeasure = useCallback(
+    (direction: 'previous' | 'next') => {
+      const timeline = timelineRef.current;
+      if (!enabled || !timeline || phaseRef.current !== 'playing') return false;
+      const requested =
+        seekTargetRef.current ??
+        Math.max(positionFloorRef.current, scoreAudio.now() - anchorRef.current);
+      const current = measureSpanAt(timeline, requested);
+      if (!current) return false;
+      const index = timeline.systems.indexOf(current);
+      const target = timeline.systems[index + (direction === 'next' ? 1 : -1)];
+      if (!target) return true;
+      seekTargetRef.current = target.startSeconds;
+      const previous = seekRef.current ?? Promise.resolve();
+      let tracked: Promise<void>;
+      tracked = previous
+        .catch(() => {})
+        .then(() => beginAt(target.startSeconds))
+        .catch(onError)
+        .finally(() => {
+          if (seekTargetRef.current === target.startSeconds) seekTargetRef.current = null;
+          if (seekRef.current === tracked) seekRef.current = null;
+        });
+      seekRef.current = tracked;
+      return true;
+    },
+    [beginAt, enabled, onError],
+  );
+
+  const stop = useCallback(() => {
+    clearScheduler();
+    scoreAudio.stopAll();
+    timelineRef.current = null;
+    auditionRef.current = null;
+    auditionGroupRef.current = null;
+    playheadGroupRef.current = null;
+    positionRef.current = 0;
+    positionFloorRef.current = 0;
+    scheduledIndexRef.current = 0;
+    seekRef.current = null;
+    seekTargetRef.current = null;
+    resumeReadyRef.current = false;
+    phaseRef.current = 'idle';
+    setState(EMPTY_STATE);
+  }, [clearScheduler]);
+
+  useEffect(() => () => stop(), [stop]);
+
+  const renderKey = render?.renderKey ?? null;
+  useEffect(() => {
+    if (!enabled || !renderKey) {
+      stop();
+      setState((current) => ({ ...current, available: false, phase: 'unavailable' }));
+      return;
+    }
+    let live = true;
+    stop();
+    const cached = peekScorePlayback(renderKey);
+    if (cached) {
+      timelineRef.current = cached;
+      setState({
+        phase: 'idle',
+        available: cached.notes.length > 0,
+        timeline: cached,
+        position: 0,
+        activeGroup: null,
+        playheadGroup: null,
+        playhead: null,
+      });
+      return;
+    }
+    setState((current) => ({ ...current, phase: 'loading', available: false }));
+    loadScorePlayback(api, renderKey)
+      .then((timeline) => {
+        if (!live) return;
+        timelineRef.current = timeline;
+        setState({
+          phase: 'idle',
+          available: timeline.notes.length > 0,
+          timeline,
+          position: 0,
+          activeGroup: null,
+          playheadGroup: null,
+          playhead: null,
+        });
+      })
+      .catch((error) => {
+        if (!live) return;
+        if (!(error instanceof ApiError) || error.code !== 'unsupported-source') {
+          onError(error);
+        }
+        setState({
+          ...EMPTY_STATE,
+          phase: 'unavailable',
+        });
+      });
+    return () => {
+      live = false;
+    };
+  }, [api, enabled, onError, renderKey, stop]);
+
+  const activeElementIds = useMemo(
+    () => new Set(state.activeGroup?.elementIds ?? []),
+    [state.activeGroup],
+  );
+  const playheadElementIds = useMemo(
+    () => new Set(state.playheadGroup?.elementIds ?? []),
+    [state.playheadGroup],
+  );
+
+  return {
+    ...state,
+    toggle,
+    audition,
+    auditionAdjacent,
+    seekMeasure,
+    clearAuditionHighlight,
+    stop,
+    canToggle: state.available && enabled,
+    activeElementIds,
+    playheadElementIds,
+    playheadKey: playheadKey(state.playhead),
+  };
+}

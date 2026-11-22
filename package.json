@@ -1,0 +1,36 @@
+{
+  "name": "ossia",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "setup": "pnpm install && pnpm engine:install && pnpm generate:docs",
+    "generate:docs": "node --no-warnings=ExperimentalWarning scripts/docs.mjs --download",
+    "generate:mcp": "cargo run --quiet -p ossia-backend --bin generate-mcp --",
+    "generate:types": "cargo run --quiet -p ossia-types --bin generate-types --",
+    "engine:install": "node scripts/engine.mjs install --download",
+    "engine:verify": "node scripts/engine.mjs verify",
+    "dev:backend": "node scripts/backend-dev.mjs",
+    "dev:desktop": "pnpm --filter @ossia/desktop dev",
+    "dev:ui": "pnpm --filter @ossia/ui dev",
+    "check": "pnpm generate:types && vp check",
+    "check:fix": "pnpm generate:types && vp check --fix",
+    "check:mcp": "cargo run --quiet -p ossia-backend --bin generate-mcp -- --check",
+    "check:types": "cargo run --quiet -p ossia-types --bin generate-types -- --check",
+    "test:scripts": "vp test tests/scripts",
+    "test:ui": "pnpm --filter @ossia/ui test",
+    "test:ui:native": "pnpm --filter @ossia/ui test:native",
+    "build:backend": "pnpm build:ui && cargo build -p ossia-desktop --no-default-features",
+    "build:desktop": "pnpm --filter @ossia/desktop build",
+    "build:ui": "pnpm --filter @ossia/ui build",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "cos-nodejs-sdk-v5": "^3.0.0",
+    "parse5": "^8.1.1",
+    "vite-plus": "^1.5.1"
+  },
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "packageManager": "pnpm@12.4.1"
+}

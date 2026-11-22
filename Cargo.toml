@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = ["packages/ossia-*", "packages/desktop/src-tauri"]
+default-members = [
+  "packages/ossia-types",
+  "packages/ossia-score",
+  "packages/ossia-engine",
+  "packages/ossia-library",
+  "packages/ossia-integrations",
+  "packages/ossia-backend",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+rust-version = "1.90"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+uuid = { version = "1", features = ["serde", "v4"] }
+regex = "1"
+quick-xml = "0.42"
+tempfile = "3"

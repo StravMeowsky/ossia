@@ -1,0 +1,523 @@
+use crate::{test_support::Fixture, *};
+
+fn import_document(f: &Fixture, title: &str, source: &str) -> DocumentState {
+    f.library
+        .import(
+            &f.engine,
+            ImportRequest {
+                title,
+                input: source.as_bytes(),
+                format: InputFormat::Ly,
+                confirmation: None,
+                author: "test",
+            },
+            &RunContext::default(),
+        )
+        .unwrap()
+        .document
+        .unwrap()
+}
+
+#[test]
+fn imported_document_source_path_is_display_ready() {
+    let f = Fixture::new();
+    let document = import_document(&f, "path", "c'1");
+
+    assert_eq!(document.source_path, path_text(&document.source_path));
+    assert!(!document.source_path.contains(r"\\?\"));
+    assert!(std::path::Path::new(&document.source_path).is_file());
+}
+
+#[test]
+fn latest_explicit_check_wins_and_preview_cannot_authorize_commit() {
+    let f = Fixture::new();
+    let edit = f.begin();
+    let hash = f.write("changed c'1");
+    f.check(&edit, &hash);
+    let expectation = MusicExpectation {
+        note_count: Some(8),
+        tracks: vec![],
+    };
+    let old = f
+        .library
+        .queue_check(CheckRequest {
+            expect: None,
+            reference: None,
+            document_id: f.doc.document_id,
+            edit_id: Some(edit.edit_id),
+            expected_source_hash: &hash,
+            options: &CompileOptions::default(),
+        })
+        .unwrap();
+    let latest = f
+        .library
+        .queue_check(CheckRequest {
+            expect: Some(&expectation),
+            reference: None,
+            document_id: f.doc.document_id,
+            edit_id: Some(edit.edit_id),
+            expected_source_hash: &hash,
+            options: &CompileOptions::default(),
+        })
+        .unwrap();
+    assert!(f.commit(&edit, &hash).is_err());
+    f.library
+        .run_check(&f.engine, latest.job_id, &RunContext::default())
+        .unwrap();
+    f.library
+        .run_check(&f.engine, old.job_id, &RunContext::default())
+        .unwrap();
+    let result: CheckResult =
+        serde_json::from_value(f.library.get_job(latest.job_id).unwrap().result.unwrap()).unwrap();
+    assert_eq!(result.verification.status, VerificationStatus::Unavailable);
+    f.library
+        .check(
+            &f.engine,
+            CheckRequest {
+                expect: None,
+                reference: None,
+                document_id: f.doc.document_id,
+                edit_id: None,
+                expected_source_hash: &hash,
+                options: &CompileOptions::default(),
+            },
+            &RunContext::default(),
+        )
+        .unwrap();
+    assert!(f.commit(&edit, &hash).is_err());
+    f.check(&edit, &hash);
+    f.commit(&edit, &hash).unwrap();
+}
+
+#[test]
+fn source_writes_require_owned_edit_hash_and_recover_after_replacement() {
+    let f = Fixture::new();
+    let edit = f.begin();
+    let mut args = WriteSourceArgs {
+        edit_id: edit.edit_id,
+        expected_source_hash: f.doc.source_hash.clone(),
+        change: SourceWriteChange::Replace {
+            text: "new c'1".into(),
+        },
+        preview: true,
+    };
+    args.expected_source_hash = ContentHash::of(b"stale");
+    assert_eq!(
+        f.library.write_source(&args).unwrap_err().code,
+        ErrorCode::Conflict
+    );
+    args.expected_source_hash = f.doc.source_hash.clone();
+    let state = f.library.write_source(&args).unwrap();
+    let SourceWriteChange::Replace { text } = &args.change else {
+        unreachable!()
+    };
+    assert_eq!(state.source_hash, ContentHash::of(text.as_bytes()));
+    assert!(state.dirty);
+    args.expected_source_hash = state.source_hash;
+    args.change = SourceWriteChange::Replace {
+        text: "after crash c'1".into(),
+    };
+    f.hook("after-replace", |_| Err(storage_error("interrupted write")));
+    assert!(f.library.write_source(&args).is_err());
+    let home = f.library.home().to_owned();
+    drop(f.library);
+    let library = Library::open(&home).unwrap();
+    assert_eq!(
+        library.source_snapshot(f.doc.document_id).unwrap().source(),
+        "after crash c'1"
+    );
+    assert_eq!(library.history(f.doc.document_id).unwrap().len(), 1);
+}
+
+#[test]
+fn source_reads_page_by_lines_spans_and_utf8_boundaries() {
+    let source = "\u{feff}first\r\n第二行\nthird line\nfourth";
+    let f = Fixture::source(source);
+    let line = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: f.doc.document_id,
+            expected_source_hash: f.doc.source_hash.clone(),
+            start: Some(SourceReadStart::Line { line: 2 }),
+            max_lines: Some(1),
+            max_bytes: None,
+            include_line_spans: true,
+        })
+        .unwrap();
+    assert_eq!(line.content, "第二行\n");
+    assert!(!line.complete);
+    assert_eq!(line.next.unwrap().start.line, 3);
+    assert_eq!(line.span.start.line, 2);
+    assert_eq!(line.total_lines, 4);
+    assert_eq!(line.line_spans.len(), 1);
+    assert_eq!(
+        ossia_score::SourceMap::new(source)
+            .slice(line.line_spans[0])
+            .unwrap(),
+        "第二行\n"
+    );
+    assert_eq!(
+        f.library
+            .read_source(&ReadSourceArgs {
+                document_id: f.doc.document_id,
+                expected_source_hash: f.doc.source_hash.clone(),
+                start: Some(SourceReadStart::Line { line: 99 }),
+                max_lines: None,
+                max_bytes: None,
+                include_line_spans: false,
+            })
+            .unwrap_err()
+            .code,
+        ErrorCode::InvalidInput
+    );
+
+    let map = ossia_score::SourceMap::new(source);
+    let exact = map
+        .span(source.find("第二").unwrap(), source.find("行").unwrap())
+        .unwrap();
+    let span = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: f.doc.document_id,
+            expected_source_hash: f.doc.source_hash.clone(),
+            start: Some(SourceReadStart::Span { span: exact }),
+            max_lines: None,
+            max_bytes: None,
+            include_line_spans: false,
+        })
+        .unwrap();
+    assert_eq!(span.content, "第二");
+    assert_eq!(span.span, exact);
+    assert!(span.complete);
+    let mut invalid_span = exact;
+    invalid_span.start.line += 1;
+    assert_eq!(
+        f.library
+            .read_source(&ReadSourceArgs {
+                document_id: f.doc.document_id,
+                expected_source_hash: f.doc.source_hash.clone(),
+                start: Some(SourceReadStart::Span { span: invalid_span }),
+                max_lines: None,
+                max_bytes: None,
+                include_line_spans: false,
+            })
+            .unwrap_err()
+            .code,
+        ErrorCode::InvalidInput
+    );
+
+    let first = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: f.doc.document_id,
+            expected_source_hash: f.doc.source_hash.clone(),
+            start: None,
+            max_lines: None,
+            max_bytes: Some(6),
+            include_line_spans: true,
+        })
+        .unwrap();
+    assert_eq!(first.content, "\u{feff}fir");
+    assert!(!first.complete);
+    assert_eq!(first.line_spans.len(), 1);
+    assert_eq!(
+        ossia_score::SourceMap::new(source)
+            .slice(first.line_spans[0])
+            .unwrap(),
+        first.content
+    );
+    assert_eq!(first.next.unwrap().byte_start, first.span.byte_end);
+
+    let stale = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: f.doc.document_id,
+            expected_source_hash: ContentHash::of(b"stale"),
+            start: None,
+            max_lines: None,
+            max_bytes: None,
+            include_line_spans: false,
+        })
+        .unwrap_err();
+    assert_eq!(stale.code, ErrorCode::Conflict);
+
+    let unicode = import_document(&f, "unicode", "中");
+    let scalar = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: unicode.document_id,
+            expected_source_hash: unicode.source_hash.clone(),
+            start: None,
+            max_lines: None,
+            max_bytes: Some(1),
+            include_line_spans: false,
+        })
+        .unwrap();
+    assert_eq!(scalar.content, "中");
+    assert_eq!(scalar.returned_bytes, "中".len());
+    assert!(scalar.complete);
+
+    let empty = import_document(&f, "empty", "");
+    let empty_page = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: empty.document_id,
+            expected_source_hash: empty.source_hash.clone(),
+            start: None,
+            max_lines: None,
+            max_bytes: None,
+            include_line_spans: false,
+        })
+        .unwrap();
+    assert!(empty_page.content.is_empty());
+    assert!(empty_page.complete);
+    assert_eq!(empty_page.total_lines, 1);
+}
+
+#[test]
+fn source_reads_default_to_sixteen_kibibytes() {
+    let source = format!("{}\n", "c'4 ".repeat(50)).repeat(150);
+    let f = Fixture::source(&source);
+    let page = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: f.doc.document_id,
+            expected_source_hash: f.doc.source_hash.clone(),
+            start: None,
+            max_lines: None,
+            max_bytes: None,
+            include_line_spans: false,
+        })
+        .unwrap();
+    assert_eq!(page.returned_bytes, 16 * 1024);
+    assert!(!page.complete);
+    assert!(page.next.is_some());
+
+    let full = f
+        .library
+        .read_source(&ReadSourceArgs {
+            document_id: f.doc.document_id,
+            expected_source_hash: f.doc.source_hash.clone(),
+            start: None,
+            max_lines: None,
+            max_bytes: Some(256 * 1024),
+            include_line_spans: false,
+        })
+        .unwrap();
+    assert!(full.complete);
+    assert_eq!(full.content, source);
+}
+
+#[test]
+fn source_edits_are_validated_together_and_applied_in_one_replacement() {
+    let source = "alpha c4 omega\nsecond c4\n";
+    let f = Fixture::source(source);
+    let edit = f.begin();
+    f.check(&edit, &f.doc.source_hash);
+    let map = ossia_score::SourceMap::new(source);
+    let first = map.span(6, 8).unwrap();
+    let second = map
+        .span(source.rfind("c4").unwrap(), source.len() - 1)
+        .unwrap();
+    let args = WriteSourceArgs {
+        edit_id: edit.edit_id,
+        expected_source_hash: f.doc.source_hash.clone(),
+        change: SourceWriteChange::Edit {
+            edits: vec![
+                SourceEdit {
+                    span: second,
+                    expected_text: "c4".into(),
+                    replacement: "g'4".into(),
+                },
+                SourceEdit {
+                    span: first,
+                    expected_text: "c4".into(),
+                    replacement: "c'4".into(),
+                },
+            ],
+        },
+        preview: true,
+    };
+    let state = f.library.write_source(&args).unwrap();
+    assert_eq!(
+        f.commit(&edit, &state.source_hash).unwrap_err().code,
+        ErrorCode::CompileFailed
+    );
+    assert_eq!(
+        f.library
+            .source_snapshot(f.doc.document_id)
+            .unwrap()
+            .source(),
+        "alpha c'4 omega\nsecond g'4\n"
+    );
+    assert_eq!(
+        state.source_hash,
+        ContentHash::of(b"alpha c'4 omega\nsecond g'4\n")
+    );
+
+    let current = f.library.source_snapshot(f.doc.document_id).unwrap();
+    let current_map = ossia_score::SourceMap::new(current.source());
+    let overlap_first = current_map.span(0, 5).unwrap();
+    let overlap_second = current_map.span(3, 8).unwrap();
+    let mut invalid = args;
+    invalid.expected_source_hash = state.source_hash;
+    invalid.change = SourceWriteChange::Edit {
+        edits: vec![
+            SourceEdit {
+                span: overlap_first,
+                expected_text: "alpha".into(),
+                replacement: "ALPHA".into(),
+            },
+            SourceEdit {
+                span: overlap_second,
+                expected_text: current_map.slice(overlap_second).unwrap().into(),
+                replacement: "HERE".into(),
+            },
+        ],
+    };
+    assert_eq!(
+        f.library.write_source(&invalid).unwrap_err().code,
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        f.library
+            .source_snapshot(f.doc.document_id)
+            .unwrap()
+            .source(),
+        "alpha c'4 omega\nsecond g'4\n"
+    );
+}
+
+#[test]
+fn source_edits_support_insert_delete_and_reject_ambiguous_targets() {
+    let source = "remove\nkeep\n";
+    let f = Fixture::source(source);
+    let edit = f.begin();
+    let map = ossia_score::SourceMap::new(source);
+    let state = f
+        .library
+        .write_source(&WriteSourceArgs {
+            edit_id: edit.edit_id,
+            expected_source_hash: f.doc.source_hash.clone(),
+            change: SourceWriteChange::Edit {
+                edits: vec![
+                    SourceEdit {
+                        span: map.span(0, "remove\n".len()).unwrap(),
+                        expected_text: "remove\n".into(),
+                        replacement: String::new(),
+                    },
+                    SourceEdit {
+                        span: map.span(source.len(), source.len()).unwrap(),
+                        expected_text: String::new(),
+                        replacement: "inserted\n".into(),
+                    },
+                ],
+            },
+            preview: true,
+        })
+        .unwrap();
+    assert_eq!(
+        f.library
+            .source_snapshot(f.doc.document_id)
+            .unwrap()
+            .source(),
+        "keep\ninserted\n"
+    );
+
+    let current = f.library.source_snapshot(f.doc.document_id).unwrap();
+    let current_map = ossia_score::SourceMap::new(current.source());
+    let invalid = WriteSourceArgs {
+        edit_id: edit.edit_id,
+        expected_source_hash: state.source_hash,
+        change: SourceWriteChange::Edit {
+            edits: vec![
+                SourceEdit {
+                    span: current_map.span(0, 0).unwrap(),
+                    expected_text: String::new(),
+                    replacement: "a".into(),
+                },
+                SourceEdit {
+                    span: current_map.span(0, 0).unwrap(),
+                    expected_text: String::new(),
+                    replacement: "b".into(),
+                },
+            ],
+        },
+        preview: true,
+    };
+    assert_eq!(
+        f.library.write_source(&invalid).unwrap_err().code,
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        f.library
+            .source_snapshot(f.doc.document_id)
+            .unwrap()
+            .source(),
+        "keep\ninserted\n"
+    );
+}
+
+#[test]
+fn source_edits_reject_stale_text_excess_ranges_and_oversized_results() {
+    let source = "a";
+    let f = Fixture::source(source);
+    let edit = f.begin();
+    let span = ossia_score::SourceMap::new(source).span(0, 1).unwrap();
+    let mut args = WriteSourceArgs {
+        edit_id: edit.edit_id,
+        expected_source_hash: f.doc.source_hash.clone(),
+        change: SourceWriteChange::Edit {
+            edits: vec![SourceEdit {
+                span,
+                expected_text: "stale".into(),
+                replacement: "b".into(),
+            }],
+        },
+        preview: true,
+    };
+    assert_eq!(
+        f.library.write_source(&args).unwrap_err().code,
+        ErrorCode::Conflict
+    );
+    assert_eq!(
+        f.library
+            .source_snapshot(f.doc.document_id)
+            .unwrap()
+            .source(),
+        source
+    );
+
+    args.change = SourceWriteChange::Edit {
+        edits: (0..65)
+            .map(|_| SourceEdit {
+                span,
+                expected_text: source.into(),
+                replacement: String::new(),
+            })
+            .collect(),
+    };
+    assert_eq!(
+        f.library.write_source(&args).unwrap_err().code,
+        ErrorCode::InvalidInput
+    );
+
+    args.change = SourceWriteChange::Edit {
+        edits: vec![SourceEdit {
+            span: ossia_score::SourceMap::new(source).span(0, 0).unwrap(),
+            expected_text: String::new(),
+            replacement: "x".repeat(1024 * 1024 + 1),
+        }],
+    };
+    assert_eq!(
+        f.library.write_source(&args).unwrap_err().code,
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        f.library
+            .source_snapshot(f.doc.document_id)
+            .unwrap()
+            .source(),
+        source
+    );
+}

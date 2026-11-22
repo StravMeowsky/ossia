@@ -1,0 +1,2050 @@
+[
+  {
+    "name": "ossia_guide",
+    "description": "Return the absolute path, byte size and line count of the local guide index. Read the index and task-relevant linked documents with the host file-read tool.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "title": "EmptyArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_status",
+    "description": "Inspect backend, engine, library, documentation, active jobs and the desktop updater's last check. update is null when unknown; checkedAt is Unix seconds and stale marks an outdated result. Returns AgentStatus.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "title": "EmptyArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_list",
+    "description": "List compact documents with limit/offset. Returns DocumentPage; does not load render or check history.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Bounded document listing for Agent transports.",
+      "properties": {
+        "limit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "default": 0,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "title": "ListArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_update_metadata",
+    "description": "Update one active score's library metadata. Currently supports title only. Trims surrounding whitespace, rejects blank, control-character and over-200-character titles, and does not modify source, rendered output or version history. Returns DocumentSummary.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Replace one active score's library title.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "documentId",
+        "title"
+      ],
+      "title": "UpdateMetadataArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_convert",
+    "description": "Run conversion for one absolute-path local file without creating a document, version or job. The file must be at most 128 MiB; format is inferred from the extension when omitted. Supported: LilyPond .ly (UTF-8), MusicXML .musicxml/.xml, compressed MusicXML .mxl, MIDI .mid/.midi, PDF .pdf, PNG .png, JPEG .jpg/.jpeg and TIFF .tif/.tiff. LilyPond, MusicXML, MXL and MIDI convert locally; MXL must contain one container rootfile. PDF and images require the configured remote OMR service, allow up to 30 minutes and must return one MusicXML movement. By default the candidate is also compiled as interactive SVG; a render failure is returned as status=refused with the blocking reason. Set verifyRender=false to skip that check. Returns a compact ImportReport; set includeSource=true to include the converted candidate source, including refused candidates. omrSource remains the retained MusicXML path.",
+    "inputSchema": {
+      "$defs": {
+        "InputFormat": {
+          "enum": [
+            "ly",
+            "music-xml",
+            "mxl",
+            "midi",
+            "pdf",
+            "png",
+            "jpeg",
+            "tiff"
+          ],
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Inspect one local input through the native converter without publishing it.",
+      "properties": {
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "includeSource": {
+          "default": false,
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "verifyRender": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ConvertArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_import",
+    "description": "Queue one absolute-path local file of at most 128 MiB. Supported: LilyPond .ly (UTF-8), MusicXML .musicxml/.xml, compressed MusicXML .mxl, MIDI .mid/.midi, PDF .pdf, PNG .png, JPEG .jpg/.jpeg and TIFF .tif/.tiff. LilyPond, MusicXML, MXL and MIDI convert locally; MXL must contain one container rootfile. PDF and images require the configured remote OMR service, allow up to 30 minutes and must return one MusicXML movement. format/title/author are inferred or defaulted. Optional expect or reference (mutually exclusive) rejects the import before publishing. Returns a bounded Job summary; pass waitMs (up to 30 seconds) or poll ossia_job for long OMR work.",
+    "inputSchema": {
+      "$defs": {
+        "ComparisonMode": {
+          "description": "Which performed-note fields participate in reference equality.",
+          "oneOf": [
+            {
+              "const": "performance",
+              "description": "Pitch, start and duration; track order and channel are ignored.",
+              "type": "string"
+            },
+            {
+              "const": "tracks",
+              "description": "Performance fields plus track and channel.",
+              "type": "string"
+            }
+          ]
+        },
+        "ContentHash": {
+          "type": "string"
+        },
+        "EvidenceSource": {
+          "description": "Immutable source addressed by an evidence or comparison request.",
+          "oneOf": [
+            {
+              "properties": {
+                "jobId": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "job",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "jobId"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "version",
+                  "type": "string"
+                },
+                "versionId": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "versionId"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "ExpectedNote": {
+          "additionalProperties": false,
+          "description": "Expected MIDI pitch and exact quarter-note timing.",
+          "properties": {
+            "duration": {
+              "$ref": "#/$defs/QuarterTime"
+            },
+            "pitch": {
+              "format": "uint8",
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "start": {
+              "$ref": "#/$defs/QuarterTime"
+            }
+          },
+          "required": [
+            "pitch",
+            "start",
+            "duration"
+          ],
+          "type": "object"
+        },
+        "InputFormat": {
+          "enum": [
+            "ly",
+            "music-xml",
+            "mxl",
+            "midi",
+            "pdf",
+            "png",
+            "jpeg",
+            "tiff"
+          ],
+          "type": "string"
+        },
+        "MusicExpectation": {
+          "additionalProperties": false,
+          "description": "Only explicitly supplied conditions are checked.",
+          "properties": {
+            "noteCount": {
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tracks": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/TrackExpectation"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "QuarterTime": {
+          "additionalProperties": false,
+          "description": "Exact nonnegative time measured in quarter notes. Denominator must be nonzero.",
+          "properties": {
+            "denominator": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "numerator": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "type": "object"
+        },
+        "ReferenceExpectation": {
+          "additionalProperties": false,
+          "description": "Reference performance used to verify a checked score.",
+          "properties": {
+            "comparison": {
+              "$ref": "#/$defs/ComparisonMode",
+              "default": "performance"
+            },
+            "source": {
+              "$ref": "#/$defs/EvidenceSource"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "type": "object"
+        },
+        "TrackExpectation": {
+          "additionalProperties": false,
+          "description": "An exact ordered sequence in one MIDI track/channel; simultaneous pitches sort ascending.",
+          "properties": {
+            "channel": {
+              "format": "uint8",
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "notes": {
+              "items": {
+                "$ref": "#/$defs/ExpectedNote"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "pitches": {
+              "items": {
+                "format": "uint8",
+                "maximum": 255,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "track": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "track",
+            "channel"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confirmation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContentHash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MusicExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReferenceExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "waitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ImportArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_context",
+    "description": "Read this document's stable browser URL, compact selection, source spans, edit state and check summary.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Identify one document for a context read.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "title": "ContextArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_edit",
+    "description": "Begin, resume, end or discard an owned edit; recovery actions are advanced. Returns EditSession or null. Keep editId private.",
+    "inputSchema": {
+      "$defs": {
+        "ContentHash": {
+          "type": "string"
+        },
+        "EditAction": {
+          "enum": [
+            "begin",
+            "resume",
+            "end",
+            "discard",
+            "resolve-recovery-conflict"
+          ],
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/EditAction"
+        },
+        "adoptWorkspace": {
+          "default": false,
+          "type": "boolean"
+        },
+        "author": {
+          "default": "Ossia",
+          "type": "string"
+        },
+        "baseVersionId": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "editId": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        }
+      },
+      "required": [
+        "action",
+        "documentId",
+        "expectedSourceHash"
+      ],
+      "title": "EditArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_write_source",
+    "description": "Atomically replace or batch-edit the active owned source and return the computed hash. The document is derived from editId. Set preview=false when an explicit check follows.",
+    "inputSchema": {
+      "$defs": {
+        "ContentHash": {
+          "type": "string"
+        },
+        "SourceEdit": {
+          "additionalProperties": false,
+          "description": "One exact original-text replacement. Empty text inserts or deletes.",
+          "properties": {
+            "expectedText": {
+              "type": "string"
+            },
+            "replacement": {
+              "type": "string"
+            },
+            "span": {
+              "$ref": "#/$defs/SourceSpan"
+            }
+          },
+          "required": [
+            "span",
+            "expectedText",
+            "replacement"
+          ],
+          "type": "object"
+        },
+        "SourcePosition": {
+          "properties": {
+            "byte": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "column": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "line": {
+              "description": "One-based line and Unicode scalar column, including a retained BOM or CR.",
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "byte",
+            "line",
+            "column"
+          ],
+          "type": "object"
+        },
+        "SourceSpan": {
+          "properties": {
+            "byteEnd": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "byteStart": {
+              "description": "Half-open byte range. Consumers must validate it against the same source snapshot.",
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "end": {
+              "$ref": "#/$defs/SourcePosition"
+            },
+            "start": {
+              "$ref": "#/$defs/SourcePosition"
+            }
+          },
+          "required": [
+            "byteStart",
+            "byteEnd",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        "SourceWriteChange": {
+          "description": "Whole-source replacement or one atomic batch of non-overlapping edits.",
+          "oneOf": [
+            {
+              "properties": {
+                "kind": {
+                  "const": "replace",
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "text"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "edits": {
+                  "items": {
+                    "$ref": "#/$defs/SourceEdit"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "const": "edit",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "edits"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Apply one atomic source change to the active owned edit.",
+      "properties": {
+        "change": {
+          "$ref": "#/$defs/SourceWriteChange"
+        },
+        "editId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        },
+        "preview": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "editId",
+        "expectedSourceHash",
+        "change"
+      ],
+      "title": "WriteSourceArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_read_source",
+    "description": "Read a bounded UTF-8-safe source page at an exact source hash. Set includeLineSpans to return exact editable line spans. Returns ReadSourceOutcome with the next span.",
+    "inputSchema": {
+      "$defs": {
+        "ContentHash": {
+          "type": "string"
+        },
+        "SourcePosition": {
+          "properties": {
+            "byte": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "column": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "line": {
+              "description": "One-based line and Unicode scalar column, including a retained BOM or CR.",
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "byte",
+            "line",
+            "column"
+          ],
+          "type": "object"
+        },
+        "SourceReadStart": {
+          "description": "Start of a bounded source read. Line numbers are one-based.",
+          "oneOf": [
+            {
+              "properties": {
+                "kind": {
+                  "const": "start",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "line",
+                  "type": "string"
+                },
+                "line": {
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "line"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "span",
+                  "type": "string"
+                },
+                "span": {
+                  "$ref": "#/$defs/SourceSpan"
+                }
+              },
+              "required": [
+                "kind",
+                "span"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "SourceSpan": {
+          "properties": {
+            "byteEnd": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "byteStart": {
+              "description": "Half-open byte range. Consumers must validate it against the same source snapshot.",
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "end": {
+              "$ref": "#/$defs/SourcePosition"
+            },
+            "start": {
+              "$ref": "#/$defs/SourcePosition"
+            }
+          },
+          "required": [
+            "byteStart",
+            "byteEnd",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Read a bounded portion of the public source at one exact hash.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        },
+        "includeLineSpans": {
+          "default": false,
+          "type": "boolean"
+        },
+        "maxBytes": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "maxLines": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceReadStart"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedSourceHash"
+      ],
+      "title": "ReadSourceArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_layout",
+    "description": "Inspect page, system, staff and reliable measure structure from a completed import or check job. Returns LayoutOutcome.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "jobId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ],
+      "title": "LayoutArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_evidence",
+    "description": "Read bounded source/performance music evidence from an immutable version or completed job. Optional measureRange, voice, track and channel filters. The returned job contains only status metadata; music is in page. Returns EvidenceOutcome.",
+    "inputSchema": {
+      "$defs": {
+        "EvidenceSection": {
+          "description": "Evidence page to return, or a summary without any event arrays.",
+          "enum": [
+            "summary",
+            "performance",
+            "source"
+          ],
+          "type": "string"
+        },
+        "EvidenceSource": {
+          "description": "Immutable source addressed by an evidence or comparison request.",
+          "oneOf": [
+            {
+              "properties": {
+                "jobId": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "job",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "jobId"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "version",
+                  "type": "string"
+                },
+                "versionId": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "versionId"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "MeasureRange": {
+          "additionalProperties": false,
+          "description": "Inclusive one-based source or performance measure range.",
+          "properties": {
+            "end": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "start": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Read bounded evidence from an immutable version or completed job snapshot.",
+      "properties": {
+        "channel": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "limit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "measureRange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MeasureRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "offset": {
+          "default": 0,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "section": {
+          "$ref": "#/$defs/EvidenceSection",
+          "default": "summary"
+        },
+        "source": {
+          "$ref": "#/$defs/EvidenceSource"
+        },
+        "track": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "voice": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "waitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "EvidenceArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_docs",
+    "description": "Search or read the bundled offline LilyPond documentation. Search takes query, limit and matchMode=all|any; read takes chapterId/offset/limit. Zero-hit searches include querySuggestions. Returns DocsOutcome.",
+    "inputSchema": {
+      "$defs": {
+        "DocsMatchMode": {
+          "description": "How multiple search terms combine in the offline documentation index.",
+          "enum": [
+            "all",
+            "any"
+          ],
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "description": "Search keywords or read one stable chapter ID with character-based pagination.",
+      "oneOf": [
+        {
+          "properties": {
+            "action": {
+              "const": "search",
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "matchMode": {
+              "$ref": "#/$defs/DocsMatchMode",
+              "default": "all"
+            },
+            "query": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "query"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "read",
+              "type": "string"
+            },
+            "chapterId": {
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "offset": {
+              "default": 0,
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "action",
+            "chapterId"
+          ],
+          "type": "object"
+        }
+      ],
+      "title": "DocsRequest",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_job",
+    "description": "Get or cancel a durable job. Optionally wait with waitMs; section pages performance, source or differences evidence with the same measure filters. Default results summarize render and output files; detail=full returns the full persisted job. Returns JobOutcome.",
+    "inputSchema": {
+      "$defs": {
+        "AnalysisSection": {
+          "description": "Which immutable evidence to page through.",
+          "enum": [
+            "performance",
+            "source",
+            "differences"
+          ],
+          "type": "string"
+        },
+        "DetailLevel": {
+          "description": "Agent responses are compact unless the caller explicitly requests full evidence.",
+          "enum": [
+            "summary",
+            "full"
+          ],
+          "type": "string"
+        },
+        "JobAction": {
+          "enum": [
+            "get",
+            "cancel"
+          ],
+          "type": "string"
+        },
+        "MeasureRange": {
+          "additionalProperties": false,
+          "description": "Inclusive one-based source or performance measure range.",
+          "properties": {
+            "end": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "start": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/JobAction"
+        },
+        "channel": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "detail": {
+          "$ref": "#/$defs/DetailLevel",
+          "default": "summary"
+        },
+        "jobId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "limit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "measureRange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MeasureRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "offset": {
+          "default": 0,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "section": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnalysisSection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "track": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "voice": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "waitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "jobId",
+        "action"
+      ],
+      "title": "JobArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_check",
+    "description": "Queue a check of exact expectedSourceHash; documentId is derived from editId when supplied. Optional expect or reference (mutually exclusive); reference compares performed notes from immutable evidence. Returns a bounded Job summary.",
+    "inputSchema": {
+      "$defs": {
+        "ComparisonMode": {
+          "description": "Which performed-note fields participate in reference equality.",
+          "oneOf": [
+            {
+              "const": "performance",
+              "description": "Pitch, start and duration; track order and channel are ignored.",
+              "type": "string"
+            },
+            {
+              "const": "tracks",
+              "description": "Performance fields plus track and channel.",
+              "type": "string"
+            }
+          ]
+        },
+        "ContentHash": {
+          "type": "string"
+        },
+        "EvidenceSource": {
+          "description": "Immutable source addressed by an evidence or comparison request.",
+          "oneOf": [
+            {
+              "properties": {
+                "jobId": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "job",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "jobId"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "version",
+                  "type": "string"
+                },
+                "versionId": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "versionId"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "ExpectedNote": {
+          "additionalProperties": false,
+          "description": "Expected MIDI pitch and exact quarter-note timing.",
+          "properties": {
+            "duration": {
+              "$ref": "#/$defs/QuarterTime"
+            },
+            "pitch": {
+              "format": "uint8",
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "start": {
+              "$ref": "#/$defs/QuarterTime"
+            }
+          },
+          "required": [
+            "pitch",
+            "start",
+            "duration"
+          ],
+          "type": "object"
+        },
+        "MusicExpectation": {
+          "additionalProperties": false,
+          "description": "Only explicitly supplied conditions are checked.",
+          "properties": {
+            "noteCount": {
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tracks": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/TrackExpectation"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "QuarterTime": {
+          "additionalProperties": false,
+          "description": "Exact nonnegative time measured in quarter notes. Denominator must be nonzero.",
+          "properties": {
+            "denominator": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "numerator": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "type": "object"
+        },
+        "ReferenceExpectation": {
+          "additionalProperties": false,
+          "description": "Reference performance used to verify a checked score.",
+          "properties": {
+            "comparison": {
+              "$ref": "#/$defs/ComparisonMode",
+              "default": "performance"
+            },
+            "source": {
+              "$ref": "#/$defs/EvidenceSource"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "type": "object"
+        },
+        "TrackExpectation": {
+          "additionalProperties": false,
+          "description": "An exact ordered sequence in one MIDI track/channel; simultaneous pitches sort ascending.",
+          "properties": {
+            "channel": {
+              "format": "uint8",
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "notes": {
+              "items": {
+                "$ref": "#/$defs/ExpectedNote"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "pitches": {
+              "items": {
+                "format": "uint8",
+                "maximum": 255,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "track": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "track",
+            "channel"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "editId": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MusicExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReferenceExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "waitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "expectedSourceHash"
+      ],
+      "title": "CheckArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_commit",
+    "description": "Commit the exact checked source through editId. Creates a Version; base version is derived from the edit.",
+    "inputSchema": {
+      "$defs": {
+        "ContentHash": {
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "editId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "editId",
+        "expectedSourceHash",
+        "summary"
+      ],
+      "title": "CommitArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_history",
+    "description": "Page through distinct version nodes. Returns VersionPage with limit/offset.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "limit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "default": 0,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "title": "HistoryArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_delete",
+    "description": "Move a score into the recoverable trash. Rejects active work unless force=true, which cancels tasks and ends edits after they stop while retaining the current source.",
+    "inputSchema": {
+      "$defs": {
+        "ContentHash": {
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Move one active score into the recoverable trash.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        },
+        "force": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedSourceHash"
+      ],
+      "title": "DeleteArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_trash",
+    "description": "Page through recoverable scores with deletedAt, retained source hash and head version.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Bounded pagination over the recoverable trash.",
+      "properties": {
+        "limit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "default": 0,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "title": "TrashArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_untrash",
+    "description": "Restore a trashed score with its original document ID, source and version history.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Select one trashed or active document.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "title": "DocumentIdArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_purge",
+    "description": "Permanently delete one score from the trash, including its source, versions, jobs and derived evidence. External imported and exported files are unaffected.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Select one trashed or active document.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "title": "DocumentIdArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_restore",
+    "description": "Queue restoration of versionId as a new version. baseVersionId is the current head and expectedSourceHash is the current workspace hash. Requires a clean workspace and no active edit; returns a Job.",
+    "inputSchema": {
+      "$defs": {
+        "ContentHash": {
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "baseVersionId": {
+          "description": "Current document head.",
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedSourceHash": {
+          "$ref": "#/$defs/ContentHash"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "versionId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "waitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "versionId",
+        "baseVersionId",
+        "expectedSourceHash",
+        "summary"
+      ],
+      "title": "RestoreArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_output",
+    "description": "Write SVG, PNG, MIDI, PDF, WAV or LilyPond output from a completed job snapshot or immutable version. WAV is a 44.1 kHz stereo PCM render of the score playback mix. MIDI and WAV accept audioRange {start,end} for inclusive one-based measures. Set includeDrawing to include the document's current freehand drawing in PDF, PNG or SVG; the job captures it at submission. For SVG/PNG, pages chooses which pages to write; one page may use outputPath, while multiple pages return OutputBatchOutcome. Crop writes one SVG/PNG per affected page; a one-item pages list filters it. Omitted outputPath or outputDirectory writes to the system temporary directory; set them for files to keep. Never overwrites.",
+    "inputSchema": {
+      "$defs": {
+        "MeasureRange": {
+          "additionalProperties": false,
+          "description": "Inclusive one-based source or performance measure range.",
+          "properties": {
+            "end": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "start": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        "OutputCrop": {
+          "description": "A visual region selected from an immutable rendered score.",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "measures",
+                  "type": "string"
+                },
+                "range": {
+                  "$ref": "#/$defs/MeasureRange"
+                },
+                "staff": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "range"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "system",
+                  "type": "string"
+                },
+                "page": {
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "staff": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "systemIndex": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "page",
+                "systemIndex"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "OutputFormat": {
+          "description": "Output file format for a job or version snapshot.",
+          "enum": [
+            "ly",
+            "svg",
+            "png",
+            "pdf",
+            "midi",
+            "wav"
+          ],
+          "type": "string"
+        },
+        "OutputSource": {
+          "description": "Immutable snapshot source for a generated output file.",
+          "oneOf": [
+            {
+              "properties": {
+                "jobId": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "job",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "jobId"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "version",
+                  "type": "string"
+                },
+                "versionId": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "versionId"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Write one output file or a page batch from a completed job snapshot or an immutable version.\nPDF may use an open password; PNG may use lossy quality and transparency options.\nMIDI and WAV may select an inclusive one-based measure range; WAV contains the playback mix.",
+      "properties": {
+        "audioRange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MeasureRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Inclusive measures for MIDI/WAV snippets; None exports the complete snapshot."
+        },
+        "crop": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputCrop"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "format": {
+          "$ref": "#/$defs/OutputFormat"
+        },
+        "includeDrawing": {
+          "description": "Include the document's current freehand drawing in visual output.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "outputDirectory": {
+          "description": "Absolute parent directory for a multi-page or crop batch. Omit to use the system temporary directory.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outputPath": {
+          "description": "Absolute file path. Omit to write a transient file in the system temporary directory.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paddingStaffSpaces": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pages": {
+          "description": "One-based SVG/PNG pages; None defaults to `[1]`.",
+          "items": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "pdfPassword": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pngQuality": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pngTransparent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/OutputSource"
+        },
+        "waitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "width": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "format"
+      ],
+      "title": "OutputArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  }
+]

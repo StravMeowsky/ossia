@@ -1,0 +1,28 @@
+use super::*;
+
+#[test]
+fn explicit_and_known_candidate_paths_are_both_accepted() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("ossia-probe-agent");
+    std::fs::write(&path, b"#!/bin/sh\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    assert_eq!(
+        find("ossia-probe-agent", Some(&path), []),
+        Some(path.clone())
+    );
+    assert_eq!(find("ossia-probe-agent", None, [path.clone()]), Some(path));
+}
+
+#[cfg(windows)]
+#[test]
+fn install_roots_include_the_real_user_local_app_data() {
+    let home = dirs::home_dir().unwrap();
+
+    assert!(program_files("DeepSeek Harness")
+        .contains(&home.join("AppData/Local/Programs/DeepSeek Harness")));
+}
