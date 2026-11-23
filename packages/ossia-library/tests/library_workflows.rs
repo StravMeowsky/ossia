@@ -61,6 +61,8 @@ impl EngineBackend for TestEngine {
             input_hash: ContentHash::of(input),
             engine_build_id: self.build_id().into(),
             omr_source: None,
+            lilypond_version: None,
+            playback_error: None,
             source_hash: source
                 .as_ref()
                 .map(|s: &String| ContentHash::of(s.as_bytes())),
@@ -110,12 +112,27 @@ impl EngineBackend for TestEngine {
                 error: AppError::new(ErrorCode::CompileFailed, "syntax error"),
             });
         }
-        if options.formats.contains(&RenderFormat::Midi) {
+        let midi = if options.formats.contains(&RenderFormat::Midi)
+            && snapshot.source().contains("NO_MIDI")
+        {
             errors.push(FormatError {
                 format: RenderFormat::Midi,
                 error: AppError::unsupported("MIDI unavailable"),
             });
-        }
+            None
+        } else if options.formats.contains(&RenderFormat::Midi) {
+            let bytes = b"MThd\0\0\0\x06\0\0\0\x01\0\x60MTrk\0\0\0\x0c\0\x90\x3c\x40\x60\x80\x3c\x40\0\xff\x2f\0";
+            let hash = ContentHash::of(bytes);
+            let path = format!("assets/{hash}.midi");
+            std::fs::write(artifact_root.join(&path), bytes).unwrap();
+            Some(ArtifactRef {
+                path,
+                sha256: hash,
+                bytes: bytes.len() as u64,
+            })
+        } else {
+            None
+        };
         Ok(RenderManifest {
             source_hash: snapshot.source_hash().clone(),
             engine_build_id: self.build_id().into(),
@@ -137,7 +154,7 @@ impl EngineBackend for TestEngine {
                 }]
             },
             pdf: None,
-            midi: None,
+            midi,
             diagnostics: if broken {
                 vec![Diagnostic {
                     severity: Severity::Error,
@@ -266,7 +283,7 @@ fn import_expectation_failure_does_not_publish_a_document() {
     let library = Library::open(root.path()).unwrap();
     let engine = TestEngine::default();
     let expect = MusicExpectation {
-        note_count: Some(1),
+        note_count: Some(2),
         tracks: vec![],
     };
     let error = library
@@ -286,7 +303,7 @@ fn import_expectation_failure_does_not_publish_a_document() {
     assert_eq!(error.code, ErrorCode::InvalidInput);
     assert_eq!(
         error.detail.as_ref().unwrap()["verification"]["status"],
-        "unavailable"
+        "failed"
     );
     assert_eq!(library.document_count().unwrap(), 0);
 
@@ -395,6 +412,44 @@ fn three_import_formats_preserve_original_bytes_and_utf8_source() {
 }
 
 #[test]
+fn playback_failure_requires_a_confirmation_bound_to_the_input() {
+    let root = tempfile::tempdir().unwrap();
+    let library = Library::open(root.path()).unwrap();
+    let engine = TestEngine::default();
+    let import = |input: &[u8], confirmation: Option<&ContentHash>| {
+        library.import(
+            &engine,
+            ImportRequest {
+                title: "view only",
+                input,
+                format: InputFormat::Ly,
+                confirmation,
+                author: "test",
+            },
+            &RunContext::default(),
+        )
+    };
+    let candidate = import(b"NO_MIDI", None).unwrap();
+    assert_eq!(candidate.report.status, ImportStatus::NeedsConfirmation);
+    assert!(candidate.document.is_none());
+    assert_eq!(
+        candidate.report.playback_error.as_ref().unwrap().message,
+        "MIDI unavailable"
+    );
+    assert_eq!(library.document_count().unwrap(), 0);
+    let token = candidate.report.confirmation.unwrap();
+    assert_eq!(
+        import(b"NO_MIDI changed", Some(&token)).unwrap_err().code,
+        ErrorCode::Conflict
+    );
+    assert_eq!(library.document_count().unwrap(), 0);
+    let accepted = import(b"NO_MIDI", Some(&token)).unwrap();
+    assert!(accepted.report.confirmed);
+    assert!(accepted.document.is_some());
+    assert_eq!(library.document_count().unwrap(), 1);
+}
+
+#[test]
 fn loss_confirmation_and_refusal_never_publish_unconfirmed_documents() {
     let root = tempfile::tempdir().unwrap();
     let library = Library::open(root.path()).unwrap();
@@ -471,71 +526,22 @@ fn loss_confirmation_and_refusal_never_publish_unconfirmed_documents() {
 }
 
 #[test]
-fn invalid_handwritten_import_survives_restart_and_first_fix_is_import_version() {
-    let f = Fixture::source("BROKEN");
-    let home = f.library.home().to_owned();
-    let id = f.doc.document_id;
-    assert!(f.doc.head_version_id.is_none());
-    assert!(f.doc.dirty);
-    assert_eq!(f.doc.last_check.as_ref().unwrap().state, JobState::Error);
-    let edit = f.begin();
-    assert_eq!(
-        f.library
-            .discard(id, Some(edit.edit_id), None, &f.doc.source_hash)
-            .unwrap_err()
-            .code,
-        ErrorCode::DirtyWorkspace
+fn invalid_handwritten_import_is_not_published() {
+    let root = tempfile::tempdir().unwrap();
+    let library = Library::open(root.path()).unwrap();
+    let result = library.import(
+        &TestEngine::default(),
+        ImportRequest {
+            title: "broken",
+            input: b"BROKEN",
+            format: InputFormat::Ly,
+            confirmation: None,
+            author: "test",
+        },
+        &RunContext::default(),
     );
-    f.library.end_edit(edit.edit_id).unwrap();
-    drop(f.library);
-    let library = Library::open(&home).unwrap();
-    assert!(library
-        .get_document(id)
-        .unwrap()
-        .last_check
-        .unwrap()
-        .result
-        .unwrap()
-        .to_string()
-        .contains("syntax error"));
-    let state = library.get_document(id).unwrap();
-    let edit = library
-        .begin_edit(BeginEditRequest {
-            document_id: id,
-            base_version_id: None,
-            expected_source_hash: &state.source_hash,
-            author: "fixer",
-            adopt_workspace: false,
-        })
-        .unwrap();
-    fs::write(&state.source_path, "fixed").unwrap();
-    let hash = ContentHash::of(b"fixed");
-    library
-        .check(
-            &f.engine,
-            CheckRequest {
-                expect: None,
-                reference: None,
-                document_id: id,
-                edit_id: Some(edit.edit_id),
-                expected_source_hash: &hash,
-                options: &CompileOptions::default(),
-            },
-            &RunContext::default(),
-        )
-        .unwrap();
-    let version = library
-        .commit(CommitRequest {
-            edit_id: edit.edit_id,
-            base_version_id: None,
-            expected_source_hash: &hash,
-            summary: "fix",
-        })
-        .unwrap();
-    assert_eq!(
-        (version.seq, version.origin, version.parent_version_id),
-        (1, VersionOrigin::Import, None)
-    );
+    assert_eq!(result.unwrap_err().code, ErrorCode::CompileFailed);
+    assert_eq!(library.document_count().unwrap(), 0);
 }
 
 #[test]
@@ -668,7 +674,7 @@ fn failed_svg_and_partial_formats_have_independent_commit_gates() {
         f.commit(&edit, &hash).unwrap_err().code,
         ErrorCode::CompileFailed
     );
-    let hash = f.write("valid opaque Scheme");
+    let hash = f.write("valid NO_MIDI opaque Scheme");
     let options = CompileOptions {
         formats: vec![RenderFormat::Svg, RenderFormat::Midi],
         point_and_click: true,

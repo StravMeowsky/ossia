@@ -28,7 +28,7 @@ async fn version_evidence_is_immutable_cached_and_does_not_create_versions() {
         })
         .unwrap();
     let page = outcome.page.unwrap();
-    assert!(outcome.job.is_some());
+    assert!(outcome.job.is_none());
     assert_eq!(page.source_hash, f.doc.source_hash);
     assert_eq!(page.offset, 0);
     assert_eq!(page.items.len(), 1);

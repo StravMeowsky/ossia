@@ -4,6 +4,33 @@ use common::Fixture;
 use ossia_backend::*;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn migration_uses_the_engine_and_keeps_the_original_unpublished() {
+    let f = Fixture::new(false).await;
+    let args = ConvertArgs {
+        path: "old.ly".into(),
+        format: Some(InputFormat::Ly),
+        verify_render: false,
+        include_source: true,
+        migrate_lilypond: true,
+    };
+    let report = f.runtime.convert(args, b"old source".to_vec()).unwrap();
+    assert_eq!(report.input_hash, ContentHash::of(b"old source"));
+    assert!(report.source.unwrap().contains("2.26.0"));
+    assert_eq!(f.runtime.library.document_count().unwrap(), 1);
+    let args = ConvertArgs {
+        path: "input.mid".into(),
+        format: Some(InputFormat::Midi),
+        verify_render: false,
+        include_source: true,
+        migrate_lilypond: true,
+    };
+    assert_eq!(
+        f.runtime.convert(args, vec![]).unwrap_err().code,
+        ErrorCode::InvalidRequest
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn convert_render_preflight_keeps_the_candidate_source() {
     let f = Fixture::new(false).await;
     let args = ConvertArgs {
@@ -11,6 +38,7 @@ async fn convert_render_preflight_keeps_the_candidate_source() {
         format: Some(InputFormat::Ly),
         verify_render: true,
         include_source: true,
+        migrate_lilypond: false,
     };
     let report = f.runtime.convert(args, b"BROKEN".to_vec()).unwrap();
     assert_eq!(report.status, ImportStatus::Refused);
@@ -28,6 +56,7 @@ async fn convert_render_preflight_keeps_the_candidate_source() {
                 format: Some(InputFormat::Ly),
                 verify_render: false,
                 include_source: true,
+                migrate_lilypond: false,
             },
             b"BROKEN".to_vec(),
         )
@@ -47,6 +76,7 @@ async fn convert_omits_source_unless_requested() {
                 format: Some(InputFormat::Ly),
                 verify_render: false,
                 include_source: false,
+                migrate_lilypond: false,
             },
             b"BROKEN".to_vec(),
         )

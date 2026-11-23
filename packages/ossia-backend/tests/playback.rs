@@ -48,6 +48,8 @@ impl EngineBackend for FixtureEngine {
             input_hash: ContentHash::of(input),
             engine_build_id: self.build_id().into(),
             omr_source: None,
+            lilypond_version: None,
+            playback_error: None,
             source_hash: Some(ContentHash::of(input)),
             source: Some(source),
             confirmation: None,
@@ -386,7 +388,22 @@ fn svg_only_render_generates_midi_when_playback_is_requested() {
             &RunContext::default(),
         )
         .unwrap();
-    let document = imported.document.unwrap();
+    let token = imported.report.confirmation.unwrap();
+    let document = library
+        .import(
+            engine.as_ref(),
+            ImportRequest {
+                title: "playback-on-demand",
+                input: &source,
+                format: InputFormat::Ly,
+                confirmation: Some(&token),
+                author: "test",
+            },
+            &RunContext::default(),
+        )
+        .unwrap()
+        .document
+        .unwrap();
     let runtime = Runtime::new(library, engine.clone(), "http://127.0.0.1:3211".into());
     let context = runtime.context(document.document_id).unwrap();
     let render = context.render.unwrap();

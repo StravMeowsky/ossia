@@ -172,7 +172,8 @@ async fn analysis_pages_are_bounded_and_legacy_evidence_is_explicit() {
             None,
         ))
         .unwrap();
-    assert!(page.items.is_empty());
+    assert_eq!(page.items.len(), 1);
+    assert!(page.total >= 1);
     let filtered = f
         .runtime
         .analysis(&args(
@@ -427,6 +428,42 @@ async fn import_infers_path_metadata_and_can_wait_for_completion() {
     assert_eq!(document.title, "Inferred scale");
     let versions = f.runtime.library.history(document.document_id).unwrap();
     assert_eq!(versions[0].author, DEFAULT_AUTHOR);
+    f.finish().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn convert_and_import_share_the_playback_confirmation() {
+    let f = Fixture::new(true).await;
+    f.engine
+        .midi
+        .store(false, std::sync::atomic::Ordering::Release);
+    let path = f.root.path().join("unplayable.ly");
+    fs::write(&path, SOURCE).unwrap();
+    let report: ImportReport = serde_json::from_value(
+        ipc::dispatch(
+            &f.runtime,
+            "convert",
+            json!({"path": path.to_string_lossy()}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(report.status, ImportStatus::NeedsConfirmation);
+    assert!(report.playback_error.is_some());
+    let args = ImportArgs {
+        title: None,
+        format: None,
+        path: path.to_string_lossy().into_owned(),
+        confirmation: report.confirmation,
+        author: None,
+        expect: None,
+        reference: None,
+        wait_ms: Some(5_000),
+    };
+    let job = f.runtime.import(args, SOURCE.to_vec()).unwrap();
+    let outcome: ImportOutcome = serde_json::from_value(job.result.unwrap()).unwrap();
+    assert!(outcome.report.confirmed);
+    assert!(outcome.document.is_some());
     f.finish().await;
 }
 

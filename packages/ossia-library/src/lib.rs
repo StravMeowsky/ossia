@@ -139,11 +139,8 @@ impl Library {
         if let Some(expect) = expect {
             ossia_score::validate_expectation(expect)?;
         }
-        let report =
-            engine.convert(request.input, request.format, request.confirmation, context)?;
-        if report.status == ImportStatus::Refused
-            || (report.status == ImportStatus::NeedsConfirmation && !report.confirmed)
-        {
+        let mut report = engine.convert(request.input, request.format, None, context)?;
+        if report.status == ImportStatus::Refused {
             return Ok(ImportOutcome {
                 music: None,
                 verification: None,
@@ -179,8 +176,51 @@ impl Library {
             Ok(svg) => svg,
             Err(error) => return Err(import_error(error, &report, Some(&render))),
         };
-        if !svg && request.format != InputFormat::Ly {
+        if !svg {
             return Err(import_error(compile_error(&render), &report, Some(&render)));
+        }
+        report.playback_error = render
+            .format_errors
+            .iter()
+            .find(|error| error.format == RenderFormat::Midi)
+            .map(|error| error.error.clone())
+            .or_else(|| {
+                render
+                    .midi
+                    .is_none()
+                    .then(|| AppError::unsupported("MIDI output is unavailable"))
+            });
+        if let Some(error) = &report.playback_error {
+            report.status = ImportStatus::NeedsConfirmation;
+            report.confirmation = Some(ContentHash::of(
+                &serde_json::to_vec(&(
+                    &report.input_hash,
+                    &report.engine_build_id,
+                    &report.source_hash,
+                    &report.losses,
+                    error,
+                ))
+                .map_err(storage_error)?,
+            ));
+        }
+        if let Some(supplied) = request.confirmation {
+            if report.confirmation.as_ref() != Some(supplied) {
+                return Err(AppError::new(
+                    ErrorCode::Conflict,
+                    "import confirmation does not match this input and report",
+                ));
+            }
+            report.confirmed = true;
+        }
+        if report.status == ImportStatus::NeedsConfirmation && !report.confirmed {
+            return Ok(ImportOutcome {
+                music: None,
+                verification: None,
+                report,
+                document: None,
+                render: Some(render),
+                job: None,
+            });
         }
         let music = self.music_report(&snapshot, &render)?;
         let verification = match (expect, reference) {

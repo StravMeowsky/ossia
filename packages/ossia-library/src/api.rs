@@ -39,6 +39,12 @@ pub trait EngineBackend: Send + Sync {
     }
 
     fn build_id(&self) -> &str;
+    /// Migrate LilyPond source into an uncommitted candidate.
+    fn migrate_lilypond(&self, _input: &[u8], _context: &RunContext) -> Result<ImportReport> {
+        Err(AppError::unsupported(
+            "LilyPond migration is unavailable in this engine backend",
+        ))
+    }
     fn convert(
         &self,
         input: &[u8],
@@ -56,6 +62,9 @@ pub trait EngineBackend: Send + Sync {
 }
 
 impl EngineBackend for Engine {
+    fn migrate_lilypond(&self, input: &[u8], context: &RunContext) -> Result<ImportReport> {
+        self.migrate_lilypond(input, context)
+    }
     fn render_wav(&self, playback: &ScorePlayback, context: &RunContext) -> Result<Vec<u8>> {
         self.render_wav(playback, context)
     }

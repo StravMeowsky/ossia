@@ -27,7 +27,7 @@
 
 % This score has been optimized for A4 paper layout. /Jakob Bagterp
 
-\version "2.16.0"
+\version "2.26.0"
 \include "deutsch.ly"
 
 global =  {
@@ -48,7 +48,7 @@ melody =  \relative c'' {
 		% 1
 		a8.^2 h16^0 c8.^1 d16^4 e4^0 f^2^1 |
 		h,^0 e2^0 d4^1^4 |
-		c^2^1 h^0^0 a8.^3^2 c16^1 \slurDown \times 2/3 { c8(  h) a^3 } \break |
+		c^2^1 h^0^0 a8.^3^2 c16^1 \slurDown \tuplet 3/2 { c8(  h) a^3 } \break |
 		gis4^1 h r \slashedGrace d8 c8. h16 |
 
 		% 5
@@ -75,7 +75,7 @@ melody =  \relative c'' {
 		<gis h^1^0>4 e' r \slashedGrace d8 c8. h16 |
 		a8. h16 c8. d16 e4 f |
 		h, e2 d4^4 |
-		c h a8. c16 \times 2/3 { c8(  h) a } |
+		c h a8. c16 \tuplet 3/2 { c8(  h) a } |
 
 		% 20
 		gis4 h r c8. h16 |

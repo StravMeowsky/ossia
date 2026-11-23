@@ -308,6 +308,12 @@ pub struct ImportReport {
     /// Converted candidate source when readable; status controls publication.
     pub source: Option<String>,
     pub source_hash: Option<ContentHash>,
+    /// Declared LilyPond version for direct LilyPond imports, when valid.
+    #[serde(default)]
+    pub lilypond_version: Option<String>,
+    /// Why the candidate cannot be played, when MIDI preparation failed.
+    #[serde(default)]
+    pub playback_error: Option<AppError>,
     pub confirmation: Option<ContentHash>,
     pub confirmed: bool,
     /// Reliable source-index count; null when the score cannot be fully indexed.

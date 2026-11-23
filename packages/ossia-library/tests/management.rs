@@ -22,6 +22,8 @@ impl EngineBackend for TestEngine {
             input_hash: ContentHash::of(input),
             engine_build_id: self.build_id().into(),
             omr_source: None,
+            lilypond_version: None,
+            playback_error: None,
             source_hash: Some(ContentHash::of(input)),
             source: Some(String::from_utf8(input.to_vec()).unwrap()),
             confirmation: None,
@@ -49,6 +51,10 @@ impl EngineBackend for TestEngine {
         let relative = format!("assets/{hash}.svg");
         fs::create_dir_all(artifact_root.join("assets")).unwrap();
         fs::write(artifact_root.join(&relative), &bytes).unwrap();
+        let midi = b"MThd\0\0\0\x06\0\0\0\x01\0\x60MTrk\0\0\0\x0c\0\x90\x3c\x40\x60\x80\x3c\x40\0\xff\x2f\0";
+        let midi_hash = ContentHash::of(midi);
+        let midi_path = format!("assets/{midi_hash}.midi");
+        fs::write(artifact_root.join(&midi_path), midi).unwrap();
         Ok(RenderManifest {
             source_hash: snapshot.source_hash().clone(),
             engine_build_id: self.build_id().into(),
@@ -62,7 +68,11 @@ impl EngineBackend for TestEngine {
                 },
             }],
             pdf: None,
-            midi: None,
+            midi: Some(ArtifactRef {
+                path: midi_path,
+                sha256: midi_hash,
+                bytes: midi.len() as u64,
+            }),
             diagnostics: vec![],
             format_errors: vec![],
         })

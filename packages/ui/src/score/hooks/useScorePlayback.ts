@@ -61,6 +61,7 @@ export function useScorePlayback(
   settings: ScoreSettings | null,
 ) {
   const [state, setState] = useState<PlaybackState>(EMPTY_STATE);
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
   const timelineRef = useRef<ScorePlayback | null>(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -417,6 +418,7 @@ export function useScorePlayback(
 
   const renderKey = render?.renderKey ?? null;
   useEffect(() => {
+    setUnavailableReason(null);
     if (!enabled || !renderKey) {
       stop();
       setState((current) => ({ ...current, available: false, phase: 'unavailable' }));
@@ -455,6 +457,7 @@ export function useScorePlayback(
       })
       .catch((error) => {
         if (!live) return;
+        setUnavailableReason(error instanceof Error ? error.message : null);
         if (!(error instanceof ApiError) || error.code !== 'unsupported-source') {
           onError(error);
         }
@@ -478,6 +481,7 @@ export function useScorePlayback(
   );
 
   return {
+    unavailableReason,
     ...state,
     toggle,
     audition,

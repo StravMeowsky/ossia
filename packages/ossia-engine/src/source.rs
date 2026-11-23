@@ -16,7 +16,10 @@ struct Lexeme {
 mod interaction;
 mod scanner;
 mod scores;
+mod version;
 use scanner::scan;
+pub(crate) use version::check_migration_input;
+pub(crate) use version::check_version;
 
 /// Static single-file validation is a dependency boundary, not a Scheme sandbox.
 pub(crate) fn validate(source: &str, engine_root: &Path, version: &str) -> Result<(), AppError> {
@@ -190,14 +193,17 @@ pub(crate) fn derive(
             .enumerate()
             .filter(|(_, t)| t.raw == "\\score")
             .collect();
-        if scores.len() != 1
-            || tokens.iter().any(|t| {
-                matches!(
-                    t.raw.as_str(),
-                    "\\book" | "\\bookpart" | "\\bookOutputName" | "\\bookOutputSuffix"
-                )
-            })
-        {
+        if tokens.iter().any(|t| {
+            matches!(
+                t.raw.as_str(),
+                "\\book" | "\\bookpart" | "\\bookOutputName" | "\\bookOutputSuffix"
+            )
+        }) {
+            return Err(AppError::unsupported(
+                "playback does not support LilyPond \\book or \\bookpart structures",
+            ));
+        }
+        if scores.len() != 1 {
             return Err(AppError::unsupported(
                 "MIDI requires one unambiguous explicit score",
             ));

@@ -34,6 +34,7 @@ export function ScoreFeatureToolbar({
   onToggleAnnotation,
   playbackPhase,
   playbackAvailable,
+  playbackUnavailableReason,
   onTogglePlayback,
   onRestoreVersion,
   fullscreen,
@@ -57,6 +58,7 @@ export function ScoreFeatureToolbar({
   onToggleAnnotation: () => void;
   playbackPhase: PlaybackPhase;
   playbackAvailable: boolean;
+  playbackUnavailableReason: string | null;
   onTogglePlayback: () => void;
   onRestoreVersion?: () => void;
   fullscreen: boolean;
@@ -83,6 +85,11 @@ export function ScoreFeatureToolbar({
   const playing = playbackPhase === 'playing';
   const loading = playbackPhase === 'loading';
   const lockedTooltip = editing ? t('scoreEditingToolsUnavailable') : undefined;
+  const playbackReason = playbackUnavailableReason?.includes('unsupported Scheme reader syntax')
+    ? t('playbackUnsupportedScheme')
+    : playbackUnavailableReason?.includes('playback does not support LilyPond \\book')
+      ? t('playbackUnsupportedBook')
+      : null;
   const playbackLabel = loading
     ? t('playbackLoading')
     : playing
@@ -93,7 +100,7 @@ export function ScoreFeatureToolbar({
     (loading
       ? t('playbackLoading')
       : !playbackAvailable
-        ? t('playbackUnavailable')
+        ? (playbackReason ?? t('playbackUnavailable'))
         : playing
           ? t('playbackPauseTooltip')
           : t('playbackPlayTooltip'));
@@ -106,7 +113,7 @@ export function ScoreFeatureToolbar({
       <button
         type="button"
         className="score-feature-toggle score-playback-toggle"
-        aria-label={playbackLabel}
+        aria-label={playbackDisabled ? playbackTooltip : playbackLabel}
         aria-pressed={playing}
         aria-disabled={playbackDisabled}
         data-tooltip={playbackTooltip}

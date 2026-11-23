@@ -7,6 +7,52 @@ use std::{
 
 #[test]
 #[ignore = "requires explicit OSSIA_TEST_LILYPOND_ROOT with verified native 2.26.0 resources"]
+fn native_import_requires_version_and_confirms_unplayable_book() {
+    let root = PathBuf::from(std::env::var_os("OSSIA_TEST_LILYPOND_ROOT").unwrap());
+    let work = tempfile::tempdir().unwrap();
+    let engine =
+        Engine::verify(&root, &work.path().join("scratch"), &RunContext::default()).unwrap();
+    let library = Library::open(&work.path().join("library")).unwrap();
+    let import = |input: &[u8], confirmation: Option<&ContentHash>| {
+        library
+            .import(
+                &engine,
+                ImportRequest {
+                    title: "test",
+                    input,
+                    format: InputFormat::Ly,
+                    confirmation,
+                    author: "test",
+                },
+                &RunContext::default(),
+            )
+            .unwrap()
+    };
+    let old = import(
+        b"\\version \"2.14.2\"\n\\score { { c'1 } \\layout {} }",
+        None,
+    );
+    assert_eq!(old.report.status, ImportStatus::Refused);
+    assert!(old.report.blocking[0].contains("2.14.2"));
+    assert_eq!(library.document_count().unwrap(), 0);
+    let source = b"\\version \"2.26.0\"\n\\book { \\score { { c'1 } \\layout {} } }";
+    let result = import(source, None);
+    assert_eq!(result.report.status, ImportStatus::NeedsConfirmation);
+    assert!(result
+        .report
+        .playback_error
+        .as_ref()
+        .unwrap()
+        .message
+        .contains("\\book"));
+    assert_eq!(library.document_count().unwrap(), 0);
+    let accepted = import(source, result.report.confirmation.as_ref());
+    assert!(accepted.document.is_some());
+    assert_eq!(library.document_count().unwrap(), 1);
+}
+
+#[test]
+#[ignore = "requires explicit OSSIA_TEST_LILYPOND_ROOT with verified native 2.26.0 resources"]
 fn native_visual_outputs_include_the_same_page_drawing() {
     let root = PathBuf::from(
         std::env::var_os("OSSIA_TEST_LILYPOND_ROOT").expect("set OSSIA_TEST_LILYPOND_ROOT"),

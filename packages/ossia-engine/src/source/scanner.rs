@@ -205,7 +205,7 @@ impl Scanner<'_> {
                         Some(b'\'') | Some(b'`') | Some(b'\\')
                     ) =>
                 {
-                    return Err(ScanError::Opaque("opaque Scheme reader prefix"));
+                    return Err(ScanError::Opaque("unsupported Scheme reader syntax in source; migrate obsolete LilyPond syntax before playback"));
                 }
                 _ => {
                     self.byte += self.source[self.byte..].chars().next().unwrap().len_utf8();

@@ -146,7 +146,7 @@ impl Engine {
                 ));
             }
         }
-        for name in ["lilypond", "musicxml2ly", "midi2ly"] {
+        for name in ["lilypond", "musicxml2ly", "midi2ly", "convert-ly"] {
             let tool = target
                 .tools
                 .get(name)
@@ -241,6 +241,69 @@ impl Engine {
         )
     }
 
+    /// Migrate a LilyPond input in scratch space and return the candidate without publishing it.
+    pub fn migrate_lilypond(
+        &self,
+        input: &[u8],
+        context: &RunContext,
+    ) -> Result<ImportReport, AppError> {
+        let source = std::str::from_utf8(input).map_err(|_| {
+            AppError::new(ErrorCode::InvalidEncoding, "LilyPond source must be UTF-8")
+        })?;
+        source::check_migration_input(source, &self.version).map_err(AppError::invalid)?;
+        let scratch = Scratch::new(&self.scratch_root)?;
+        fs::write(scratch.path().join("input.ly"), input).map_err(io_error)?;
+        let output = self.run(
+            "convert-ly",
+            &["--edit", "--current-version", "input.ly"],
+            &scratch,
+            context,
+        )?;
+        let converted = fs::read(scratch.path().join("input.ly")).map_err(io_error)?;
+        let mut report = self.convert(&converted, InputFormat::Ly, None, context)?;
+        report.input_hash = ContentHash::of(input);
+        report.diagnostics.extend(diagnostics::parse(
+            &output.log,
+            scratch.path(),
+            &self.root,
+            None,
+            None,
+        ));
+        if !output.success {
+            report.status = ImportStatus::Refused;
+            report
+                .blocking
+                .push("convert-ly failed; inspect the conversion diagnostics".into());
+            report.confirmation = None;
+            report.confirmed = false;
+        } else {
+            for line in output.log.lines() {
+                let lower = line.to_lowercase();
+                if lower.contains("warning")
+                    || lower.contains("not smart enough")
+                    || lower.contains("error")
+                {
+                    report
+                        .losses
+                        .push(diagnostics::redact(line, scratch.path(), &self.root));
+                }
+            }
+            if !report.losses.is_empty() && report.status != ImportStatus::Refused {
+                report.status = ImportStatus::NeedsConfirmation;
+                report.confirmation = Some(ContentHash::of(
+                    &serde_json::to_vec(&(
+                        &report.input_hash,
+                        self.build_id(),
+                        &report.source_hash,
+                        &report.losses,
+                    ))
+                    .map_err(|error| AppError::invalid(error.to_string()))?,
+                ));
+            }
+        }
+        Ok(report)
+    }
+
     /// Convert with options that do not affect LilyPond or MIDI inputs.
     pub fn convert_with_options(
         &self,
@@ -327,6 +390,13 @@ impl Engine {
                 ));
             }
         };
+        let mut lilypond_version = None;
+        if format == InputFormat::Ly && !text.is_empty() {
+            match source::check_version(&text, &self.version) {
+                Ok(version) => lilypond_version = Some(version),
+                Err(reason) => blocking.push(reason),
+            }
+        }
         if !text.is_empty() {
             source::validate(&text, &self.root, &self.version)?;
         } else {
@@ -378,6 +448,8 @@ impl Engine {
             omr_source: None,
             source: (!text.is_empty()).then_some(text),
             source_hash,
+            lilypond_version,
+            playback_error: None,
             confirmed: token.is_some() && confirmation == token.as_ref(),
             confirmation: token,
             measures,

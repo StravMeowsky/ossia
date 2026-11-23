@@ -280,14 +280,21 @@ impl Runtime {
         } else {
             RunContext::default()
         };
-        let mut report = self.engine.convert(&bytes, format, None, &context)?;
-        if args.verify_render {
+        let mut report = if args.migrate_lilypond {
+            if format != InputFormat::Ly {
+                return Err(invalid("migrateLilypond requires LilyPond input"));
+            }
+            self.engine.migrate_lilypond(&bytes, &context)?
+        } else {
+            self.engine.convert(&bytes, format, None, &context)?
+        };
+        if args.verify_render && report.status != ImportStatus::Refused {
             if let Some(source) = report.source.as_deref() {
                 let snapshot = SourceSnapshot::new(DocumentId::new(), source.as_bytes().to_vec())?;
                 let render = self.engine.compile(
                     &snapshot,
                     &CompileOptions {
-                        formats: vec![RenderFormat::Svg],
+                        formats: vec![RenderFormat::Svg, RenderFormat::Midi],
                         point_and_click: true,
                     },
                     &self.library.artifact_root()?,
@@ -306,6 +313,32 @@ impl Runtime {
                     report.confirmation = None;
                     report.confirmed = false;
                     report.diagnostics.extend(render.diagnostics);
+                } else {
+                    report.playback_error = render
+                        .format_errors
+                        .iter()
+                        .find(|error| error.format == RenderFormat::Midi)
+                        .map(|error| error.error.clone())
+                        .or_else(|| {
+                            render
+                                .midi
+                                .is_none()
+                                .then(|| AppError::unsupported("MIDI output is unavailable"))
+                        });
+                    if let Some(error) = &report.playback_error {
+                        report.status = ImportStatus::NeedsConfirmation;
+                        report.confirmation = Some(ContentHash::of(
+                            &serde_json::to_vec(&(
+                                &report.input_hash,
+                                &report.engine_build_id,
+                                &report.source_hash,
+                                &report.losses,
+                                error,
+                            ))
+                            .map_err(storage)?,
+                        ));
+                        report.confirmed = false;
+                    }
                 }
             }
         }

@@ -202,12 +202,19 @@ pub struct ImportArgs {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConvertArgs {
+    /// Absolute input file path; maximum size 128 MiB.
     pub path: String,
+    /// Inferred from the file extension when omitted.
     pub format: Option<InputFormat>,
+    /// Check SVG and MIDI by default; set false for conversion only.
     #[serde(default = "default_verify_render")]
     pub verify_render: bool,
+    /// Include candidate source, including refused candidates.
     #[serde(default)]
     pub include_source: bool,
+    /// Migrate LilyPond with bundled convert-ly on a temporary copy; use includeSource to read it.
+    #[serde(default)]
+    pub migrate_lilypond: bool,
 }
 
 fn default_verify_render() -> bool {

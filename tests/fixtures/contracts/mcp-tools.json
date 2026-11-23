@@ -96,7 +96,7 @@
   },
   {
     "name": "ossia_convert",
-    "description": "Run conversion for one absolute-path local file without creating a document, version or job. The file must be at most 128 MiB; format is inferred from the extension when omitted. Supported: LilyPond .ly (UTF-8), MusicXML .musicxml/.xml, compressed MusicXML .mxl, MIDI .mid/.midi, PDF .pdf, PNG .png, JPEG .jpg/.jpeg and TIFF .tif/.tiff. LilyPond, MusicXML, MXL and MIDI convert locally; MXL must contain one container rootfile. PDF and images require the configured remote OMR service, allow up to 30 minutes and must return one MusicXML movement. By default the candidate is also compiled as interactive SVG; a render failure is returned as status=refused with the blocking reason. Set verifyRender=false to skip that check. Returns a compact ImportReport; set includeSource=true to include the converted candidate source, including refused candidates. omrSource remains the retained MusicXML path.",
+    "description": "Inspect or migrate a local score file without importing it. Returns an ImportReport; set includeSource to read the candidate. See the import guide for formats and migration.",
     "inputSchema": {
       "$defs": {
         "InputFormat": {
@@ -125,17 +125,26 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "description": "Inferred from the file extension when omitted."
         },
         "includeSource": {
           "default": false,
+          "description": "Include candidate source, including refused candidates.",
+          "type": "boolean"
+        },
+        "migrateLilypond": {
+          "default": false,
+          "description": "Migrate LilyPond with bundled convert-ly on a temporary copy; use includeSource to read it.",
           "type": "boolean"
         },
         "path": {
+          "description": "Absolute input file path; maximum size 128 MiB.",
           "type": "string"
         },
         "verifyRender": {
           "default": true,
+          "description": "Check SVG and MIDI by default; set false for conversion only.",
           "type": "boolean"
         }
       },
@@ -154,7 +163,7 @@
   },
   {
     "name": "ossia_import",
-    "description": "Queue one absolute-path local file of at most 128 MiB. Supported: LilyPond .ly (UTF-8), MusicXML .musicxml/.xml, compressed MusicXML .mxl, MIDI .mid/.midi, PDF .pdf, PNG .png, JPEG .jpg/.jpeg and TIFF .tif/.tiff. LilyPond, MusicXML, MXL and MIDI convert locally; MXL must contain one container rootfile. PDF and images require the configured remote OMR service, allow up to 30 minutes and must return one MusicXML movement. format/title/author are inferred or defaulted. Optional expect or reference (mutually exclusive) rejects the import before publishing. Returns a bounded Job summary; pass waitMs (up to 30 seconds) or poll ossia_job for long OMR work.",
+    "description": "Import a local score file as a background job. Optional expect or reference verifies musical content before publication. See the import guide for formats and confirmation.",
     "inputSchema": {
       "$defs": {
         "ComparisonMode": {

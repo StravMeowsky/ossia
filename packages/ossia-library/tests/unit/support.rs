@@ -55,6 +55,8 @@ impl EngineBackend for TestEngine {
             input_hash: ContentHash::of(input),
             engine_build_id: self.build_id().into(),
             omr_source: None,
+            lilypond_version: None,
+            playback_error: None,
             source_hash: source
                 .as_ref()
                 .map(|s: &String| ContentHash::of(s.as_bytes())),
@@ -123,12 +125,27 @@ impl EngineBackend for TestEngine {
                 error: AppError::new(ErrorCode::CompileFailed, "syntax error"),
             });
         }
-        if options.formats.contains(&RenderFormat::Midi) {
+        let midi = if options.formats.contains(&RenderFormat::Midi)
+            && snapshot.source().contains("NO_MIDI")
+        {
             errors.push(FormatError {
                 format: RenderFormat::Midi,
                 error: AppError::unsupported("MIDI unavailable"),
             });
-        }
+            None
+        } else if options.formats.contains(&RenderFormat::Midi) {
+            let bytes = b"MThd\0\0\0\x06\0\0\0\x01\0\x60MTrk\0\0\0\x0c\0\x90\x3c\x40\x60\x80\x3c\x40\0\xff\x2f\0";
+            let hash = ContentHash::of(bytes);
+            let path = format!("assets/{hash}.midi");
+            std::fs::write(artifact_root.join(&path), bytes).unwrap();
+            Some(ArtifactRef {
+                path,
+                sha256: hash,
+                bytes: bytes.len() as u64,
+            })
+        } else {
+            None
+        };
         Ok(RenderManifest {
             source_hash: snapshot.source_hash().clone(),
             engine_build_id: self.build_id().into(),
@@ -139,7 +156,7 @@ impl EngineBackend for TestEngine {
             }),
             pages: if broken { vec![] } else { pages },
             pdf: None,
-            midi: None,
+            midi,
             diagnostics: if broken {
                 vec![Diagnostic {
                     severity: Severity::Error,

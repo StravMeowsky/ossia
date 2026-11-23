@@ -485,6 +485,7 @@ function ScoreApp({
       onToggleAnnotation={() => setAnnotationMode(!annotationActive)}
       playbackPhase={playback.phase}
       playbackAvailable={playback.available}
+      playbackUnavailableReason={playback.unavailableReason}
       onTogglePlayback={() => void playback.toggle()}
       onRestoreVersion={viewingVersion ? () => requestRestore(viewingVersion) : undefined}
       fullscreen={fullscreen.active}

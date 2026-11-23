@@ -104,11 +104,11 @@ pub fn tools() -> Vec<Tool> {
         ),
         read_tool::<ConvertArgs>(
             "ossia_convert",
-            "Run conversion for one absolute-path local file without creating a document, version or job. The file must be at most 128 MiB; format is inferred from the extension when omitted. Supported: LilyPond .ly (UTF-8), MusicXML .musicxml/.xml, compressed MusicXML .mxl, MIDI .mid/.midi, PDF .pdf, PNG .png, JPEG .jpg/.jpeg and TIFF .tif/.tiff. LilyPond, MusicXML, MXL and MIDI convert locally; MXL must contain one container rootfile. PDF and images require the configured remote OMR service, allow up to 30 minutes and must return one MusicXML movement. By default the candidate is also compiled as interactive SVG; a render failure is returned as status=refused with the blocking reason. Set verifyRender=false to skip that check. Returns a compact ImportReport; set includeSource=true to include the converted candidate source, including refused candidates. omrSource remains the retained MusicXML path.",
+            "Inspect or migrate a local score file without importing it. Returns an ImportReport; set includeSource to read the candidate. See the import guide for formats and migration.",
         ),
         write_tool::<ImportArgs>(
             "ossia_import",
-            "Queue one absolute-path local file of at most 128 MiB. Supported: LilyPond .ly (UTF-8), MusicXML .musicxml/.xml, compressed MusicXML .mxl, MIDI .mid/.midi, PDF .pdf, PNG .png, JPEG .jpg/.jpeg and TIFF .tif/.tiff. LilyPond, MusicXML, MXL and MIDI convert locally; MXL must contain one container rootfile. PDF and images require the configured remote OMR service, allow up to 30 minutes and must return one MusicXML movement. format/title/author are inferred or defaulted. Optional expect or reference (mutually exclusive) rejects the import before publishing. Returns a bounded Job summary; pass waitMs (up to 30 seconds) or poll ossia_job for long OMR work.",
+            "Import a local score file as a background job. Optional expect or reference verifies musical content before publication. See the import guide for formats and confirmation.",
             false,
         ),
         read_tool::<ContextArgs>(
@@ -322,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn import_tools_describe_inputs_and_limits() {
+    fn import_tools_remain_concise_and_point_to_the_guide() {
         let tools = tools();
         for name in ["ossia_convert", "ossia_import"] {
             let description = tools
@@ -330,20 +330,8 @@ mod tests {
                 .find(|tool| tool.name == name)
                 .and_then(|tool| tool.description.as_deref())
                 .unwrap();
-            for required in [
-                "absolute-path",
-                "128 MiB",
-                ".musicxml/.xml",
-                ".mxl",
-                ".mid/.midi",
-                ".jpg/.jpeg",
-                ".tif/.tiff",
-                "one container rootfile",
-                "one MusicXML movement",
-                "30 minutes",
-            ] {
-                assert!(description.contains(required), "{name}: {required}");
-            }
+            assert!(description.len() <= 240, "{name} description is too long");
+            assert!(description.contains("guide"), "{name} must point to the guide");
         }
     }
 }

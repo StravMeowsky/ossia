@@ -10,8 +10,9 @@ For score creation and editing, see [Create and edit](editing.md). For verificat
    when the task establishes the expected result. Use `waitMs` or poll
    `ossia_job`; see [Operations](operations.md) for background jobs.
 3. Inspect the outcome, report and any verification. A `needs-confirmation`
-   report has no document: review its losses, then, when proceeding is consistent
-   with the user's request, retry the same import with `confirmation` set to the
+   report has no document: review its losses and `playbackError`. If playback is
+   unavailable, tell the user the score can be viewed but not played and obtain
+   their choice before proceeding. Retry the same import with `confirmation` set to the
    report's `confirmation` value. A refused input cannot be forced.
    If an expectation or reference fails, the job error includes
    `verification.differences` and actual pitches; no document is created.
@@ -38,6 +39,21 @@ from the extension. `title` defaults from the filename and `author` defaults to
 
 ## Import reports and validation
 
+Direct `.ly` imports require one consistent top-level `\version` declaration
+between 2.24.0 and the bundled LilyPond version. Missing, malformed, conflicting,
+older or newer declarations are refused before a score is created. To migrate an
+older file, call `ossia_convert` with `migrateLilypond: true` and
+`includeSource: true`. Ossia runs its bundled `convert-ly` on a temporary copy;
+the original remains unchanged. Review the returned source, diagnostics, losses
+and playback result. If the user wants to proceed, save the candidate as a new
+UTF-8 `.ly` file without overwriting an existing file and import it through
+`ossia_import`. The conversion confirmation belongs to the original input;
+inspect the import report and use its own confirmation when required. Changing
+only the version declaration does not migrate its syntax.
+MIDI preparation is checked separately: a modern source can still have an
+unsupported structure such as `\book`. In that case `playbackError` explains the
+failure and confirmation imports a viewable score without playback.
+
 Clean import means conversion succeeded, not musical or engraving correctness.
 `ossia_convert` runs the same checks and conversion without publishing a
 document, version or job. The original input stays under `original/input.*`,
@@ -47,7 +63,7 @@ blocking losses. It returns a compact `ImportReport` by default; set
 including refused candidates. Use it to inspect or repair generated sources
 before import; import summaries still omit `source`.
 By default `ossia_convert` also compiles the candidate with interactive SVG
-anchors. A render failure returns `status: "refused"` and adds the reason to
+anchors and checks MIDI. An SVG failure returns `status: "refused"` and adds the reason to
 `blocking`; `source` is present only when `includeSource` is true. Pass
 `verifyRender: false` only for fast inspection.
 A failed import keeps the converted source and format errors under `error.detail`.

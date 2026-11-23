@@ -134,8 +134,8 @@ pub(super) fn probes(engine: &Engine, context: &RunContext) -> Result<(), AppErr
     let version = regex::Regex::new(r"\b2\.26\.0(?:\s|$)").unwrap();
     // Every probe has its own scratch directory and can fail independently.
     let first_failure = std::thread::scope(|scope| {
-        let mut handles = Vec::with_capacity(4);
-        for (index, name) in ["lilypond", "musicxml2ly", "midi2ly"]
+        let mut handles = Vec::with_capacity(5);
+        for (index, name) in ["lilypond", "musicxml2ly", "midi2ly", "convert-ly"]
             .into_iter()
             .enumerate()
         {
@@ -143,7 +143,7 @@ pub(super) fn probes(engine: &Engine, context: &RunContext) -> Result<(), AppErr
             handles
                 .push(scope.spawn(move || (index, tool_version(engine, name, version, context))));
         }
-        handles.push(scope.spawn(|| (3, svg_smoke(engine, context))));
+        handles.push(scope.spawn(|| (4, svg_smoke(engine, context))));
         handles
             .into_iter()
             .filter_map(|handle| {

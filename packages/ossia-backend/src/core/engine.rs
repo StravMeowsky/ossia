@@ -93,6 +93,10 @@ impl RuntimeEngine {
 }
 
 impl EngineBackend for RuntimeEngine {
+    fn migrate_lilypond(&self, input: &[u8], context: &RunContext) -> Result<ImportReport> {
+        let report = self.engine.migrate_lilypond(input, context)?;
+        self.report(report, input, None, Vec::new())
+    }
     fn render_wav(&self, playback: &ScorePlayback, context: &RunContext) -> Result<Vec<u8>> {
         let root = self.audio_root.as_deref().ok_or_else(|| {
             invalid("WAV export requires a static UI directory containing audio samples")

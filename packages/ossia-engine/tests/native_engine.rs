@@ -4,6 +4,44 @@ use std::{fs, path::PathBuf, time::Duration};
 
 #[test]
 #[ignore = "requires native LilyPond 2.26.0"]
+fn native_convert_ly_migrates_an_independent_candidate() {
+    let root = PathBuf::from(std::env::var_os("OSSIA_TEST_LILYPOND_ROOT").unwrap());
+    let work = tempfile::tempdir().unwrap();
+    let context = RunContext::default();
+    let engine = Engine::verify(&root, &work.path().join("scratch"), &context).unwrap();
+    let source = b"\\version \"2.14.2\"\n\\score { { \\times 2/3 { c'4 d' e' } } \\layout {} }\n";
+    let report = engine.migrate_lilypond(source, &context).unwrap();
+    assert_eq!(report.status, ImportStatus::Clean, "{:?}", report.blocking);
+    assert_eq!(report.input_hash, ContentHash::of(source));
+    let candidate = report.source.unwrap();
+    assert!(candidate.contains("\\version \"2.26.0\""));
+    assert!(candidate.contains("\\tuplet 3/2"));
+    assert!(engine
+        .migrate_lilypond(b"\\version \"2.27.0\"", &context)
+        .is_err());
+    assert!(engine.migrate_lilypond(b"{ c'1 }", &context).is_err());
+    let snapshot = SourceSnapshot::new(DocumentId::new(), candidate.into_bytes()).unwrap();
+    let render = engine
+        .compile(
+            &snapshot,
+            &CompileOptions {
+                formats: vec![RenderFormat::Svg, RenderFormat::Midi],
+                point_and_click: true,
+            },
+            &work.path().join("assets"),
+            &context,
+        )
+        .unwrap();
+    assert!(
+        render.format_errors.is_empty(),
+        "{:?}",
+        render.format_errors
+    );
+    assert!(render.midi.is_some());
+}
+
+#[test]
+#[ignore = "requires native LilyPond 2.26.0"]
 fn native_starter_scores_identify_solo_instruments() {
     let root = PathBuf::from(std::env::var_os("OSSIA_TEST_LILYPOND_ROOT").unwrap());
     let work = tempfile::tempdir().unwrap();

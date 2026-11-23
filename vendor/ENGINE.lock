@@ -35,6 +35,12 @@
           "args": [
             "libexec/midi2ly"
           ]
+        },
+        "convert-ly": {
+          "program": "libexec/python3.14",
+          "args": [
+            "libexec/convert-ly"
+          ]
         }
       },
       "runtimeDependencies": {
@@ -81,6 +87,12 @@
           "program": "libexec/python3.14",
           "args": [
             "libexec/midi2ly"
+          ]
+        },
+        "convert-ly": {
+          "program": "libexec/python3.14",
+          "args": [
+            "libexec/convert-ly"
           ]
         }
       },
@@ -129,6 +141,12 @@
           "args": [
             "libexec/midi2ly"
           ]
+        },
+        "convert-ly": {
+          "program": "libexec/python3.14",
+          "args": [
+            "libexec/convert-ly"
+          ]
         }
       },
       "runtimeDependencies": {
@@ -175,6 +193,12 @@
           "program": "bin/python.exe",
           "args": [
             "bin/midi2ly.py"
+          ]
+        },
+        "convert-ly": {
+          "program": "bin/python.exe",
+          "args": [
+            "bin/convert-ly.py"
           ]
         }
       },
@@ -223,6 +247,12 @@
           "program": "libexec/python3.14",
           "args": [
             "libexec/midi2ly"
+          ]
+        },
+        "convert-ly": {
+          "program": "libexec/python3.14",
+          "args": [
+            "libexec/convert-ly"
           ]
         }
       },

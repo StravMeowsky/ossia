@@ -26,7 +26,6 @@ pub fn measured_midi() -> Vec<u8> {
     midi
 }
 
-#[derive(Default)]
 pub struct Engine {
     pub hold: AtomicBool,
     pub midi: AtomicBool,
@@ -39,6 +38,22 @@ pub struct Engine {
     pub seen: Mutex<Vec<ContentHash>>,
 }
 
+impl Default for Engine {
+    fn default() -> Self {
+        Self {
+            hold: AtomicBool::new(false),
+            midi: AtomicBool::new(true),
+            interaction: AtomicBool::new(false),
+            legacy_render: AtomicBool::new(false),
+            omr_source: Mutex::new(None),
+            active: AtomicUsize::new(0),
+            peak: AtomicUsize::new(0),
+            documents: Mutex::new(Vec::new()),
+            seen: Mutex::new(Vec::new()),
+        }
+    }
+}
+
 struct Active<'a>(&'a Engine, DocumentId);
 
 impl Drop for Active<'_> {
@@ -49,6 +64,13 @@ impl Drop for Active<'_> {
 }
 
 impl EngineBackend for Engine {
+    fn migrate_lilypond(&self, input: &[u8], context: &RunContext) -> Result<ImportReport> {
+        let mut report = self.convert(input, InputFormat::Ly, None, context)?;
+        let candidate = "\\version \"2.26.0\"\n{ c'1 }";
+        report.source = Some(candidate.into());
+        report.source_hash = Some(ContentHash::of(candidate.as_bytes()));
+        Ok(report)
+    }
     fn build_id(&self) -> &str {
         "runtime-test-engine"
     }
@@ -68,6 +90,8 @@ impl EngineBackend for Engine {
             input_hash: ContentHash::of(input),
             engine_build_id: self.build_id().into(),
             omr_source: self.omr_source.lock().unwrap().clone(),
+            lilypond_version: None,
+            playback_error: None,
             source_hash: Some(ContentHash::of(input)),
             source: Some(source),
             confirmation: None,
