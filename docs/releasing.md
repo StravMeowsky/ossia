@@ -55,12 +55,14 @@ unwanted stable tag.
    the manifests and lockfile. `Check` validates on macOS arm64 and Windows
    x86_64, including browser regression tests on both platforms.
 2. `Release` validates the annotated tag and current version.
-3. Verification, DeepSeek notes and the two platform builds run in parallel.
+3. Verification, DeepSeek notes and offline documentation generation run in
+   parallel. Both platform builds use the generated documentation artifact.
 4. Each build installs or extracts its installable artifacts and runs the same
    packaged smoke check.
 5. The publish job creates a draft release and verifies its exact asset set.
-6. It publishes the two update-feed targets, including the macOS DMG download,
-   then publishes the GitHub release as a Pre-release or Latest release.
+6. The publish job publishes the GitHub release as a Pre-release or Latest release.
+7. The separate `Ossia update feed` workflow verifies the published release and
+   uploads the two update-feed targets, including the macOS DMG download.
 
 Packaging requires a clean Git working tree. The source archive is generated
 from `HEAD` and respects `.gitattributes` export rules.
@@ -131,8 +133,10 @@ The update feed contains installers, not source or materials archives. The
 GitHub release contains the corresponding source and third-party materials;
 make those materials available to recipients of the binaries.
 
-Feed publication runs serially across release jobs. Each target is updated
+Feed publication runs serially across workflow runs. Each target is updated
 individually. The uploader reads the current manifest from COS before merging,
-then uploads assets before the manifest. If publication fails, rerun the failed
-publish job using the same build artifacts. An existing manifest entry cannot
+then uploads assets before the manifest using the COS global acceleration
+endpoint. If publication fails, rerun `Ossia update feed` or start it manually
+with `gh workflow run update-feed.yml --ref main -f tag=<tag>`. GitHub Release
+remains available independently of the feed. An existing manifest entry cannot
 be replaced with a different installer digest under the same version.

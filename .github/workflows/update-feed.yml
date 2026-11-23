@@ -1,0 +1,115 @@
+name: Ossia update feed
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag to upload
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ossia-update-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'micooz/ossia' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || inputs.tag }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Verify published release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.workflow_run.head_branch || inputs.tag }}
+          CHECKED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          node scripts/release/version.mjs parse "$TAG"
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          test "$(git cat-file -t "refs/tags/$TAG")" = tag
+          if [ -n "$CHECKED_SHA" ]; then
+            test "$(git rev-parse "refs/tags/$TAG^{}")" = "$CHECKED_SHA"
+          fi
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{}")"
+          gh release view "$TAG" --json isDraft,body > release.json
+          test "$(jq -r .isDraft release.json)" = false
+          jq -er '.body | select(length > 0)' release.json > release-notes.md
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          node scripts/release/tags.mjs current "$TAG"
+      - name: Download and verify release assets
+        if: steps.release.outputs.current == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir release
+          gh release download "$TAG" --dir release \
+            --pattern 'ossia-darwin-arm64.zip' \
+            --pattern 'ossia-darwin-arm64.dmg' \
+            --pattern 'ossia-windows-amd64.exe' \
+            --pattern 'SHA256SUMS'
+          cd release
+          test -f ossia-darwin-arm64.zip
+          test -f ossia-darwin-arm64.dmg
+          test -f ossia-windows-amd64.exe
+          for asset in ossia-darwin-arm64.zip ossia-darwin-arm64.dmg ossia-windows-amd64.exe; do
+            grep -F "  $asset" SHA256SUMS | sha256sum --check
+          done
+      - name: Check before updating Ossia feed
+        if: steps.release.outputs.current == 'true'
+        id: before-feed
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: node scripts/release/tags.mjs current "$TAG"
+      - name: Publish Ossia update feed
+        if: steps.before-feed.outputs.current == 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          OSSIA_RELEASES_URL: ${{ secrets.OSSIA_RELEASES_URL }}
+          OSSIA_RELEASES_PREFIX: ${{ secrets.OSSIA_RELEASES_PREFIX }}
+          OSSIA_RELEASES_BUCKET: ${{ secrets.OSSIA_RELEASES_BUCKET }}
+          OSSIA_RELEASES_REGION: ${{ secrets.OSSIA_RELEASES_REGION }}
+          OSSIA_RELEASES_SECRET_ID: ${{ secrets.OSSIA_RELEASES_SECRET_ID }}
+          OSSIA_RELEASES_SECRET_KEY: ${{ secrets.OSSIA_RELEASES_SECRET_KEY }}
+          OSSIA_RELEASES_SECURITY_TOKEN: ${{ secrets.OSSIA_RELEASES_SECURITY_TOKEN }}
+          OSSIA_RELEASES_ACL: ${{ secrets.OSSIA_RELEASES_ACL }}
+        run: |
+          set -euo pipefail
+          test -n "$OSSIA_RELEASES_URL"
+          test -n "$OSSIA_RELEASES_BUCKET"
+          test -n "$OSSIA_RELEASES_REGION"
+          test -n "$OSSIA_RELEASES_SECRET_ID"
+          test -n "$OSSIA_RELEASES_SECRET_KEY"
+          node scripts/release/publish-update-feed.mjs \
+            --tag "$TAG" \
+            --asset-dir release \
+            --notes-file release-notes.md \
+            --stage-dir "$RUNNER_TEMP/ossia-update-stage"

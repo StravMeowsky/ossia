@@ -194,7 +194,7 @@ jobs:
     needs: [metadata, verify, build, notes]
     runs-on: ubuntu-latest
     concurrency:
-      group: ossia-update-publication
+      group: github-release-publication
       cancel-in-progress: false
     permissions:
       contents: write
@@ -256,39 +256,9 @@ jobs:
             --notes-file notes/release-notes.md
 
           test "$(gh release view "$TAG" --json assets --jq '.assets | length')" -eq 6
-      - name: Check before updating Ossia feed
-        id: before-feed
-        if: steps.before-stage.outputs.current == 'true'
-        env:
-          TAG: ${{ needs.metadata.outputs.tag }}
-        run: node scripts/release/tags.mjs current "$TAG"
-      - name: Publish Ossia update feed
-        if: steps.before-feed.outputs.current == 'true'
-        env:
-          TAG: ${{ needs.metadata.outputs.tag }}
-          OSSIA_RELEASES_URL: ${{ secrets.OSSIA_RELEASES_URL }}
-          OSSIA_RELEASES_PREFIX: ${{ secrets.OSSIA_RELEASES_PREFIX }}
-          OSSIA_RELEASES_BUCKET: ${{ secrets.OSSIA_RELEASES_BUCKET }}
-          OSSIA_RELEASES_REGION: ${{ secrets.OSSIA_RELEASES_REGION }}
-          OSSIA_RELEASES_SECRET_ID: ${{ secrets.OSSIA_RELEASES_SECRET_ID }}
-          OSSIA_RELEASES_SECRET_KEY: ${{ secrets.OSSIA_RELEASES_SECRET_KEY }}
-          OSSIA_RELEASES_SECURITY_TOKEN: ${{ secrets.OSSIA_RELEASES_SECURITY_TOKEN }}
-          OSSIA_RELEASES_ACL: ${{ secrets.OSSIA_RELEASES_ACL }}
-        run: |
-          set -euo pipefail
-          test -n "$OSSIA_RELEASES_URL"
-          test -n "$OSSIA_RELEASES_BUCKET"
-          test -n "$OSSIA_RELEASES_REGION"
-          test -n "$OSSIA_RELEASES_SECRET_ID"
-          test -n "$OSSIA_RELEASES_SECRET_KEY"
-          node scripts/release/publish-update-feed.mjs \
-            --tag "$TAG" \
-            --asset-dir release \
-            --notes-file notes/release-notes.md \
-            --stage-dir "$RUNNER_TEMP/ossia-update-stage"
       - name: Check before publishing
         id: before-publish
-        if: steps.before-feed.outputs.current == 'true'
+        if: steps.before-stage.outputs.current == 'true'
         env:
           TAG: ${{ needs.metadata.outputs.tag }}
         run: node scripts/release/tags.mjs current "$TAG"
