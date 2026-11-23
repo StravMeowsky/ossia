@@ -413,7 +413,7 @@ export const enUS = {
   updateChannel: 'Update channel',
   updateFeedSource: 'Update source',
   updateFeedSourceDescription:
-    'Ossia is an accelerated mirror for mainland China; GitHub is currently unavailable.',
+    'The Ossia source is optimized for mainland China; the GitHub source is available worldwide.',
   updateChannelStable: 'Stable',
   updateChannelBeta: 'Beta',
   updateNotes: 'Release notes',

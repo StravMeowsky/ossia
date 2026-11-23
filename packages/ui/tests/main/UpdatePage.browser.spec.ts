@@ -35,18 +35,47 @@ const found: UpdateSnapshot = {
   },
 };
 
-test('About hides the update feed settings until the source is public', async ({ page }) => {
-  await mockManagement(page, { githubTokenMasked: '••••••••test' });
+test('About saves the update source and GitHub token', async ({ page }) => {
+  await mockManagement(page);
   await page.goto('/main.html');
   await page.getByRole('button', { name: '关于', exact: true }).click();
   await expect(page.locator('.about-page').getByRole('heading', { name: '更新' })).toHaveCount(0);
   await expect(page.locator('.about-page').getByText('数据目录')).toHaveCount(0);
-  await expect(page.getByRole('group', { name: '更新源' })).toHaveCount(0);
-  await expect(page.getByLabel('GitHub Token')).toHaveCount(0);
-  await expect(page.getByText('••••••••test')).toHaveCount(0);
+  const source = page.getByRole('group', { name: '更新源' });
+  const tokenRow = page.locator('.update-token-row');
+  const channel = page.getByRole('group', { name: '更新通道' });
+  await expect(tokenRow).toHaveCount(0);
+  await expect(page.getByText('Ossia 源为中国大陆优化；GitHub 源全球可用。')).toBeVisible();
+  await expect(source.getByRole('button', { name: 'Ossia' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await source.getByRole('button', { name: 'GitHub' }).click();
+  await expect(source.getByRole('button', { name: 'GitHub' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(tokenRow).toBeVisible();
+  expect((await source.boundingBox())!.y).toBeLessThan((await tokenRow.boundingBox())!.y);
+  expect((await tokenRow.boundingBox())!.y).toBeLessThan((await channel.boundingBox())!.y);
+  await page.getByLabel('GitHub Token').fill('github_pat_test');
+  await page.locator('.update-token-row').getByRole('button', { name: '保存' }).click();
+  await expect(page.getByText('••••••••test')).toBeVisible();
+  await source.getByRole('button', { name: 'Ossia' }).click();
+  await expect(tokenRow).toHaveCount(0);
+  await source.getByRole('button', { name: 'GitHub' }).click();
+  await expect(page.getByText('••••••••test')).toBeVisible();
   await page.getByRole('button', { name: '常规', exact: true }).click();
   await expect(page.getByRole('heading', { name: '常规', exact: true })).toBeVisible();
   await expect(page.getByLabel('GitHub Token')).toHaveCount(0);
+  await page.getByRole('button', { name: '关于', exact: true }).click();
+  await expect(source.getByRole('button', { name: 'GitHub' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByText('••••••••test')).toBeVisible();
+  await page.locator('.update-token-row').getByRole('button', { name: '移除' }).click();
+  await expect(page.getByLabel('GitHub Token')).toBeVisible();
 });
 
 test('update action, channel, and automatic download use saved preferences', async ({ page }) => {

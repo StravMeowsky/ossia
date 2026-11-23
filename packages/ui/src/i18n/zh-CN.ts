@@ -393,7 +393,7 @@ export const zhCN: Record<MessageKey, string> = {
   updateDebugUnavailable: '开发版不支持自动下载更新',
   updateChannel: '更新通道',
   updateFeedSource: '更新源',
-  updateFeedSourceDescription: 'Ossia 为中国境内加速镜像；GitHub 当前尚不可用。',
+  updateFeedSourceDescription: 'Ossia 源为中国大陆优化；GitHub 源全球可用。',
   updateChannelStable: '稳定版',
   updateChannelBeta: '测试版',
   updateNotes: '更新内容',

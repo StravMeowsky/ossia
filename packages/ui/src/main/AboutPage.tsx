@@ -16,7 +16,7 @@ import { UpdateNotesDialog } from './UpdateNotesDialog.tsx';
 
 const NOTICE_STATES = new Set<UpdateState>(['latest', 'no_release', 'source']);
 const NOTICE_DURATION = 3_000;
-const SHOW_UPDATE_FEED_SETTINGS = false;
+const SHOW_UPDATE_FEED_SETTINGS = true;
 
 export function AboutPage({
   preferences,
@@ -232,22 +232,6 @@ export function AboutPage({
             <span />
           </button>
         </div>
-        <div className="settings-row">
-          <div className="setting-copy">
-            <span className="setting-label">{t('updateChannel')}</span>
-          </div>
-          <Segmented
-            ariaLabel={t('updateChannel')}
-            value={preferences?.updateChannel ?? 'stable'}
-            disabled={!native || !preferences || preferencesBusy}
-            compact
-            options={[
-              { value: 'stable', label: t('updateChannelStable') },
-              { value: 'beta', label: t('updateChannelBeta') },
-            ]}
-            onChange={(value) => onChannel(value as UpdateChannel)}
-          />
-        </div>
         {SHOW_UPDATE_FEED_SETTINGS && (
           <>
             <div className="settings-row">
@@ -267,79 +251,97 @@ export function AboutPage({
                 onChange={(value) => onSource(value as UpdateSource)}
               />
             </div>
-            <div className="settings-row github-token-row update-token-row">
-              <div className="setting-copy">
-                <div className="github-token-heading">
-                  <label className="setting-label" htmlFor="update-github-token">
-                    {t('githubToken')}
-                  </label>
-                  <button
-                    className="github-token-link"
-                    type="button"
-                    aria-label={t('githubTokenCreate')}
-                    title={t('githubTokenCreate')}
-                    onClick={() =>
-                      onOpenExternal('https://github.com/settings/personal-access-tokens/new')
-                    }
-                  >
-                    <ExternalLink aria-hidden="true" />
-                  </button>
-                </div>
-                <span className="setting-note">{t('githubTokenDescription')}</span>
-              </div>
-              <div className="github-token-control">
-                {preferences?.githubTokenMasked ? (
-                  <div className="github-token-configured">
-                    <code className="github-token-masked">{preferences.githubTokenMasked}</code>
+            {preferences?.updateSource === 'github' && (
+              <div className="settings-row github-token-row update-token-row">
+                <div className="setting-copy">
+                  <div className="github-token-heading">
+                    <label className="setting-label" htmlFor="update-github-token">
+                      {t('githubToken')}
+                    </label>
                     <button
-                      className="secondary-button"
+                      className="github-token-link"
                       type="button"
-                      disabled={!native || tokenBusy}
-                      onClick={() => void saveToken(null)}
+                      aria-label={t('githubTokenCreate')}
+                      title={t('githubTokenCreate')}
+                      onClick={() =>
+                        onOpenExternal('https://github.com/settings/personal-access-tokens/new')
+                      }
                     >
-                      {tokenAction === 'remove' ? t('githubTokenRemoving') : t('remove')}
+                      <ExternalLink aria-hidden="true" />
                     </button>
                   </div>
-                ) : (
-                  <form
-                    className="github-token-form"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void saveToken(token);
-                    }}
-                  >
-                    <input
-                      className="github-token-input"
-                      id="update-github-token"
-                      type="password"
-                      autoComplete="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      disabled={!native || !preferences || tokenBusy}
-                      value={token}
-                      onChange={(event) => {
-                        setToken(event.target.value);
-                        setTokenError('');
+                  <span className="setting-note">{t('githubTokenDescription')}</span>
+                </div>
+                <div className="github-token-control">
+                  {preferences?.githubTokenMasked ? (
+                    <div className="github-token-configured">
+                      <code className="github-token-masked">{preferences.githubTokenMasked}</code>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        disabled={!native || tokenBusy}
+                        onClick={() => void saveToken(null)}
+                      >
+                        {tokenAction === 'remove' ? t('githubTokenRemoving') : t('remove')}
+                      </button>
+                    </div>
+                  ) : (
+                    <form
+                      className="github-token-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void saveToken(token);
                       }}
-                    />
-                    <button
-                      className="secondary-button"
-                      type="submit"
-                      disabled={!native || !preferences || tokenBusy}
                     >
-                      {tokenAction === 'save' ? t('githubTokenSaving') : t('save')}
-                    </button>
-                  </form>
-                )}
-                {tokenError && (
-                  <p className="github-token-error" role="alert">
-                    {tokenError}
-                  </p>
-                )}
+                      <input
+                        className="github-token-input"
+                        id="update-github-token"
+                        type="password"
+                        autoComplete="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        disabled={!native || !preferences || tokenBusy}
+                        value={token}
+                        onChange={(event) => {
+                          setToken(event.target.value);
+                          setTokenError('');
+                        }}
+                      />
+                      <button
+                        className="secondary-button"
+                        type="submit"
+                        disabled={!native || !preferences || tokenBusy}
+                      >
+                        {tokenAction === 'save' ? t('githubTokenSaving') : t('save')}
+                      </button>
+                    </form>
+                  )}
+                  {tokenError && (
+                    <p className="github-token-error" role="alert">
+                      {tokenError}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
+        <div className="settings-row">
+          <div className="setting-copy">
+            <span className="setting-label">{t('updateChannel')}</span>
+          </div>
+          <Segmented
+            ariaLabel={t('updateChannel')}
+            value={preferences?.updateChannel ?? 'stable'}
+            disabled={!native || !preferences || preferencesBusy}
+            compact
+            options={[
+              { value: 'stable', label: t('updateChannelStable') },
+              { value: 'beta', label: t('updateChannelBeta') },
+            ]}
+            onChange={(value) => onChannel(value as UpdateChannel)}
+          />
+        </div>
       </div>
       {notes && (
         <UpdateNotesDialog
