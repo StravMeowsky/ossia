@@ -138,6 +138,7 @@ fn main() {
         UiTheme,
         UiLanguage,
         TrayClickAction,
+        StartupAction,
         UiPreferences,
         StorageCacheLimit,
         StorageStatus,

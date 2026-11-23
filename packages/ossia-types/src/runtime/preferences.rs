@@ -60,12 +60,23 @@ impl TrayClickAction {
     }
 }
 
+/// Initial management window behavior when the desktop application starts.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum StartupAction {
+    #[default]
+    Window,
+    Tray,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct UiPreferences {
     pub theme: UiTheme,
     pub language: Option<UiLanguage>,
     pub tray_click_action: TrayClickAction,
+    #[serde(default)]
+    pub startup_action: StartupAction,
     #[serde(default)]
     pub storage_cache_limit: StorageCacheLimit,
     #[serde(default = "default_storage_auto_cleanup")]
@@ -111,6 +122,7 @@ impl Default for UiPreferences {
             theme: UiTheme::System,
             language: None,
             tray_click_action: TrayClickAction::Window,
+            startup_action: StartupAction::Window,
             storage_cache_limit: StorageCacheLimit::Gib1,
             storage_auto_cleanup: true,
             lan_access: false,
@@ -132,6 +144,7 @@ pub struct ManagementPreferences {
     pub theme: UiTheme,
     pub language: Option<UiLanguage>,
     pub tray_click_action: TrayClickAction,
+    pub startup_action: StartupAction,
     pub tray_click_action_editable: bool,
     pub storage_cache_limit: StorageCacheLimit,
     pub storage_auto_cleanup: bool,
@@ -157,6 +170,7 @@ pub struct ManagementPreferencesChange {
     pub theme: UiTheme,
     pub language: Option<UiLanguage>,
     pub tray_click_action: TrayClickAction,
+    pub startup_action: StartupAction,
     pub storage_cache_limit: StorageCacheLimit,
     pub storage_auto_cleanup: bool,
     pub lan_access: bool,

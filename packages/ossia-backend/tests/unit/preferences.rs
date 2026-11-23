@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
-    OmrService, StorageCacheLimit, TrayClickAction, UiLanguage, UiTheme, UpdateChannelPreference,
-    UpdateSource,
+    OmrService, StartupAction, StorageCacheLimit, TrayClickAction, UiLanguage, UiTheme,
+    UpdateChannelPreference, UpdateSource,
 };
 
 #[test]
@@ -24,6 +24,7 @@ fn legacy_preferences_use_the_default_storage_limit() {
             theme: UiTheme::Dark,
             language: None,
             tray_click_action: TrayClickAction::Menu,
+            startup_action: StartupAction::Window,
             storage_cache_limit: StorageCacheLimit::Gib1,
             storage_auto_cleanup: true,
             lan_access: false,
@@ -60,6 +61,7 @@ fn round_trips_all_preferences() {
         theme: UiTheme::Dark,
         language: Some(UiLanguage::ZhCn),
         tray_click_action: TrayClickAction::Menu,
+        startup_action: StartupAction::Tray,
         storage_cache_limit: StorageCacheLimit::Gib10,
         storage_auto_cleanup: false,
         lan_access: true,

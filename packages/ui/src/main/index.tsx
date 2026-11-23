@@ -36,6 +36,7 @@ function Main() {
               theme: loaded.theme,
               language: detectedLanguage,
               trayClickAction: loaded.trayClickAction,
+              startupAction: loaded.startupAction,
               storageCacheLimit: loaded.storageCacheLimit,
               storageAutoCleanup: loaded.storageAutoCleanup,
               lanAccess: loaded.lanAccess,

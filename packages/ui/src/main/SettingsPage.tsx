@@ -4,6 +4,7 @@ import type {
   ManagementPreferences,
   OmrService,
   OmrSettingsChange,
+  StartupAction,
   StorageCacheLimit,
   StorageCleanupReport,
   StorageStatus,
@@ -21,6 +22,7 @@ export function SettingsPage({
   platform,
   onTheme,
   onLanguage,
+  onStartup,
   onTrayClick,
   onAutostart,
   onStorageLimit,
@@ -44,6 +46,7 @@ export function SettingsPage({
   platform: string;
   onTheme: (theme: UiTheme) => void;
   onLanguage: (language: UiLanguage) => void;
+  onStartup: (action: StartupAction) => void;
   onTrayClick: (action: TrayClickAction) => void;
   onAutostart: (enabled: boolean) => void;
   onStorageLimit: (limit: StorageCacheLimit) => void;
@@ -206,6 +209,19 @@ export function SettingsPage({
             {t('behavior')}
           </h2>
           <div className="settings-list">
+            <div className="settings-row">
+              <span className="setting-label">{t('startupAction')}</span>
+              <Segmented
+                ariaLabel={t('startupAction')}
+                value={preferences?.startupAction ?? 'window'}
+                disabled={disabled}
+                options={[
+                  { value: 'window', label: t('startupWindow') },
+                  { value: 'tray', label: t('startupTray') },
+                ]}
+                onChange={(value) => onStartup(value as StartupAction)}
+              />
+            </div>
             <div className="settings-row">
               <div className="setting-copy">
                 <span className="setting-label">{t('trayClickAction')}</span>

@@ -386,6 +386,9 @@ export const enUS = {
   nonNativeMain:
     'Open the management window from the Ossia desktop app. Browser score pages do not need the desktop bridge.',
   trayClickAction: 'Click tray icon',
+  startupAction: 'On startup',
+  startupWindow: 'Open management window',
+  startupTray: 'Minimize to tray',
   trayWindow: 'Open management window',
   trayMenu: 'Show tray menu',
   trayLinuxUnsupported: 'Linux tray backends only support showing the menu.',

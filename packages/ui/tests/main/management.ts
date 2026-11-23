@@ -66,6 +66,7 @@ export async function mockManagement(
     theme: 'system',
     language: 'zh-CN',
     trayClickAction: 'window',
+    startupAction: 'window',
     trayClickActionEditable: true,
     storageCacheLimit: 'gib1',
     storageAutoCleanup: true,

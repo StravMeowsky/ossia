@@ -32,7 +32,6 @@ fn autostart_args_preserve_runtime_configuration() {
             "192.168.1.20",
             "--public-url",
             "http://ossia.test:3212",
-            "--no-main-window",
         ]
     );
 }
@@ -64,9 +63,16 @@ fn autostart_args_hide_verbatim_windows_paths() {
             r"E:\docs",
             "--static-dir",
             r"E:\ui",
-            "--no-main-window",
         ]
     );
+}
+
+#[test]
+fn startup_visibility_respects_preference_and_explicit_hide() {
+    assert!(show_on_startup(StartupAction::Window, true));
+    assert!(!show_on_startup(StartupAction::Tray, true));
+    assert!(!show_on_startup(StartupAction::Window, false));
+    assert!(!show_on_startup(StartupAction::Tray, false));
 }
 
 #[test]

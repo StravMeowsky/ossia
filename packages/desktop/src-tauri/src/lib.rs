@@ -291,6 +291,7 @@ async fn management_preferences_change(
         theme: change.theme,
         language: change.language,
         tray_click_action: change.tray_click_action,
+        startup_action: change.startup_action,
         storage_cache_limit: change.storage_cache_limit,
         storage_auto_cleanup: change.storage_auto_cleanup,
         lan_access: change.lan_access,
@@ -552,7 +553,7 @@ pub fn run(config: Result<server::Config>, show_main_window: bool) {
     };
     let autostart_args = match &config {
         Ok(config) => preferences::autostart_args(config),
-        Err(_) => vec!["--no-main-window".into()],
+        Err(_) => Vec::new(),
     };
     let update = config
         .as_ref()
@@ -583,7 +584,11 @@ pub fn run(config: Result<server::Config>, show_main_window: bool) {
             let preferences = initial_preferences.clone()?;
             let language = preferences::language(&preferences);
             start_runtime(app.handle().clone(), config.clone(), management.clone());
-            window::create(app.handle(), show_main_window, language)?;
+            window::create(
+                app.handle(),
+                preferences::show_on_startup(preferences.startup_action, show_main_window),
+                language,
+            )?;
             tray::install(app.handle(), language, preferences.tray_click_action)?;
             update::runtime::start_update_schedule(app.handle().clone(), management.clone());
 

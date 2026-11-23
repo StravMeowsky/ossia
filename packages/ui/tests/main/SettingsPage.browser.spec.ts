@@ -2,6 +2,27 @@ import { expect, test, type Locator } from '@playwright/test';
 
 import { mockManagement } from './management.ts';
 
+test('startup behavior is saved alongside other preferences', async ({ page }) => {
+  await mockManagement(page);
+  await page.goto('/main.html');
+  await page.getByRole('button', { name: '常规', exact: true }).click();
+  const startup = page.getByRole('group', { name: '首次启动' });
+  await expect(startup.getByRole('button', { name: '打开管理窗口' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await startup.getByRole('button', { name: '最小化到托盘' }).click();
+  await expect(startup.getByRole('button', { name: '最小化到托盘' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('group', { name: '颜色主题' }).getByRole('button', { name: '浅色' }).click();
+  await expect(startup.getByRole('button', { name: '最小化到托盘' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
 test('management descriptions wrap while controls stay on one row', async ({ page }, testInfo) => {
   await mockManagement(page);
   await page.goto('/main.html');

@@ -1,6 +1,6 @@
 use ossia_backend::{
-    path_text, server, AppError, ErrorCode, ManagementPreferences, Result, TrayClickAction,
-    UiLanguage, UiPreferences, OSSIA_OMR_URL,
+    path_text, server, AppError, ErrorCode, ManagementPreferences, Result, StartupAction,
+    TrayClickAction, UiLanguage, UiPreferences, OSSIA_OMR_URL,
 };
 use tauri_plugin_autostart::ManagerExt;
 
@@ -37,6 +37,7 @@ pub fn snapshot<R: tauri::Runtime>(
         theme: preferences.theme,
         language: preferences.language,
         tray_click_action: preferences.tray_click_action.effective(),
+        startup_action: preferences.startup_action,
         tray_click_action_editable: !cfg!(target_os = "linux"),
         storage_cache_limit: preferences.storage_cache_limit,
         storage_auto_cleanup: preferences.storage_auto_cleanup,
@@ -132,8 +133,11 @@ pub fn autostart_args(config: &server::Config) -> Vec<String> {
         args.push("--public-url".into());
         args.push(public_url.clone());
     }
-    args.push("--no-main-window".into());
     args
+}
+
+pub fn show_on_startup(action: StartupAction, show_main_window: bool) -> bool {
+    show_main_window && action == StartupAction::Window
 }
 
 pub fn language(preferences: &UiPreferences) -> UiLanguage {

@@ -16,6 +16,7 @@ import type {
   ManagementSnapshot,
   OmrService,
   OmrSettingsChange,
+  StartupAction,
   StorageCacheLimit,
   StorageCleanupReport,
   StorageStatus,
@@ -187,6 +188,7 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
           theme: next.theme,
           language: next.language,
           trayClickAction: next.trayClickAction,
+          startupAction: next.startupAction,
           storageCacheLimit: next.storageCacheLimit,
           storageAutoCleanup: next.storageAutoCleanup,
           lanAccess: next.lanAccess,
@@ -215,6 +217,11 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
   async function setLanguage(language: UiLanguage) {
     if (!preferences || preferencesBusy || preferences.language === language) return;
     await savePreferences({ ...preferences, language });
+  }
+
+  async function setStartupAction(startupAction: StartupAction) {
+    if (!preferences || preferencesBusy || preferences.startupAction === startupAction) return;
+    await savePreferences({ ...preferences, startupAction });
   }
 
   async function setTrayClickAction(trayClickAction: TrayClickAction) {
@@ -592,6 +599,7 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
               platform={platform}
               onTheme={(theme) => void setTheme(theme)}
               onLanguage={(language) => void setLanguage(language)}
+              onStartup={(action) => void setStartupAction(action)}
               onTrayClick={(action) => void setTrayClickAction(action)}
               onAutostart={(enabled) => void setAutostart(enabled)}
               onStorageLimit={(limit) => void setStorageLimit(limit)}
