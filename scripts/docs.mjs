@@ -171,7 +171,7 @@ export function prepare(archive, output, lock) {
     if (!selected.length) throw new Error('documentation archive contained no indexed chapters');
     const fileList = path.join(temporary, 'files.txt');
     fs.writeFileSync(fileList, `${selected.map((name) => `./${name}`).join('\n')}\n`);
-    tar(['-xJf', archive, '-C', extracted, '-T', fileList]);
+    tar(['-xf', archive, '-C', extracted, '-T', fileList]);
 
     const chapters = [];
     for (const name of selected) {

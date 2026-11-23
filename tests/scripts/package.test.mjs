@@ -345,7 +345,7 @@ function registry(args) {
 
 test(
   'windows smoke state restores installer registry keys',
-  { skip: process.platform !== 'win32' },
+  { skip: process.platform !== 'win32', timeout: 60_000 },
   async () => {
     const suffix = `${process.pid}-${Date.now()}`;
     const manufacturer = `OssiaStateTest-${suffix}`;
@@ -374,7 +374,7 @@ test(
 
 test(
   'windows smoke state removes installer registry keys it created',
-  { skip: process.platform !== 'win32' },
+  { skip: process.platform !== 'win32', timeout: 60_000 },
   async () => {
     const suffix = `${process.pid}-${Date.now()}`;
     const manufacturer = `OssiaStateMissing-${suffix}`;

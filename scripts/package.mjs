@@ -190,7 +190,10 @@ export function collectRustLicenses(packages, destination) {
       repository: pkg.repository ?? pkg.homepage ?? null,
       source: pkg.source,
       licenseFiles: uniqueFiles.map((file) =>
-        path.relative(destination, path.join(directory, path.basename(file))),
+        path
+          .relative(destination, path.join(directory, path.basename(file)))
+          .split(path.sep)
+          .join('/'),
       ),
       missingLicenseText: !uniqueFiles.some(
         (file) =>

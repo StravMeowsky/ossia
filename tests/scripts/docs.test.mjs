@@ -30,9 +30,18 @@ test('offline pack preserves code and indexes sections without navigation', () =
     fs.writeFileSync(path.join(htmlRoot, 'COPYING.FDL'), 'Original license');
     fs.writeFileSync(path.join(htmlRoot, 'notation.pdf'), 'PDF');
     const archive = path.join(root, 'docs.tar.xz');
-    execFileSync('tar', ['-cJf', archive, '-C', source, '.'], {
-      env: { ...process.env, XZ_OPT: '-1' },
-    });
+    if (process.platform === 'win32') {
+      execFileSync('python', [
+        '-c',
+        'import sys, tarfile; t = tarfile.open(sys.argv[1], "w:xz"); t.add(sys.argv[2], arcname="."); t.close()',
+        archive,
+        source,
+      ]);
+    } else {
+      execFileSync('tar', ['-cJf', archive, '-C', source, '.'], {
+        env: { ...process.env, XZ_OPT: '-1' },
+      });
+    }
     const lock = {
       version: '2.26.0',
       formatVersion: 1,
