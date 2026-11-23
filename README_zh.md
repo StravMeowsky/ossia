@@ -36,17 +36,41 @@ Ossia 可以一键接入 Codex、DeepSeek Harness、WorkBuddy 等 AI Agent，除
 
 Ossia 可以帮你从现有乐谱或简单想法开始，一步步完成乐谱改写或创作，无论是用于学习、教学还是专业制谱，都是极佳的场景。
 
-<table width="100%">
-  <thead><tr><th>场景</th><th>实际运行截图</th></tr></thead>
-  <tbody>
-  <tr><td>创建乐谱</td><td><img src="docs/readme-assets/case-find-score.webp" alt="创建巴赫乐谱" width="360"><br>创建乐谱：《羊儿可以安静地吃草》，BWV 208。</td></tr>
-  <tr><td>改编乐谱</td><td><img src="docs/readme-assets/case-arrange.webp" alt="改编钢琴四手连弹乐谱" width="360"><br>把《羊儿可以安静地吃草》改编成钢琴四手连弹，写入新乐谱。</td></tr>
-  <tr><td>创作旋律与伴奏</td><td><img src="docs/readme-assets/case-compose.webp" alt="创作旋律并配上和声与伴奏" width="360"><br>写一段优美的旋律，为旋律配和声并加入伴奏声部。</td></tr>
-  <tr><td>导入图片乐谱</td><td><img src="docs/readme-assets/case-import-image.webp" alt="导入图片乐谱并校对" width="360"><br>导入这张图片乐谱，仔细核对原谱并改正错误。</td></tr>
-  <tr><td>分析调性并移调</td><td><img src="docs/readme-assets/case-transpose.webp" alt="分析调性并移调" width="360"><br>《空洞骑士》是什么调性？移调到 A 小调。</td></tr>
-  <tr><td>改编吉他六线谱</td><td><img src="docs/readme-assets/case-guitar-tab.webp" alt="改编吉他六线谱并标注和弦图" width="360"><br>将《空洞骑士》转成吉他六线谱，保存为新乐谱并标注和弦图。</td></tr>
-  </tbody>
-</table>
+### 创建乐谱
+
+<img src="docs/readme-assets/case-find-score.webp" alt="创建巴赫乐谱" width="360">
+
+创建乐谱：《羊儿可以安静地吃草》，BWV 208。
+
+### 改编乐谱
+
+<img src="docs/readme-assets/case-arrange.webp" alt="改编钢琴四手连弹乐谱" width="360">
+
+把《羊儿可以安静地吃草》改编成钢琴四手连弹，写入新乐谱。
+
+### 创作旋律与伴奏
+
+<img src="docs/readme-assets/case-compose.webp" alt="创作旋律并配上和声与伴奏" width="360">
+
+写一段优美的旋律，为旋律配和声并加入伴奏声部。
+
+### 导入图片乐谱
+
+<img src="docs/readme-assets/case-import-image.webp" alt="导入图片乐谱并校对" width="360">
+
+导入这张图片乐谱，仔细核对原谱并改正错误。
+
+### 分析调性并移调
+
+<img src="docs/readme-assets/case-transpose.webp" alt="分析调性并移调" width="360">
+
+《空洞骑士》是什么调性？移调到 A 小调。
+
+### 改编吉他六线谱
+
+<img src="docs/readme-assets/case-guitar-tab.webp" alt="改编吉他六线谱并标注和弦图" width="360">
+
+将《空洞骑士》转成吉他六线谱，保存为新乐谱并标注和弦图。
 
 > AI 可能出错，请仔细甄别，鼓励多轮打磨成果。
 

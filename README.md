@@ -36,17 +36,41 @@ Ossia connects to AI agents such as Codex, DeepSeek Harness, and WorkBuddy. It a
 
 Start with an existing score or a simple idea and work with your agent to arrange or create music for study, teaching, or professional notation.
 
-<table width="100%">
-  <thead><tr><th>Scenario</th><th>Screenshot</th></tr></thead>
-  <tbody>
-  <tr><td>Create a score</td><td><img src="docs/readme-assets/case-find-score.webp" alt="Creating a Bach score" width="360"><br>Create a score for Bach's <em>Sheep May Safely Graze</em>, BWV 208.</td></tr>
-  <tr><td>Arrange a score</td><td><img src="docs/readme-assets/case-arrange.webp" alt="Arranging a score for piano four hands" width="360"><br>Arrange <em>Sheep May Safely Graze</em> for piano four hands and save it as a new score.</td></tr>
-  <tr><td>Compose a melody and accompaniment</td><td><img src="docs/readme-assets/case-compose.webp" alt="Composing a melody with harmony and accompaniment" width="360"><br>Write a beautiful melody, add harmony, and create an accompaniment part.</td></tr>
-  <tr><td>Import an image of a score</td><td><img src="docs/readme-assets/case-import-image.webp" alt="Importing and checking an image of a score" width="360"><br>Import this score image, check it carefully against the original, and correct any errors.</td></tr>
-  <tr><td>Analyze and transpose</td><td><img src="docs/readme-assets/case-transpose.webp" alt="Analyzing the key and transposing a score" width="360"><br>What key is <em>Hollow Knight</em> in? Transpose it to A minor.</td></tr>
-  <tr><td>Arrange for guitar tablature</td><td><img src="docs/readme-assets/case-guitar-tab.webp" alt="Arranging guitar tablature with chord diagrams" width="360"><br>Arrange <em>Hollow Knight</em> as a new guitar tablature score and add chord diagrams.</td></tr>
-  </tbody>
-</table>
+### Create a score
+
+<img src="docs/readme-assets/case-find-score.webp" alt="Creating a Bach score" width="360">
+
+Create a score for Bach's <em>Sheep May Safely Graze</em>, BWV 208.
+
+### Arrange a score
+
+<img src="docs/readme-assets/case-arrange.webp" alt="Arranging a score for piano four hands" width="360">
+
+Arrange <em>Sheep May Safely Graze</em> for piano four hands and save it as a new score.
+
+### Compose a melody and accompaniment
+
+<img src="docs/readme-assets/case-compose.webp" alt="Composing a melody with harmony and accompaniment" width="360">
+
+Write a beautiful melody, add harmony, and create an accompaniment part.
+
+### Import an image of a score
+
+<img src="docs/readme-assets/case-import-image.webp" alt="Importing and checking an image of a score" width="360">
+
+Import this score image, check it carefully against the original, and correct any errors.
+
+### Analyze and transpose
+
+<img src="docs/readme-assets/case-transpose.webp" alt="Analyzing the key and transposing a score" width="360">
+
+What key is <em>Hollow Knight</em> in? Transpose it to A minor.
+
+### Arrange for guitar tablature
+
+<img src="docs/readme-assets/case-guitar-tab.webp" alt="Arranging guitar tablature with chord diagrams" width="360">
+
+Arrange <em>Hollow Knight</em> as a new guitar tablature score and add chord diagrams.
 
 > AI can make mistakes. Review the result carefully and refine it through follow-up requests.
 
