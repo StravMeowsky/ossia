@@ -34,7 +34,7 @@ fn fixture() -> (tempfile::TempDir, Integrator, DetectedAgent) {
     let detected = DetectedAgent {
         executable: root.path().join("codebuddy"),
         command: root.path().join("node"),
-        command_args: vec![path_text(&root.path().join("codebuddy"))],
+        command_args: vec![path_text(root.path().join("codebuddy"))],
         version: "5.11.3 (CLI 2.176.0)".into(),
         config_root,
         profile: "desktop",

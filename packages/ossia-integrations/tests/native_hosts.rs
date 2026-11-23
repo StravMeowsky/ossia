@@ -153,7 +153,7 @@ fn workbuddy_plugin_install_and_remove_round_trip() {
         .iter()
         .find(|agent| agent.name == "WorkBuddy")
         .expect("WorkBuddy should be detected");
-    assert!(before.installed == false);
+    assert!(!before.installed);
 
     let installed = integrator
         .set_agents(AgentsChange {

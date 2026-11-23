@@ -27,7 +27,7 @@ pub(super) fn app_candidates(home: &Path) -> Vec<PathBuf> {
             };
             for entry in entries.flatten() {
                 let path = entry.path();
-                if !path.extension().is_some_and(|extension| extension == "app") {
+                if path.extension().is_none_or(|extension| extension != "app") {
                     continue;
                 }
                 if path

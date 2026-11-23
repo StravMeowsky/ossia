@@ -375,11 +375,9 @@ fn nested_context_order_is_engraving_order_and_composed_music_is_conservative() 
 
 #[test]
 fn document_note_language_cannot_silently_change_pitch_interpretation() {
-    for prefix in ["\\language \"deutsch\""] {
-        let source = format!("{prefix}\nMusic = {{ b'1 | }} \\score {{ \\new Staff \\Music }}");
-        let index = build_index(&source);
-        let pitch = resolve_pitches(&source, index.voices[0].music_span).unwrap();
-        assert!(pitch.unsupported.is_some());
-        assert!(pitch.events.is_empty());
-    }
+    let source = "\\language \"deutsch\"\nMusic = { b'1 | } \\score { \\new Staff \\Music }";
+    let index = build_index(source);
+    let pitch = resolve_pitches(source, index.voices[0].music_span).unwrap();
+    assert!(pitch.unsupported.is_some());
+    assert!(pitch.events.is_empty());
 }

@@ -64,7 +64,7 @@ async fn successful_check_publishes_available_version() {
     let server = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap();
         let mut request = [0; 4096];
-        stream.read(&mut request).unwrap();
+        assert!(stream.read(&mut request).unwrap() > 0);
         let body = r#"[{"tag_name":"v0.2.0","draft":false,"prerelease":false,"body":"stable","assets":[]}]"#;
         write!(
             stream,
