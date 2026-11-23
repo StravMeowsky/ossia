@@ -104,17 +104,21 @@ test('packaging cannot bypass source consistency checks', async () => {
   await assert.rejects(packageTarget('darwin-arm64', { allowDirty: true }), /dirty/i);
 });
 
-test('Rust notice inventory follows the desktop executable dependency tree', () => {
-  const host = execFileSync('rustc', ['-vV'], { encoding: 'utf8' })
-    .split('\n')
-    .find((line) => line.startsWith('host: '))
-    .slice('host: '.length);
-  const names = new Set(rustDependencies(host).map((pkg) => pkg.name));
-  assert.ok(names.has('ossia-desktop'));
-  assert.ok(names.has('tauri'));
-  assert.ok(names.has('imagequant'));
-  assert.ok(!names.has('ossia-omr'));
-});
+test(
+  'Rust notice inventory follows the desktop executable dependency tree',
+  { timeout: 60_000 },
+  () => {
+    const host = execFileSync('rustc', ['-vV'], { encoding: 'utf8' })
+      .split('\n')
+      .find((line) => line.startsWith('host: '))
+      .slice('host: '.length);
+    const names = new Set(rustDependencies(host).map((pkg) => pkg.name));
+    assert.ok(names.has('ossia-desktop'));
+    assert.ok(names.has('tauri'));
+    assert.ok(names.has('imagequant'));
+    assert.ok(!names.has('ossia-omr'));
+  },
+);
 
 test('Rust materials include copyright notices alongside an explicit license file', () => {
   const root = temporaryRoot();
