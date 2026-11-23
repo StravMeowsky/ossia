@@ -1525,6 +1525,19 @@ test('arrow keys seek by measure during playback without changing the audition a
       measureSpan(3, 2, 3, 80, 90),
     ],
   };
+  timeline.durationSeconds *= 20;
+  for (const note of timeline.notes) {
+    note.startSeconds *= 20;
+    note.durationSeconds *= 20;
+  }
+  for (const group of timeline.groups) {
+    if (group.startSeconds !== null) group.startSeconds *= 20;
+    if (group.durationSeconds !== null) group.durationSeconds *= 20;
+  }
+  for (const span of timeline.systems) {
+    span.startSeconds *= 20;
+    span.endSeconds *= 20;
+  }
   const { page } = await pageWithNotes(context, timeline, elements);
   const overlay = page.locator('.overlay').first();
   const box = (await overlay.boundingBox())!;
