@@ -27,7 +27,7 @@ gh variable set OSSIA_BOT_APP_ID --repo micooz/ossia --body '<app-id>'
 gh secret set OSSIA_BOT_PRIVATE_KEY --repo micooz/ossia < /path/to/ossia-bot.pem
 ```
 
-`Check` runs on pull requests, `main` pushes and release tags. `Auto tag` creates
+`Check` runs on pull requests and `main` pushes. `Auto tag` creates
 the next patch tag after a successful `main` check when the committed version
 matches that tag. The first release tag must be created manually.
 
@@ -55,8 +55,9 @@ unwanted stable tag.
    the manifests and lockfile. `Check` validates on macOS arm64 and Windows
    x86_64, including browser regression tests on both platforms.
 2. `Release` validates the annotated tag and current version.
-3. Verification, DeepSeek notes and offline documentation generation run in
-   parallel. Both platform builds use the generated documentation artifact.
+3. Release waits for the latest successful `main` Check for the exact tagged
+   commit. DeepSeek notes and offline documentation generation run in parallel;
+   both platform builds use the generated documentation artifact.
 4. Each build installs or extracts its installable artifacts and runs the same
    packaged smoke check.
 5. The publish job creates a draft release and verifies its exact asset set.

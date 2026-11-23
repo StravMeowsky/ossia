@@ -48,6 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(node scripts/release/version.mjs parse "$TAG")
+          node scripts/release/version.mjs check "$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "prerelease=$(node scripts/release/version.mjs prerelease "$TAG")" >> "$GITHUB_OUTPUT"
@@ -76,9 +77,20 @@ jobs:
   verify:
     needs: metadata
     if: needs.metadata.outputs.current == 'true'
-    uses: ./.github/workflows/check.yml
-    with:
-      tag: ${{ needs.metadata.outputs.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+      - name: Wait for the checked commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/check-gate.mjs
 
   notes:
     needs: metadata
@@ -108,7 +120,7 @@ jobs:
   documentation:
     needs: metadata
     if: needs.metadata.outputs.current == 'true'
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1
