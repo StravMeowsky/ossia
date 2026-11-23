@@ -38,6 +38,38 @@ pub fn create(
         builder = builder.decorations(false);
     }
     let window = builder.build().map_err(storage)?;
+    #[cfg(all(debug_assertions, any(target_os = "macos", target_os = "windows")))]
+    {
+        use tauri::menu::{Menu, MenuItem, Submenu};
+
+        #[cfg(target_os = "macos")]
+        let shortcut = "Cmd+Alt+I";
+        #[cfg(target_os = "windows")]
+        let shortcut = "Ctrl+Shift+I";
+        let item = MenuItem::with_id(app, "devtools", "Developer Tools", true, Some(shortcut))
+            .map_err(storage)?;
+        let submenu = Submenu::with_items(app, "Developer", true, &[&item]).map_err(storage)?;
+        #[cfg(target_os = "macos")]
+        let menu = app
+            .menu()
+            .map(Ok)
+            .unwrap_or_else(|| Menu::default(app))
+            .map_err(storage)?;
+        #[cfg(target_os = "windows")]
+        let menu = Menu::new(app).map_err(storage)?;
+        menu.append(&submenu).map_err(storage)?;
+        #[cfg(target_os = "macos")]
+        app.set_menu(menu).map_err(storage)?;
+        #[cfg(target_os = "windows")]
+        window.set_menu(menu).map_err(storage)?;
+
+        let devtools_window = window.clone();
+        window.on_menu_event(move |_, event| {
+            if event.id().as_ref() == "devtools" && devtools_window.is_focused().unwrap_or(false) {
+                devtools_window.open_devtools();
+            }
+        });
+    }
     let handle = app.clone();
     window.on_window_event(move |event| {
         if let WindowEvent::CloseRequested { api, .. } = event {
