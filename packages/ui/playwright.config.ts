@@ -11,6 +11,7 @@ export default defineConfig({
     channel: 'chrome',
     locale: 'zh-CN',
     trace: 'retain-on-failure',
+    launchOptions: process.env.CI ? { args: ['--disable-audio-input'] } : undefined,
   },
   webServer: {
     command: 'pnpm dev',
