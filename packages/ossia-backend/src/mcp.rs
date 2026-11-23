@@ -331,7 +331,10 @@ mod tests {
                 .and_then(|tool| tool.description.as_deref())
                 .unwrap();
             assert!(description.len() <= 240, "{name} description is too long");
-            assert!(description.contains("guide"), "{name} must point to the guide");
+            assert!(
+                description.contains("guide"),
+                "{name} must point to the guide"
+            );
         }
     }
 }
