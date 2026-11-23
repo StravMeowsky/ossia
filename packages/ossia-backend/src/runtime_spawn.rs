@@ -31,7 +31,7 @@ impl RuntimeChild {
             if !success {
                 return Err(storage(std::io::Error::last_os_error()));
             }
-            return Ok((code != STILL_ACTIVE as u32).then_some(code as i32));
+            Ok((code != STILL_ACTIVE as u32).then_some(code as i32))
         }
     }
 
@@ -83,8 +83,10 @@ pub(crate) fn spawn(executable: &Path, args: &[OsString]) -> Result<RuntimeChild
 
         let application = wide(executable.as_os_str());
         let mut command_line = command_line(executable, args);
-        let mut startup = STARTUPINFOW::default();
-        startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+        let startup = STARTUPINFOW {
+            cb: std::mem::size_of::<STARTUPINFOW>() as u32,
+            ..Default::default()
+        };
         let mut process = PROCESS_INFORMATION::default();
         let created = unsafe {
             CreateProcessW(
@@ -106,9 +108,9 @@ pub(crate) fn spawn(executable: &Path, args: &[OsString]) -> Result<RuntimeChild
         unsafe {
             CloseHandle(process.hThread);
         }
-        return Ok(RuntimeChild {
+        Ok(RuntimeChild {
             handle: process.hProcess as usize,
-        });
+        })
     }
 }
 
