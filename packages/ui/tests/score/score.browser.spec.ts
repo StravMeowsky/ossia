@@ -1307,7 +1307,7 @@ test('active agent edits disable playback, annotation and drawing tools', async 
 }) => {
   const h = await mockScoreRuntime(context);
   await page.goto(`/scores?documentId=${firstId}`);
-  const playback = page.getByRole('button', { name: '播放', exact: true });
+  const playback = page.locator('.score-playback-toggle');
   const annotation = page.getByRole('button', { name: '打开标注' });
   const pen = page.getByRole('button', { name: '画笔', exact: true });
   const eraser = page.getByRole('button', { name: '橡皮擦', exact: true });

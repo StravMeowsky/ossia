@@ -77,7 +77,7 @@ test('LAN access requires confirmation and shows the restarted service address',
   await page.getByRole('button', { name: '服务未连接' }).click();
   const service = page.getByRole('dialog', { name: '本地服务' });
   await service.getByRole('button', { name: '启动服务' }).click();
-  await page.getByRole('button', { name: '关闭', exact: true }).click();
+  await service.getByRole('button', { name: '关闭', exact: true }).click();
   await page.getByRole('button', { name: '常规', exact: true }).click();
 
   const lan = page.getByRole('switch', { name: '局域网访问' });

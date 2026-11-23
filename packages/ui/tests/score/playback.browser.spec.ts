@@ -375,7 +375,9 @@ async function pageWithNotes(
 test('play button starts at the first note, pause keeps the playhead and space resumes', async ({
   context,
 }) => {
-  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const timeline = playback([system(1, 0, 2)]);
+  timeline.durationSeconds = 30;
+  const { page } = await pageWithPlayback(context, timeline);
   const play = page.getByRole('button', { name: '播放', exact: true });
   await expect(play).toBeEnabled();
   await play.click();
@@ -447,7 +449,9 @@ test('a concurrent staff rest does not capture the first playhead frame', async 
 });
 
 test('historical versions expose playback, audition and restore controls', async ({ context }) => {
-  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const timeline = playback([system(1, 0, 2)]);
+  timeline.durationSeconds = 30;
+  const { page } = await pageWithPlayback(context, timeline);
   await page.getByRole('button', { name: '乐谱设置' }).click();
   await page.getByRole('dialog', { name: '乐谱设置' }).getByLabel('钢琴').selectOption('violin');
   await expect(page.getByRole('dialog', { name: '乐谱设置' }).getByLabel('钢琴')).toHaveValue(
@@ -536,7 +540,9 @@ test('escape clears the audition highlight but keeps the next playback start', a
 test('escape leaves the audition highlight alone while playing or annotating', async ({
   context,
 }) => {
-  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const timeline = playback([system(1, 0, 2)]);
+  timeline.durationSeconds = 30;
+  const { page } = await pageWithPlayback(context, timeline);
   const overlay = page.locator('.overlay').first();
   const box = (await overlay.boundingBox())!;
   await overlay.click({ position: { x: box.width * 0.61, y: (box.height * 25) / 140 } });
@@ -563,7 +569,9 @@ test('escape leaves the audition highlight alone while playing or annotating', a
 test('clicking a note keeps a paused playhead until playback resumes from it', async ({
   context,
 }) => {
-  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const timeline = playback([system(1, 0, 2)]);
+  timeline.durationSeconds = 30;
+  const { page } = await pageWithPlayback(context, timeline);
   await page.getByRole('button', { name: '播放', exact: true }).click();
   await expect(page.getByRole('button', { name: '暂停', exact: true })).toBeVisible({
     timeout: 20_000,

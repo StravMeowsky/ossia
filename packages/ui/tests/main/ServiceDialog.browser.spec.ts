@@ -26,10 +26,17 @@ for (const fallback of [false, true]) {
     await expect(dialog.getByRole('heading', { name: '本地服务' })).toBeFocused();
     await dialog.evaluate(async (element) => {
       await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+      element.addEventListener(
+        'transitionrun',
+        () => element.setAttribute('data-transition-ran', 'true'),
+        {
+          once: true,
+        },
+      );
     });
     if (fallback) await page.keyboard.press('Escape');
     else await dialog.getByRole('button', { name: '关闭', exact: true }).click();
-    expect(await dialog.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+    await expect(dialog).toHaveAttribute('data-transition-ran', 'true');
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
   });

@@ -72,6 +72,7 @@ test('annotations color note ink, shared beams and tied continuations and restor
   const overlay = page.locator('.overlay').first();
   const ink = (id: string) => page.locator(`[data-ossia-graphic="${id}"] path`).first();
   await page.keyboard.press('e');
+  await expect(page.getByRole('button', { name: '关闭标注' })).toBeVisible();
   const box = (await overlay.boundingBox())!;
   await overlay.click({ position: { x: box.width * 0.31, y: (box.height * 25) / 140 } });
   await page.getByRole('textbox', { name: '标注' }).fill('连音组');

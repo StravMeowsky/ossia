@@ -99,7 +99,7 @@ test('agent compilation keeps the current drawing when the new render is pending
   await expect(page.locator('.overlay.interactive')).toHaveCount(0);
 });
 
-test('a score without any previous render still shows the delayed loading fallback', async ({
+test('a score without any previous render shows the empty state while editing', async ({
   context,
   page,
 }) => {
@@ -107,9 +107,9 @@ test('a score without any previous render still shows the delayed loading fallba
   runtime.states[0]!.lastSuccessfulRender = null;
   runtime.states[0]!.editState = 'active';
   await page.goto(`/scores?documentId=${firstId}`);
-  await expect(page.getByText('正在排版最新草稿…', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '尚无可用谱面' })).toBeVisible();
   await expect(page.locator('.score-image')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: '尚无可用谱面' })).toHaveCount(0);
+  await expect(page.locator('.score-loading-state')).toHaveCount(0);
 });
 
 test('new geometry and SVG replace the current drawing in place without loading', async ({
@@ -272,5 +272,5 @@ test('switching documents never retains another score as its preview', async ({
   }, secondId);
   await expect(page.locator('.topbar-title')).toHaveText('另一份乐谱');
   await expect(page.locator('.score-image')).toHaveCount(0);
-  await expect(page.getByText('正在排版最新草稿…', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '尚无可用谱面' })).toBeVisible();
 });
