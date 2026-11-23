@@ -856,7 +856,7 @@ test('concurrent drawing edits are merged across pages after a revision conflict
   context,
   page,
 }) => {
-  const runtime = await mockScoreRuntime(context, { eventsDelay: 1500 });
+  const runtime = await mockScoreRuntime(context);
   const other = await context.newPage();
   await Promise.all([
     page.goto(`/scores?documentId=${firstId}`),
@@ -865,6 +865,9 @@ test('concurrent drawing edits are merged across pages after a revision conflict
   await Promise.all(
     [page, other].map(async (tab) => {
       await tab.getByRole('button', { name: '画笔', exact: true }).click();
+      await expect(
+        tab.locator('.page-host').first().locator('.score-freehand-layer'),
+      ).toBeVisible();
     }),
   );
   const draw = async (tab: typeof page, yFraction: number) => {
@@ -874,9 +877,17 @@ test('concurrent drawing edits are merged across pages after a revision conflict
     await tab.mouse.move(box.x + box.width * 0.5, box.y + box.height * yFraction);
     await tab.mouse.up();
   };
+  runtime.pauseEvents();
   await draw(page, 0.25);
+  await expect.poll(() => runtime.drawings.get(firstId)?.strokes.length).toBe(1);
+  const conflict = other.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/documents/${firstId}/drawing`) && response.status() === 409,
+  );
   await draw(other, 0.35);
+  await conflict;
   await expect.poll(() => runtime.drawings.get(firstId)?.strokes.length).toBe(2);
+  runtime.resumeEvents();
   await expect(
     page.locator('.page-host').first().locator('.score-freehand-layer polyline'),
   ).toHaveCount(2);

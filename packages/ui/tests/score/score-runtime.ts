@@ -176,13 +176,16 @@ export async function mockScoreRuntime(
   const pageRequests: string[] = [];
   const playbackRequests: string[] = [];
   const events: RuntimeEvent[] = [];
+  let eventsPaused = false;
+  const pendingEvents: RuntimeEvent[] = [];
   const activeJobs: Job[] = [];
   const streams = new Set<ServerResponse>();
   const eventFrame = (event: RuntimeEvent) => `event: runtime\ndata: ${JSON.stringify(event)}\n\n`;
   const emit = (type: string, documentId = firstId, payload: RuntimeEvent['payload'] = {}) => {
     const event = { instanceId: 'instance', seq: ++seq, type, documentId, payload };
     events.push(event);
-    for (const stream of streams) stream.write(eventFrame(event));
+    if (eventsPaused) pendingEvents.push(event);
+    else for (const stream of streams) stream.write(eventFrame(event));
   };
   const eventServer = createServer((request, response) => {
     if (loseEvents) {
@@ -532,6 +535,15 @@ export async function mockScoreRuntime(
     scoreSettings,
     states,
     emit,
+    pauseEvents: () => {
+      eventsPaused = true;
+    },
+    resumeEvents: () => {
+      eventsPaused = false;
+      for (const event of pendingEvents.splice(0)) {
+        for (const stream of streams) stream.write(eventFrame(event));
+      }
+    },
     contextFor,
     disconnect: (value: boolean) => {
       loseEvents = value;
