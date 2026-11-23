@@ -121,3 +121,11 @@ jobs:
         run: pnpm --filter @ossia/ui exec playwright install chrome
       - name: Browser regression
         run: pnpm test:ui
+      - name: Upload browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failures-${{ matrix.os }}
+          path: packages/ui/test-results/browser/
+          if-no-files-found: ignore
+          retention-days: 7
