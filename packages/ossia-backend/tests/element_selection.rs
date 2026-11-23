@@ -90,12 +90,18 @@ async fn element_targets_and_annotations_clear_on_any_source_change() {
         .runtime
         .geometry(&context.render.unwrap().render_key)
         .unwrap();
-    let notes: Vec<_> = geometry.pages[0]
+    let mut notes = Vec::new();
+    for target in geometry.pages[0]
         .elements
         .iter()
-        .filter(|e| e.region.element_kind.as_deref() == Some("NoteHead") && e.bounds.y0 == 20.)
+        .filter(|e| e.region.element_kind.as_deref() == Some("NoteHead"))
         .map(|e| e.region.target.clone())
-        .collect();
+    {
+        if !notes.contains(&target) {
+            notes.push(target);
+        }
+    }
+    assert!(notes.len() >= 2);
     f.runtime
         .selection(Selection {
             document_id: f.doc.document_id,
