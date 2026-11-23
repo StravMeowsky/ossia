@@ -1,3 +1,5 @@
+import { createServer, type ServerResponse } from 'node:http';
+
 import type { BrowserContext } from '@playwright/test';
 
 import type {
@@ -175,9 +177,47 @@ export async function mockScoreRuntime(
   const playbackRequests: string[] = [];
   const events: RuntimeEvent[] = [];
   const activeJobs: Job[] = [];
+  const streams = new Set<ServerResponse>();
+  const eventFrame = (event: RuntimeEvent) => `event: runtime\ndata: ${JSON.stringify(event)}\n\n`;
   const emit = (type: string, documentId = firstId, payload: RuntimeEvent['payload'] = {}) => {
-    events.push({ instanceId: 'instance', seq: ++seq, type, documentId, payload });
+    const event = { instanceId: 'instance', seq: ++seq, type, documentId, payload };
+    events.push(event);
+    for (const stream of streams) stream.write(eventFrame(event));
   };
+  const eventServer = createServer((request, response) => {
+    if (loseEvents) {
+      request.socket.destroy();
+      return;
+    }
+    response.writeHead(200, {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
+      'access-control-allow-origin': '*',
+    });
+    response.write(': keep-alive\n\n');
+    if (options.languageEvent) {
+      response.write(
+        eventFrame({
+          instanceId: 'instance',
+          seq,
+          type: 'ui-language-changed',
+          payload: { language: options.languageEvent },
+        }),
+      );
+    }
+    const after = Number(new URL(request.url!, 'http://localhost').searchParams.get('after'));
+    for (const event of events.filter((entry) => entry.seq > after))
+      response.write(eventFrame(event));
+    streams.add(response);
+    response.on('close', () => streams.delete(response));
+  });
+  await new Promise<void>((resolve) => eventServer.listen(0, '127.0.0.1', resolve));
+  const address = eventServer.address();
+  if (!address || typeof address === 'string') throw new Error('event server did not bind a port');
+  context.on('close', () => {
+    eventServer.closeAllConnections();
+    eventServer.close();
+  });
   const contextFor = (documentId: string): DocumentContext | null => {
     const document = states.find((state) => state.documentId === documentId);
     if (!document) return null;
@@ -208,6 +248,11 @@ export async function mockScoreRuntime(
     const reply = (body: unknown, status = 200) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (path === '/events') {
+      if (options.eventsDelay === undefined) {
+        return route.continue({
+          url: `http://127.0.0.1:${address.port}${url.pathname}${url.search}`,
+        });
+      }
       await new Promise((resolve) => setTimeout(resolve, options.eventsDelay ?? 1500));
       if (loseEvents) return route.abort();
       const body =
@@ -490,6 +535,7 @@ export async function mockScoreRuntime(
     contextFor,
     disconnect: (value: boolean) => {
       loseEvents = value;
+      if (value) for (const stream of streams) stream.destroy();
     },
     stale: () => {
       rejectSelection = true;

@@ -1344,6 +1344,24 @@ test('active agent edits disable playback, annotation and drawing tools', async 
   await expect(eraser).toHaveAttribute('aria-disabled', 'false');
 });
 
+test('an idle event stream keeps score tools available', async ({ context, page }) => {
+  await mockScoreRuntime(context);
+  await page.goto(`/scores?documentId=${firstId}`);
+  const annotation = page.getByRole('button', { name: '打开标注' });
+  await expect(annotation).toBeVisible();
+  await page.evaluate(() => {
+    Reflect.set(window, 'toolbarDisconnected', false);
+    const toolbar = document.querySelector('.score-feature-toolbar')!;
+    new MutationObserver(() => {
+      if (!toolbar.isConnected) Reflect.set(window, 'toolbarDisconnected', true);
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.waitForTimeout(3_000);
+  expect(await page.evaluate(() => Reflect.get(window, 'toolbarDisconnected'))).toBe(false);
+  await expect(annotation).toBeVisible();
+  await expect(annotation).toHaveAttribute('aria-disabled', 'false');
+});
+
 test('stale source clears selection without exposing diagnostics and reconnect works', async ({
   context,
   page,
