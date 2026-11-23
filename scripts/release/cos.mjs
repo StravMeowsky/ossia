@@ -30,6 +30,7 @@ export function cosClient({ secretId, secretKey, securityToken }) {
     SecretId: secretId,
     SecretKey: secretKey,
     SecurityToken: securityToken,
+    UseAccelerate: true,
   });
 }
 

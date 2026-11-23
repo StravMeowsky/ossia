@@ -7,8 +7,19 @@ import path from 'node:path';
 
 import { test } from 'vite-plus/test';
 
-import { fileDigest, objectKey, putObject } from '../../../scripts/release/cos.mjs';
+import { cosClient, fileDigest, objectKey, putObject } from '../../../scripts/release/cos.mjs';
 import { readOriginIndex } from '../../../scripts/release/upload-update.mjs';
+
+test('COS release requests use the global acceleration endpoint', () => {
+  const client = cosClient({ secretId: 'test', secretKey: 'test' });
+  const url = client.getObjectUrl({
+    Bucket: 'example-1250000000',
+    Region: 'ap-shanghai',
+    Key: 'index.json',
+    Sign: false,
+  });
+  assert.equal(new URL(url).hostname, 'example-1250000000.cos.accelerate.myqcloud.com');
+});
 
 test('reads the authoritative manifest from object storage', async () => {
   const index = { schemaVersion: 1, target: 'darwin-arm64', releases: [] };
