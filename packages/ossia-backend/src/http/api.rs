@@ -214,13 +214,7 @@ pub(super) async fn api(
             ("GET", ["documents", doc, "drawing"]) => value(runtime.library.drawing(id(doc)?)?)?,
             ("PUT", ["documents", doc, "drawing"]) => {
                 let document = id(doc)?;
-                let drawing = runtime.library.save_drawing(document, decode(data)?)?;
-                runtime.emit(
-                    "drawing-changed",
-                    Some(document),
-                    None,
-                    json!({"revision":drawing.revision}),
-                );
+                let drawing = runtime.save_drawing(document, decode(data)?)?;
                 value(drawing)?
             }
             ("POST", ["documents", doc, "locate"]) => {

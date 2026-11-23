@@ -67,6 +67,12 @@ pub enum Command {
     ReadSource {
         json: String,
     },
+    ReadDrawing {
+        json: String,
+    },
+    WriteDrawing {
+        json: String,
+    },
     Layout {
         json: String,
     },
@@ -339,6 +345,8 @@ pub async fn run(args: Args) -> Result<Option<serde_json::Value>> {
                 Command::UpdateMetadata { json } => ("update_metadata", json),
                 Command::WriteSource { json } => ("write_source", json),
                 Command::ReadSource { json } => ("read_source", json),
+                Command::ReadDrawing { json } => ("read_drawing", json),
+                Command::WriteDrawing { json } => ("write_drawing", json),
                 Command::Layout { json } => ("layout", json),
                 Command::Evidence { json } => ("evidence", json),
                 Command::Docs { json } => ("docs", json),

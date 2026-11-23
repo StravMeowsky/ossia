@@ -129,6 +129,15 @@ pub fn tools() -> Vec<Tool> {
             "ossia_read_source",
             "Read a bounded UTF-8-safe source page at an exact source hash. Set includeLineSpans to return exact editable line spans. Returns ReadSourceOutcome with the next span.",
         ),
+        read_tool::<ReadDrawingArgs>(
+            "ossia_read_drawing",
+            "Read a revision-guarded page of indexed drawing strokes or export the complete drawing to a new absolute JSON path. Offsets are global stroke indices; preserve expectedRevision between pages. A page filter uses one-based page numbers.",
+        ),
+        write_tool::<WriteDrawingArgs>(
+            "ossia_write_drawing",
+            "Atomically modify drawing strokes or replace the drawing from an array or absolute JSON file. Read the destination revision first. Indices refer to the original drawing at expectedRevision; additions append. Page-relative coordinates can shift when score layout changes.",
+            true,
+        ),
         read_tool::<LayoutArgs>(
             "ossia_layout",
             "Inspect page, system, staff and reliable measure structure from a completed import or check job. Returns LayoutOutcome.",
@@ -279,6 +288,8 @@ mod tests {
                 "ossia_edit",
                 "ossia_write_source",
                 "ossia_read_source",
+                "ossia_read_drawing",
+                "ossia_write_drawing",
                 "ossia_layout",
                 "ossia_evidence",
                 "ossia_docs",

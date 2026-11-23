@@ -287,6 +287,8 @@ pub fn dispatch(runtime: &Runtime, method: &str, params: Value) -> Result<Value>
         }
         "write_source" => value(runtime.write_source(decode(params)?)?),
         "read_source" => value(runtime.read_source(decode(params)?)?),
+        "read_drawing" => value(runtime.read_drawing(decode(params)?)?),
+        "write_drawing" => value(runtime.write_drawing(decode(params)?)?),
         "edit" => runtime.edit(decode(params)?),
         "check" => value(crate::agent::summarize_job(
             runtime.check(decode(params)?, false)?,

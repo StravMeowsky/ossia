@@ -1,6 +1,77 @@
 //! Agent operations on owned source files and immutable draft snapshots.
 use crate::*;
 
+/// Read or export a score's freehand drawing.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReadDrawingArgs {
+    pub document_id: DocumentId,
+    pub page: Option<u32>,
+    pub offset: Option<usize>,
+    pub limit: Option<usize>,
+    pub expected_revision: Option<u64>,
+    pub output_path: Option<String>,
+}
+
+/// A stroke's index is valid only at the returned drawing revision.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexedDrawingStroke {
+    pub index: usize,
+    pub stroke: DrawingStroke,
+}
+
+/// A bounded drawing page, or the path of an exported drawing.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadDrawingOutcome {
+    pub revision: u64,
+    pub stroke_count: usize,
+    pub strokes: Vec<IndexedDrawingStroke>,
+    pub next_offset: Option<usize>,
+    pub output_path: Option<String>,
+}
+
+/// A change referring to an index in the original drawing.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+pub enum DrawingEdit {
+    Add { stroke: DrawingStroke },
+    Delete { index: usize },
+    Replace { index: usize, stroke: DrawingStroke },
+}
+
+/// Replace from a file or an explicit array, or apply an atomic edit batch.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
+pub enum DrawingChange {
+    Import { input_path: String },
+    Replace { strokes: Vec<DrawingStroke> },
+    Edit { edits: Vec<DrawingEdit> },
+}
+
+/// Apply a drawing change only at the expected destination revision.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WriteDrawingArgs {
+    pub document_id: DocumentId,
+    pub expected_revision: u64,
+    pub change: DrawingChange,
+}
+
+/// The saved drawing's revision and total number of strokes.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteDrawingOutcome {
+    pub revision: u64,
+    pub stroke_count: usize,
+}
+
 /// Start of a bounded source read. Line numbers are one-based.
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
 #[serde(tag = "kind", rename_all = "kebab-case")]

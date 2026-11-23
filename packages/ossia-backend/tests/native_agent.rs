@@ -37,7 +37,7 @@ async fn cli(
     let output = c.output().await.unwrap();
     assert!(
         output.status.success(),
-        "{}",
+        "{name} {args}: {}",
         String::from_utf8_lossy(&output.stdout)
     );
     serde_json::from_slice(&output.stdout).unwrap()
@@ -188,6 +188,36 @@ async fn offline_docs_cli_and_mcp_complete_the_agent_music_workflow() {
     );
     let outcome: ImportOutcome = serde_json::from_value(imported.result.unwrap()).unwrap();
     let doc = outcome.document.unwrap();
+    let ink = json!({"page":1,"width":0.01,"color":"blue","points":[{"x":0.25,"y":0.5}]});
+    let written = cli(&bin, &home, &engine, &docs, "write-drawing", json!({"documentId":doc.document_id,"expectedRevision":0,"change":{"kind":"edit","edits":[{"kind":"add","stroke":ink}]}})).await;
+    assert_eq!(written["revision"], 1);
+    let drawing = call(
+        &client,
+        "ossia_read_drawing",
+        json!({"documentId":doc.document_id}),
+    )
+    .await;
+    assert_eq!(drawing["strokes"][0]["stroke"], ink);
+    let backup = work.path().join("drawing.json");
+    call(
+        &client,
+        "ossia_read_drawing",
+        json!({"documentId":doc.document_id,"outputPath":backup}),
+    )
+    .await;
+    call(&client, "ossia_write_drawing", json!({"documentId":doc.document_id,"expectedRevision":1,"change":{"kind":"replace","strokes":[]}})).await;
+    let restored = cli(&bin, &home, &engine, &docs, "write-drawing", json!({"documentId":doc.document_id,"expectedRevision":2,"change":{"kind":"import","inputPath":backup}})).await;
+    assert_eq!(restored["strokeCount"], 1);
+    let read = cli(
+        &bin,
+        &home,
+        &engine,
+        &docs,
+        "read-drawing",
+        json!({"documentId":doc.document_id}),
+    )
+    .await;
+    assert_eq!(read["strokes"][0]["stroke"], ink);
     let music = outcome.music.unwrap();
     assert_eq!(music.source.measures, Some(2));
     assert_eq!(music.performance.notes.len(), 8);

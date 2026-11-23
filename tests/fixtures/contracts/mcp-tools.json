@@ -860,6 +860,296 @@
     }
   },
   {
+    "name": "ossia_read_drawing",
+    "description": "Read a revision-guarded page of indexed drawing strokes or export the complete drawing to a new absolute JSON path. Offsets are global stroke indices; preserve expectedRevision between pages. A page filter uses one-based page numbers.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Read or export a score's freehand drawing.",
+      "properties": {
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "limit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "outputPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "title": "ReadDrawingArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "ossia_write_drawing",
+    "description": "Atomically modify drawing strokes or replace the drawing from an array or absolute JSON file. Read the destination revision first. Indices refer to the original drawing at expectedRevision; additions append. Page-relative coordinates can shift when score layout changes.",
+    "inputSchema": {
+      "$defs": {
+        "DrawingChange": {
+          "description": "Replace from a file or an explicit array, or apply an atomic edit batch.",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "inputPath": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "import",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "inputPath"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "replace",
+                  "type": "string"
+                },
+                "strokes": {
+                  "items": {
+                    "$ref": "#/$defs/DrawingStroke"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "kind",
+                "strokes"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "edits": {
+                  "items": {
+                    "$ref": "#/$defs/DrawingEdit"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "const": "edit",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "edits"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "DrawingColor": {
+          "description": "The fixed ink colors available in the score editor.",
+          "enum": [
+            "black",
+            "blue",
+            "green",
+            "yellow",
+            "red"
+          ],
+          "type": "string"
+        },
+        "DrawingEdit": {
+          "description": "A change referring to an index in the original drawing.",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "add",
+                  "type": "string"
+                },
+                "stroke": {
+                  "$ref": "#/$defs/DrawingStroke"
+                }
+              },
+              "required": [
+                "kind",
+                "stroke"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "index": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "delete",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "index"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "index": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "replace",
+                  "type": "string"
+                },
+                "stroke": {
+                  "$ref": "#/$defs/DrawingStroke"
+                }
+              },
+              "required": [
+                "kind",
+                "index",
+                "stroke"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "DrawingPoint": {
+          "additionalProperties": false,
+          "description": "A point relative to the page width and height.",
+          "properties": {
+            "x": {
+              "format": "double",
+              "type": "number"
+            },
+            "y": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "type": "object"
+        },
+        "DrawingStroke": {
+          "additionalProperties": false,
+          "description": "A stroke in normalized page coordinates.",
+          "properties": {
+            "color": {
+              "$ref": "#/$defs/DrawingColor",
+              "default": "black",
+              "description": "Ink color; defaults to black when omitted."
+            },
+            "page": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "points": {
+              "items": {
+                "$ref": "#/$defs/DrawingPoint"
+              },
+              "type": "array"
+            },
+            "width": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "page",
+            "width",
+            "points"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Apply a drawing change only at the expected destination revision.",
+      "properties": {
+        "change": {
+          "$ref": "#/$defs/DrawingChange"
+        },
+        "documentId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "change"
+      ],
+      "title": "WriteDrawingArgs",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
     "name": "ossia_layout",
     "description": "Inspect page, system, staff and reliable measure structure from a completed import or check job. Returns LayoutOutcome.",
     "inputSchema": {

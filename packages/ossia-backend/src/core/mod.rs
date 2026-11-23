@@ -15,6 +15,7 @@ use tokio::sync::Notify;
 
 mod analysis;
 mod context;
+mod drawing;
 mod engine;
 mod evidence;
 mod jobs;

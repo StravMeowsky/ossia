@@ -66,3 +66,30 @@ The result is an `OutputBatchOutcome` with ordered `files`; for a single-file
 crop, `directory` is the file's parent. Indexed files can be downloaded or
 revealed through HTTP routes ending in `/outputs/<index>` and
 `/outputs/<index>/reveal`.
+
+## Freehand drawing data
+
+Use `ossia_read_drawing` to inspect a score's shared drawing, optionally filtered
+by one-based `page`. Results contain global zero-based stroke indices and a
+`revision`; follow `nextOffset` with the same `page` and `expectedRevision`.
+The default page contains up to 25 strokes; `limit` may be 1–100. A single
+stroke that exceeds the response limit must be exported to a file instead.
+
+For backup or migration, pass an absolute, unused `outputPath` to export the
+complete drawing as JSON. Import it into the destination with
+`ossia_write_drawing`, the destination's current `expectedRevision`, and
+`change: {"kind":"import","inputPath":"/absolute/path.json"}`. Files are
+limited to 32 MiB; existing output files are never overwritten. The exported
+revision belongs to the source and does not authorize a destination write.
+
+For local changes use `change: {"kind":"edit","edits":[...]}` with `add`,
+`delete` or `replace` edits. Delete and replace take a global `index`, and add
+and replace take a `stroke`; all indices address the original revision. Added
+strokes are appended. Use `change: {"kind":"replace","strokes":[]}` to clear
+all ink. For example, `edits: [{"kind":"delete","index":3},
+{"kind":"add","stroke":{"page":1,"width":0.01,"color":"black",
+"points":[{"x":0.5,"y":0.5}]}}]` deletes one stroke and appends one.
+Coordinates and width are page-relative; point coordinates are in 0–1, width
+is greater than 0 and at most 1, and color is black, blue, green, yellow or red.
+Read again after a conflict rather than overwriting another editor's changes. Drawings are independent of score versions and use page-relative
+coordinates; a different layout may place strokes over different notation.

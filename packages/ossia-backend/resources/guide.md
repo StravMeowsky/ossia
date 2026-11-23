@@ -20,7 +20,7 @@ than one document when the task spans workflows.
 - [History and deletion](guide/library.md): history, restoration, trash and
   permanent deletion.
 - [Rendering and output](guide/output.md): rendered structure, source locations,
-  exports and output options.
+  exports, output options and freehand drawing data.
 - [Operations](guide/operations.md): CLI transport, background jobs, paged
   responses and application update status.
 

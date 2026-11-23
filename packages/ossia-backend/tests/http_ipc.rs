@@ -233,7 +233,39 @@ async fn http_document_routes_support_localhost_without_tokens_or_views() {
     assert!(events
         .iter()
         .any(|event| event.r#type == "drawing-changed" && event.payload["revision"] == 1));
-    let drawing_cursor = events.last().unwrap().seq;
+    let agent_saved = runtime
+        .write_drawing(WriteDrawingArgs {
+            document_id: document.document_id,
+            expected_revision: 1,
+            change: DrawingChange::Edit {
+                edits: vec![DrawingEdit::Add {
+                    stroke: drawing.strokes[0].clone(),
+                }],
+            },
+        })
+        .unwrap();
+    assert_eq!(agent_saved.revision, 2);
+    let via_http: Drawing = client
+        .get(&drawing_url)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(via_http.revision, 2);
+    assert_eq!(via_http.strokes.len(), 2);
+    let agent_events = runtime
+        .events(
+            Some(document.document_id),
+            &context.instance_id,
+            events.last().unwrap().seq,
+        )
+        .unwrap();
+    assert!(agent_events
+        .iter()
+        .any(|event| event.r#type == "drawing-changed" && event.payload["revision"] == 2));
+    let drawing_cursor = agent_events.last().unwrap().seq;
     let key = ossia_library::render_key(
         document.document_id,
         document.last_successful_render.as_ref().unwrap(),
