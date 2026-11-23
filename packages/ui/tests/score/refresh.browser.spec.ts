@@ -31,7 +31,6 @@ const updatedSvg =
 
 test('loading indicator appears only after 200 milliseconds', async ({ context, page }) => {
   await mockScoreRuntime(context);
-  await page.clock.install({ time: new Date('2026-11-17T08:00:00Z') });
   await page.clock.pauseAt(new Date('2026-11-17T08:00:00Z'));
   const gate = deferred();
   await context.route('**/api/v1/documents/*/context', async (route) => {
