@@ -191,7 +191,7 @@ pub fn tools() -> Vec<Tool> {
         ),
         write_tool::<RestoreArgs>(
             "ossia_restore",
-            "Queue restoration of versionId as a new version. baseVersionId is the current head and expectedSourceHash is the current workspace hash. Requires a clean workspace and no active edit; returns a Job.",
+            "Queue restoration of versionId as a new version. baseVersionId is the current head and expectedSourceHash is the current workspace hash. By default requires a clean workspace and no active edit. Set discardCurrentEdit to true only when explicitly authorized to discard the current draft and end its edit; returns a Job.",
             false,
         ),
         write_tool::<OutputArgs>(

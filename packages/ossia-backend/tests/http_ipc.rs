@@ -636,6 +636,7 @@ async fn http_document_routes_support_localhost_without_tokens_or_views() {
             version_id: document.head_version_id.unwrap(),
             base_version_id: version.version_id,
             expected_source_hash: hash,
+            discard_current_edit: false,
             author: Some("http".into()),
             summary: "restore".into(),
             wait_ms: None,

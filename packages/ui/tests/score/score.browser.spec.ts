@@ -1211,6 +1211,7 @@ test('version selection, restore order and export dialog use the viewed version'
   expect(h.restores[0]).toMatchObject({
     versionId: olderVersionId,
     expectedSourceHash: h.states[0]!.sourceHash,
+    discardCurrentEdit: true,
   });
 });
 
@@ -1283,6 +1284,21 @@ test('active agent edits preserve their last displayed render', async ({ context
   await expect(page.locator('.score-loading-state')).toHaveCount(0);
   await expect(page.locator('.score-image')).toHaveCount(2);
   await expect(page.getByRole('heading', { name: '尚无可用谱面' })).toHaveCount(0);
+});
+
+test('an active edit without a render or pending job does not keep loading', async ({
+  context,
+  page,
+}) => {
+  const h = await mockScoreRuntime(context, { eventsDelay: 10000 });
+  h.states[0]!.lastSuccessfulRender = null;
+  h.states[0]!.editState = 'active';
+  h.states[0]!.dirty = true;
+  await page.goto(`/scores?documentId=${firstId}`);
+
+  await expect(page.locator('.score-version-control button')).toHaveText('正在编辑');
+  await expect(page.getByRole('heading', { name: '尚无可用谱面' })).toBeVisible();
+  await expect(page.locator('.score-loading-state')).toHaveCount(0);
 });
 
 test('active agent edits disable playback, annotation and drawing tools', async ({

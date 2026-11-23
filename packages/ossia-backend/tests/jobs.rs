@@ -677,6 +677,7 @@ async fn running_import_restore_output_cancellation_finishes_before_publishing()
             version_id: f.doc.head_version_id.unwrap(),
             base_version_id: f.doc.head_version_id.unwrap(),
             expected_source_hash: f.doc.source_hash.clone(),
+            discard_current_edit: false,
             author: Some("test".into()),
             summary: "cancel restore".into(),
             wait_ms: None,

@@ -7,7 +7,9 @@ For exported files, see [Rendering and output](output.md).
 Use `ossia_history` to page through versions. To make an older version the
 current base, call `ossia_restore` with the target `versionId`, current head
 `baseVersionId`, and current workspace `expectedSourceHash`. The workspace must
-be clean with no active edit. Restoration queues a job and appends a new version;
+be clean with no active edit unless the user explicitly authorizes discarding the
+draft and ending the edit, in which case set `discardCurrentEdit: true`.
+Restoration queues a job and appends a new version;
 wait for it to finish before editing. See [Operations](operations.md) for jobs.
 To inspect or compare a version without restoring it, see
 [Evidence and checks](evidence.md).

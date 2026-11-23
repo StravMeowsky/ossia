@@ -251,6 +251,7 @@ impl Fixture {
                 target_version_id: target,
                 base_version_id: doc.head_version_id,
                 expected_source_hash: &doc.source_hash,
+                discard_current_edit: false,
                 author: "test",
                 summary: "restore",
             },
@@ -746,6 +747,106 @@ fn dirty_restore_and_wrong_discard_capability_never_overwrite_files() {
         ErrorCode::DirtyWorkspace
     );
     assert_eq!(fs::read(&f.doc.source_path).unwrap(), b"B");
+}
+
+#[test]
+fn explicit_restore_discards_draft_and_ends_edit() {
+    let f = Fixture::new();
+    let target = f.doc.head_version_id.unwrap();
+    let edit = f.begin();
+    let hash = f.write("unfinished draft");
+    let restored = f
+        .library
+        .restore(
+            &f.engine,
+            RestoreRequest {
+                target_version_id: target,
+                base_version_id: Some(target),
+                expected_source_hash: &hash,
+                discard_current_edit: true,
+                author: "user",
+                summary: "restore",
+            },
+            &RunContext::default(),
+        )
+        .unwrap();
+    assert_eq!(fs::read(&f.doc.source_path).unwrap(), b"A c'1");
+    assert_eq!(restored.origin, VersionOrigin::Restore);
+    assert_eq!(
+        f.library.get_edit(edit.edit_id).unwrap().status,
+        EditStatus::Ended
+    );
+    assert!(!f.library.get_document(f.doc.document_id).unwrap().dirty);
+}
+
+#[test]
+fn explicit_restore_preserves_edit_on_compile_failure_or_concurrent_write() {
+    let f = Fixture::new();
+    let target = f.doc.head_version_id.unwrap();
+    let edit = f.begin();
+    let hash = f.write("draft");
+    let request = || RestoreRequest {
+        target_version_id: target,
+        base_version_id: Some(target),
+        expected_source_hash: &hash,
+        discard_current_edit: true,
+        author: "user",
+        summary: "restore",
+    };
+    *f.engine.error.lock().unwrap() = Some(AppError::new(ErrorCode::CompileFailed, "failed"));
+    assert!(f
+        .library
+        .restore(&f.engine, request(), &RunContext::default())
+        .is_err());
+    assert_eq!(fs::read(&f.doc.source_path).unwrap(), b"draft");
+    assert_eq!(
+        f.library.get_edit(edit.edit_id).unwrap().status,
+        EditStatus::Active
+    );
+    let path = f.doc.source_path.clone();
+    *f.engine.hook.lock().unwrap() =
+        Some(Box::new(move |_| fs::write(&path, "newer draft").unwrap()));
+    assert!(f
+        .library
+        .restore(&f.engine, request(), &RunContext::default())
+        .is_err());
+    assert_eq!(fs::read(&f.doc.source_path).unwrap(), b"newer draft");
+    assert_eq!(
+        f.library.get_edit(edit.edit_id).unwrap().status,
+        EditStatus::Active
+    );
+}
+
+#[test]
+fn explicit_restore_ends_unchanged_edit_and_discards_unowned_draft() {
+    let f = Fixture::new();
+    let target = f.doc.head_version_id.unwrap();
+    let edit = f.begin();
+    let restore = |base, hash: &ContentHash| {
+        f.library
+            .restore(
+                &f.engine,
+                RestoreRequest {
+                    target_version_id: target,
+                    base_version_id: Some(base),
+                    expected_source_hash: hash,
+                    discard_current_edit: true,
+                    author: "user",
+                    summary: "restore",
+                },
+                &RunContext::default(),
+            )
+            .unwrap()
+    };
+    let first = restore(target, &f.doc.source_hash);
+    assert_eq!(
+        f.library.get_edit(edit.edit_id).unwrap().status,
+        EditStatus::Ended
+    );
+    let draft = f.write("unowned draft");
+    let second = restore(first.version_id, &draft);
+    assert_eq!(second.parent_version_id, Some(first.version_id));
+    assert_eq!(fs::read(&f.doc.source_path).unwrap(), b"A c'1");
 }
 
 #[test]

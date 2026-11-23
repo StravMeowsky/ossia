@@ -100,7 +100,7 @@ export const enUS = {
   noRenderBody: 'Ask the Agent to inspect the source or generate a score.',
   restoreTitle: 'Restore this version?',
   restoreBody:
-    'This appends a restore version. The core rejects the operation while the workspace is dirty or an edit owns it.',
+    'This ends the current edit, discards any uncommitted draft, and appends a restore version.',
   confirmRestore: 'Restore',
   staff: 'Staff {staff}',
   measure: 'measure {start}',

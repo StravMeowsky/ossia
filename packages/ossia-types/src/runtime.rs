@@ -284,6 +284,9 @@ pub struct RestoreArgs {
     /// Current document head.
     pub base_version_id: VersionId,
     pub expected_source_hash: ContentHash,
+    /// Allow discarding the current workspace and ending its edit when restoring.
+    #[serde(default)]
+    pub discard_current_edit: bool,
     pub author: Option<String>,
     pub summary: String,
     pub wait_ms: Option<u64>,

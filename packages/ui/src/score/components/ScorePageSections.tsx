@@ -1,3 +1,4 @@
+import { FileMusic } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 
@@ -351,10 +352,13 @@ export function ScoreWorkspace({
             eraserSize={eraserSize}
             penColor={penColor}
           />
-        ) : renderPending || agentEditing ? (
+        ) : renderPending ? (
           <ScoreLoading label={t('loadingLatestDraft')} />
         ) : (
-          <section className="empty">
+          <section className="score-empty">
+            <div className="score-empty-icon" aria-hidden="true">
+              <FileMusic size={28} strokeWidth={1.5} />
+            </div>
             <h2>{t('noRenderTitle')}</h2>
             <p>{t('noRenderBody')}</p>
           </section>

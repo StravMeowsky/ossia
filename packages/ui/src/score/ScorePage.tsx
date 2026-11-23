@@ -296,6 +296,7 @@ function ScoreApp({
         versionId: version.versionId,
         baseVersionId,
         expectedSourceHash: current.sourceHash,
+        discardCurrentEdit: true,
         author: 'user',
         summary: t('restoreSummary', { version: version.seq }),
         waitMs: null,

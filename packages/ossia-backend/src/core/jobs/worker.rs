@@ -95,6 +95,7 @@ impl Runtime {
                         target_version_id: args.version_id,
                         base_version_id: Some(args.base_version_id),
                         expected_source_hash: &args.expected_source_hash,
+                        discard_current_edit: args.discard_current_edit,
                         author: args.author.as_deref().unwrap_or(DEFAULT_AUTHOR),
                         summary: &args.summary,
                     },

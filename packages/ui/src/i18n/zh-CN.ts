@@ -94,7 +94,7 @@ export const zhCN: Record<MessageKey, string> = {
   noRenderTitle: '尚无可用谱面',
   noRenderBody: '请让 Agent 检查源码或生成谱面。',
   restoreTitle: '恢复至此版本？',
-  restoreBody: '将追加一个恢复版本。工作区存在未提交修改或编辑占用时，核心会拒绝操作。',
+  restoreBody: '将结束当前编辑、丢弃未提交的草稿，并追加一个恢复版本。',
   confirmRestore: '恢复',
   staff: '谱表 {staff}',
   measure: '第 {start} 小节',

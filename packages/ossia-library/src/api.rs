@@ -144,6 +144,7 @@ pub struct RestoreRequest<'a> {
     pub target_version_id: VersionId,
     pub base_version_id: Option<VersionId>,
     pub expected_source_hash: &'a ContentHash,
+    pub discard_current_edit: bool,
     pub author: &'a str,
     pub summary: &'a str,
 }

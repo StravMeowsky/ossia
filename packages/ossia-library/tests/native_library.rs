@@ -233,6 +233,7 @@ fn native_import_edit_check_commit_restore_and_reopen() {
                     target_version_id: initial,
                     base_version_id: Some(version.version_id),
                     expected_source_hash: &hash,
+                    discard_current_edit: false,
                     author: "native-test",
                     summary: "Restore initial",
                 },

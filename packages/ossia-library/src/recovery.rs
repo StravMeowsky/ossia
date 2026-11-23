@@ -193,17 +193,21 @@ impl Library {
         context: &RunContext,
     ) -> Result<Version> {
         context.check()?;
-        let snapshot = {
+        let (snapshot, original_edit) = {
             let conn = self.db()?;
             let target = db::version(&conn, request.target_version_id)?;
             let doc = db::document(&conn, target.document_id)?;
-            self.restore_guard(
+            let edit = self.restore_guard(
                 &conn,
                 &doc,
                 request.base_version_id,
                 request.expected_source_hash,
+                request.discard_current_edit,
             )?;
-            SourceSnapshot::new(doc.id, self.store.get(&target.source_hash)?)?
+            (
+                SourceSnapshot::new(doc.id, self.store.get(&target.source_hash)?)?,
+                edit,
+            )
         };
         let render = engine.compile(
             &snapshot,
@@ -218,12 +222,16 @@ impl Library {
         let mut conn = self.db()?;
         let tx = conn.transaction().map_err(storage_error)?;
         let doc = db::document(&tx, snapshot.document_id())?;
-        self.restore_guard(
+        let current_edit = self.restore_guard(
             &tx,
             &doc,
             request.base_version_id,
             request.expected_source_hash,
+            request.discard_current_edit,
         )?;
+        if current_edit != original_edit {
+            return Err(conflict("edit session changed before restore"));
+        }
         db::record_render(&tx, doc.id, &render)?;
         let version = db::next_version(
             &tx,
@@ -234,6 +242,11 @@ impl Library {
             request.summary,
         )?;
         if snapshot.source_hash() == request.expected_source_hash {
+            if let Some(id) = current_edit {
+                let mut edit = db::edit(&tx, id)?;
+                edit.status = EditStatus::Ended;
+                db::save_edit(&tx, &edit)?;
+            }
             db::set_current_render(&tx, doc.id, &render)?;
             db::publish_version(&tx, &version)?;
             tx.commit().map_err(storage_error)?;
@@ -245,7 +258,7 @@ impl Library {
             target_hash: snapshot.source_hash().clone(),
             base_version_id: doc.head,
             version: Some(version.clone()),
-            end_edit: None,
+            end_edit: current_edit,
         };
         save_intent(&tx, &intent)?;
         tx.commit().map_err(storage_error)?;
@@ -260,9 +273,11 @@ impl Library {
         doc: &db::Document,
         base: Option<VersionId>,
         expected: &ContentHash,
-    ) -> Result<()> {
+        discard_current_edit: bool,
+    ) -> Result<Option<EditId>> {
         self.no_intent(conn, doc.id)?;
-        if db::active_edit(conn, doc.id)?.is_some() {
+        let edit = db::active_edit(conn, doc.id)?;
+        if edit.is_some() && !discard_current_edit {
             return Err(AppError::new(
                 ErrorCode::EditBusy,
                 "end or recover the current edit before restoring",
@@ -270,20 +285,21 @@ impl Library {
         }
         self.expect_head(doc, base)?;
         let snapshot = self.expect_snapshot(doc, expected)?;
-        if doc
-            .head
-            .map(|id| db::version(conn, id))
-            .transpose()?
-            .map(|v| v.source_hash)
-            .as_ref()
-            != Some(snapshot.source_hash())
+        if !discard_current_edit
+            && doc
+                .head
+                .map(|id| db::version(conn, id))
+                .transpose()?
+                .map(|v| v.source_hash)
+                .as_ref()
+                != Some(snapshot.source_hash())
         {
             return Err(AppError::new(
                 ErrorCode::DirtyWorkspace,
                 "restore requires a clean workspace",
             ));
         }
-        Ok(())
+        Ok(edit.map(|edit| edit.edit_id))
     }
 
     fn execute_intent(&self, intent: &Intent) -> Result<()> {
