@@ -481,6 +481,7 @@ test('historical versions expose playback, audition and restore controls', async
   await expect(page.getByRole('button', { name: '暂停', exact: true })).toBeVisible({
     timeout: 20_000,
   });
+  await page.getByRole('button', { name: '暂停', exact: true }).click();
   const overlay = page.locator('.overlay').first();
   const box = (await overlay.boundingBox())!;
   await overlay.click({ position: { x: box.width * 0.61, y: (box.height * 25) / 140 } });
