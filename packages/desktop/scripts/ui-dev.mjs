@@ -15,10 +15,9 @@ const UI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../ui'
 const ROOT = path.resolve(UI, '../..');
 const windows = process.platform === 'win32';
 const vite = path.join(UI, 'node_modules/.bin', windows ? 'vite.cmd' : 'vite');
-const pnpm = windows ? 'pnpm.cmd' : 'pnpm';
 const args = process.argv.slice(2);
 
-execFileSync(pnpm, ['run', 'generate:types'], { cwd: ROOT, stdio: 'inherit', shell: windows });
+execFileSync('pnpm', ['run', 'generate:types'], { cwd: ROOT, stdio: 'inherit', shell: windows });
 
 if (args[0] === 'build') {
   execFileSync(vite, ['build'], { cwd: UI, stdio: 'inherit', shell: windows });

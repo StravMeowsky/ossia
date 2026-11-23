@@ -4,7 +4,7 @@
   <p><strong>体验极佳的 AI 原生乐谱制作软件</strong></p>
   <p>
     <a href="https://github.com/micooz/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/micooz/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
-    <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.90%2B-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" alt="Rust 1.90 或更新版本"></a>
+    <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.91%2B-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" alt="Rust 1.91 或更新版本"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-111111?style=flat-square" alt="许可证：GPL-3.0-or-later"></a>
   </p>
   <p>
@@ -17,8 +17,8 @@ Ossia 是一款体验极佳的 AI 原生乐谱制作软件，它为 AI Agent 提
 
 > Ossia 基于 [GPL-3.0-or-later](LICENSE) 开源，商业使用、销售、分发时需遵守该协议规则，包括：保留版权及许可声明、向接收者提供对应源代码、分发修改版须继续以 GPL 授权。详细条款请参阅 [许可证](LICENSE)和 [GNU GPL 常见问题](https://www.gnu.org/licenses/gpl-faq.html)。
 
-| 乐谱库 | 与 Agent 协作 |
-| --- | --- |
+| 乐谱库                                                                        | 与 Agent 协作                                                                           |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | <img src="docs/readme-assets/library-zh.webp" alt="Ossia 乐谱库" width="575"> | <img src="docs/readme-assets/agent-session-zh.webp" alt="Agent 与乐谱页面" width="575"> |
 
 ## Ossia 的功能
@@ -153,16 +153,16 @@ pnpm dev:desktop
 
 Ossia 的诞生离不开开源软件和社区，感谢以下开源项目及其贡献者：
 
-| 项目 | 用途 | 许可证 |
-| --- | --- | --- |
-| [LilyPond](https://lilypond.org/) | 乐谱排版与格式转换 | 主程序为 [GPL-3.0-or-later](https://github.com/lilypond/lilypond/blob/master/LICENSE)；文档、字体及部分文件采用其他条款 |
-| [Rust](https://www.rust-lang.org/) | 核心程序与后端开发 | 主要为 [MIT 和 Apache-2.0](https://github.com/rust-lang/rust#license)；部分组件采用其他许可证 |
-| [Tauri](https://tauri.app/) | 桌面应用框架 | [MIT 或 Apache-2.0](https://github.com/tauri-apps/tauri/blob/dev/ARCHITECTURE.md#license) |
-| [React](https://react.dev/) | 用户界面 | [MIT](https://github.com/facebook/react/blob/main/LICENSE) |
-| [Vite](https://vite.dev/) | 前端构建工具 | [MIT](https://github.com/vitejs/vite/blob/main/LICENSE) |
-| [SQLite](https://sqlite.org/) | 本地乐谱库 | [Public domain](https://sqlite.org/copyright.html) |
-| [resvg](https://github.com/linebender/resvg) | SVG 渲染 | MIT 或 Apache-2.0 |
-| [libimagequant](https://github.com/ImageOptim/libimagequant) | PNG 图像量化 | GPL-3.0-or-later |
+| 项目                                                         | 用途               | 许可证                                                                                                                  |
+| ------------------------------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| [LilyPond](https://lilypond.org/)                            | 乐谱排版与格式转换 | 主程序为 [GPL-3.0-or-later](https://github.com/lilypond/lilypond/blob/master/LICENSE)；文档、字体及部分文件采用其他条款 |
+| [Rust](https://www.rust-lang.org/)                           | 核心程序与后端开发 | 主要为 [MIT 和 Apache-2.0](https://github.com/rust-lang/rust#license)；部分组件采用其他许可证                           |
+| [Tauri](https://tauri.app/)                                  | 桌面应用框架       | [MIT 或 Apache-2.0](https://github.com/tauri-apps/tauri/blob/dev/ARCHITECTURE.md#license)                               |
+| [React](https://react.dev/)                                  | 用户界面           | [MIT](https://github.com/facebook/react/blob/main/LICENSE)                                                              |
+| [Vite](https://vite.dev/)                                    | 前端构建工具       | [MIT](https://github.com/vitejs/vite/blob/main/LICENSE)                                                                 |
+| [SQLite](https://sqlite.org/)                                | 本地乐谱库         | [Public domain](https://sqlite.org/copyright.html)                                                                      |
+| [resvg](https://github.com/linebender/resvg)                 | SVG 渲染           | MIT 或 Apache-2.0                                                                                                       |
+| [libimagequant](https://github.com/ImageOptim/libimagequant) | PNG 图像量化       | GPL-3.0-or-later                                                                                                        |
 
 - 这里列出的是主要项目，并非完整清单。
 - 发行安装包中的 `THIRD-PARTY-NOTICES.md` 和 `licenses/` 包含更多依赖及许可信息。

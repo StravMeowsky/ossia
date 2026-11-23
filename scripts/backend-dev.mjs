@@ -8,7 +8,6 @@ import { candidateRoots } from './engine.mjs';
 import { detachedChild, stopProcessTree, windows } from './process-tree.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const pnpm = windows ? 'pnpm.cmd' : 'pnpm';
 const executable = path.join(root, 'target/debug', windows ? 'ossia-desktop.exe' : 'ossia-desktop');
 const tempRoot = windows ? fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-backend-dev-')) : null;
 const backendArgs = [
@@ -130,7 +129,7 @@ async function stopBackend() {
 }
 
 function startUi() {
-  const child = spawnProcess(pnpm, ['dev:ui'], { shell: windows });
+  const child = spawnProcess('pnpm', ['dev:ui'], { shell: windows });
   ui = child;
   child.on('error', (error) => {
     process.stderr.write(`ui dev server failed: ${error.message}\n`);

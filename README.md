@@ -4,7 +4,7 @@
   <p><strong>AI-native music notation software, built for a great experience.</strong></p>
   <p>
     <a href="https://github.com/micooz/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/micooz/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
-    <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.90%2B-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" alt="Rust 1.90 or later"></a>
+    <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.91%2B-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" alt="Rust 1.91 or later"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-111111?style=flat-square" alt="License: GPL-3.0-or-later"></a>
   </p>
   <p>
@@ -17,8 +17,8 @@ Ossia is AI-native music notation software that gives AI agents the tools and gu
 
 > Ossia is open source under [GPL-3.0-or-later](LICENSE). Commercial use, sale, and distribution are subject to the license, including requirements when distributing the software to retain copyright and license notices, provide recipients with corresponding source code, and license modified versions under the GPL. See the [license](LICENSE) and the [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.html) for details.
 
-| Score library | Working with an agent |
-| --- | --- |
+| Score library                                                                        | Working with an agent                                                                       |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | <img src="docs/readme-assets/library-en.webp" alt="Ossia score library" width="575"> | <img src="docs/readme-assets/agent-session-zh.webp" alt="Agent and score view" width="575"> |
 
 ## Features
@@ -144,6 +144,7 @@ pnpm setup
 # Start the desktop app.
 pnpm dev:desktop
 ```
+
 - The development app uses the repository's `.ossia` directory, separate from the release app.
 - Run `pnpm check`, `cargo test`, and `pnpm test:ui` for the relevant checks.
 
@@ -151,16 +152,16 @@ pnpm dev:desktop
 
 Ossia is made possible by open-source software and its community. Thanks to these projects and their contributors:
 
-| Project | Use | License |
-| --- | --- | --- |
-| [LilyPond](https://lilypond.org/) | Music engraving and format conversion | The main program is [GPL-3.0-or-later](https://github.com/lilypond/lilypond/blob/master/LICENSE); documentation, fonts, and some files have other terms |
-| [Rust](https://www.rust-lang.org/) | Core application and backend development | Primarily [MIT and Apache-2.0](https://github.com/rust-lang/rust#license); some components use other licenses |
-| [Tauri](https://tauri.app/) | Desktop application framework | [MIT or Apache-2.0](https://github.com/tauri-apps/tauri/blob/dev/ARCHITECTURE.md#license) |
-| [React](https://react.dev/) | User interface | [MIT](https://github.com/facebook/react/blob/main/LICENSE) |
-| [Vite](https://vite.dev/) | Frontend build tool | [MIT](https://github.com/vitejs/vite/blob/main/LICENSE) |
-| [SQLite](https://sqlite.org/) | Local score library | [Public domain](https://sqlite.org/copyright.html) |
-| [resvg](https://github.com/linebender/resvg) | SVG rendering | MIT or Apache-2.0 |
-| [libimagequant](https://github.com/ImageOptim/libimagequant) | PNG image quantization | GPL-3.0-or-later |
+| Project                                                      | Use                                      | License                                                                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [LilyPond](https://lilypond.org/)                            | Music engraving and format conversion    | The main program is [GPL-3.0-or-later](https://github.com/lilypond/lilypond/blob/master/LICENSE); documentation, fonts, and some files have other terms |
+| [Rust](https://www.rust-lang.org/)                           | Core application and backend development | Primarily [MIT and Apache-2.0](https://github.com/rust-lang/rust#license); some components use other licenses                                           |
+| [Tauri](https://tauri.app/)                                  | Desktop application framework            | [MIT or Apache-2.0](https://github.com/tauri-apps/tauri/blob/dev/ARCHITECTURE.md#license)                                                               |
+| [React](https://react.dev/)                                  | User interface                           | [MIT](https://github.com/facebook/react/blob/main/LICENSE)                                                                                              |
+| [Vite](https://vite.dev/)                                    | Frontend build tool                      | [MIT](https://github.com/vitejs/vite/blob/main/LICENSE)                                                                                                 |
+| [SQLite](https://sqlite.org/)                                | Local score library                      | [Public domain](https://sqlite.org/copyright.html)                                                                                                      |
+| [resvg](https://github.com/linebender/resvg)                 | SVG rendering                            | MIT or Apache-2.0                                                                                                                                       |
+| [libimagequant](https://github.com/ImageOptim/libimagequant) | PNG image quantization                   | GPL-3.0-or-later                                                                                                                                        |
 
 - These are major projects, not a complete list.
 - The installer includes `THIRD-PARTY-NOTICES.md` and `licenses/` with further dependency and license information.
