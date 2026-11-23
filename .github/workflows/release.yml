@@ -105,8 +105,29 @@ jobs:
           if-no-files-found: error
           path: release-notes.md
 
-  build:
+  documentation:
     needs: metadata
+    if: needs.metadata.outputs.current == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm generate:docs
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: offline-documentation
+          if-no-files-found: error
+          path: vendor/docs/lilypond
+
+  build:
+    needs: [metadata, documentation]
     if: needs.metadata.outputs.current == 'true'
     strategy:
       fail-fast: false
@@ -154,8 +175,10 @@ jobs:
         env:
           RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
         run: node scripts/release/version.mjs check "$RELEASE_TAG"
-      - name: Package
-        run: pnpm generate:docs
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: offline-documentation
+          path: vendor/docs/lilypond
 
       - name: Package with offline documentation
         env:
