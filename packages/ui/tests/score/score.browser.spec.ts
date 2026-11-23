@@ -90,22 +90,35 @@ test('score page loads without crypto.randomUUID on a LAN origin', async ({ cont
 });
 
 test('score loading stages use the rendered score background', async ({ context, page }) => {
-  await mockScoreRuntime(context, { delays: { context: 600, versionRender: 600 } });
+  await mockScoreRuntime(context, { delays: { versionRender: 600 } });
+  let releaseContext!: () => void;
+  const contextGate = new Promise<void>((resolve) => {
+    releaseContext = resolve;
+  });
+  await context.route('**/api/v1/documents/*/context', async (route) => {
+    await contextGate;
+    await route.fallback();
+  });
   await page.goto(`/scores?documentId=${firstId}`);
   const connectingHeight = (await page.locator('.score-topbar').boundingBox())!.height;
   const loading = page.locator('.score-loading-state');
-  await expect(loading).toBeVisible();
-  await expect(loading.locator('.score-loading-note')).toHaveCount(3);
-  await expect(loading.getByRole('progressbar')).toHaveCount(1);
-  const workspace = await page.locator('.score-workspace').boundingBox();
-  const loadingBox = await loading.boundingBox();
-  expect(loadingBox!.y + loadingBox!.height / 2).toBeCloseTo(
-    workspace!.y + workspace!.height / 2,
-    0,
-  );
-  const initialBackground = await page
-    .locator('.score-workspace')
-    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  let initialBackground: string;
+  try {
+    await expect(loading).toBeVisible();
+    await expect(loading.locator('.score-loading-note')).toHaveCount(3);
+    await expect(loading.getByRole('progressbar')).toHaveCount(1);
+    const workspace = await page.locator('.score-workspace').boundingBox();
+    const loadingBox = await loading.boundingBox();
+    expect(loadingBox!.y + loadingBox!.height / 2).toBeCloseTo(
+      workspace!.y + workspace!.height / 2,
+      0,
+    );
+    initialBackground = await page
+      .locator('.score-workspace')
+      .evaluate((node) => getComputedStyle(node).backgroundColor);
+  } finally {
+    releaseContext();
+  }
   await expect(page.locator('.score-image')).toHaveCount(2);
   const connectedHeight = (await page.locator('.score-topbar').boundingBox())!.height;
   expect(connectedHeight).toBe(connectingHeight);
