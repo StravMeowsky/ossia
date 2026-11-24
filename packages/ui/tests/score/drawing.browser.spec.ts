@@ -370,9 +370,11 @@ test('drawing refreshes again when a change arrives during an in-flight read', a
 });
 
 test('drawing catches up after the event stream reconnects', async ({ context, page }) => {
-  const runtime = await mockScoreRuntime(context, { eventsDelay: 200 });
+  const runtime = await mockScoreRuntime(context);
+  const connected = page.waitForResponse((response) => response.url().includes('/api/v1/events?'));
   await page.goto(`/scores?documentId=${firstId}`);
   await expect(page.getByRole('button', { name: '画笔', exact: true })).toBeVisible();
+  await connected;
   const failed = page.waitForEvent('requestfailed', (request) =>
     request.url().includes('/api/v1/events?'),
   );

@@ -90,13 +90,21 @@ test('score page loads without crypto.randomUUID on a LAN origin', async ({ cont
 });
 
 test('score loading stages use the rendered score background', async ({ context, page }) => {
-  await mockScoreRuntime(context, { delays: { versionRender: 600 } });
+  await mockScoreRuntime(context);
   let releaseContext!: () => void;
   const contextGate = new Promise<void>((resolve) => {
     releaseContext = resolve;
   });
   await context.route('**/api/v1/documents/*/context', async (route) => {
     await contextGate;
+    await route.fallback();
+  });
+  let releaseVersion!: () => void;
+  const versionGate = new Promise<void>((resolve) => {
+    releaseVersion = resolve;
+  });
+  await context.route('**/api/v1/documents/*/versions/*/render', async (route) => {
+    await versionGate;
     await route.fallback();
   });
   await page.goto(`/scores?documentId=${firstId}`);
@@ -129,13 +137,17 @@ test('score loading stages use the rendered score background', async ({ context,
 
   await page.locator('.score-version-control button').click();
   await page.getByRole('menuitemradio', { name: /版本 1/ }).click();
-  await expect(loading).toBeVisible();
-  await expect(page.getByText('载入历史谱面…')).toBeVisible();
-  expect(
-    await page
-      .locator('.score-workspace')
-      .evaluate((node) => getComputedStyle(node).backgroundColor),
-  ).toBe(renderedBackground);
+  try {
+    await expect(loading).toBeVisible();
+    await expect(page.getByText('载入历史谱面…')).toBeVisible();
+    expect(
+      await page
+        .locator('.score-workspace')
+        .evaluate((node) => getComputedStyle(node).backgroundColor),
+    ).toBe(renderedBackground);
+  } finally {
+    releaseVersion();
+  }
   await expect(page.locator('.score-image')).toHaveCount(2);
 });
 
