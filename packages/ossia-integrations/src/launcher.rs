@@ -155,5 +155,5 @@ pub(crate) fn guide_command(home: &Path, env: &BTreeMap<String, String>) -> Stri
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/launcher.rs"]
+#[path = "../tests/launcher.rs"]
 mod tests;

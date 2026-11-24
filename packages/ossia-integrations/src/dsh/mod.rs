@@ -11,7 +11,7 @@ mod detect;
 mod lifecycle;
 mod status;
 #[cfg(test)]
-#[path = "../../tests/unit/dsh.rs"]
+#[path = "../../tests/dsh/mod.rs"]
 mod tests;
 
 const PLUGIN: &str = "ossia-dsh-plugin";

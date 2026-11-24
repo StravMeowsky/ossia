@@ -247,8 +247,11 @@ pub fn dispatch(runtime: &Runtime, method: &str, params: Value) -> Result<Value>
     match method {
         "handshake" => value(&runtime.info),
         "guide" => {
-            let _: EmptyArgs = decode(params)?;
-            value(crate::guide::outcome(runtime.library.home())?)
+            let args: crate::guide::GuideArgs = decode(params)?;
+            value(crate::guide::document(
+                runtime.library.home(),
+                args.document.as_deref(),
+            )?)
         }
         "status" => {
             let _: EmptyArgs = decode(params)?;

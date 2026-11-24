@@ -11,7 +11,7 @@ mod detect;
 mod lifecycle;
 mod status;
 #[cfg(test)]
-#[path = "../../tests/unit/workbuddy.rs"]
+#[path = "../../tests/workbuddy/mod.rs"]
 mod tests;
 
 const MARKETPLACE: &str = "ossia-workbuddy";

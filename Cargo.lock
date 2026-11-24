@@ -3259,6 +3259,7 @@ dependencies = [
  "dirs 7.0.0",
  "fs2",
  "ossia-types",
+ "plist",
  "serde",
  "serde_json",
  "sha2 0.11.1",

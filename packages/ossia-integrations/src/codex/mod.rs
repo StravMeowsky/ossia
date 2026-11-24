@@ -12,7 +12,7 @@ mod detect;
 mod lifecycle;
 mod status;
 #[cfg(test)]
-#[path = "../../tests/unit/codex.rs"]
+#[path = "../../tests/codex/mod.rs"]
 mod tests;
 
 const MARKETPLACE: &str = "ossia-local";

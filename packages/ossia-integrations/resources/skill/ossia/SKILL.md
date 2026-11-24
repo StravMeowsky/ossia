@@ -9,11 +9,10 @@ Work with the local Ossia score library through MCP or CLI.
 
 ## Read the manual first
 
-Before performing score operations, call `ossia_guide` to get the absolute
-`path`, `bytes` and `lines` of the guide index. Read the complete index with
-the host's file reader, then read the linked documents relevant to the task.
-Resolve their paths relative to the index directory. The guide defines workflows,
-parameters, editing rules, and supported formats.
+Before performing score operations, call `ossia_guide` and read its `text`.
+Call it again with `document` set to each relevant linked path to read that
+document. The guide defines workflows, parameters, editing rules, and supported
+formats.
 
 ## CLI fallback
 

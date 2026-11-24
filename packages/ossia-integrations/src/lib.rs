@@ -1,4 +1,6 @@
 mod agent;
+mod claude_code;
+mod claude_desktop;
 mod codex;
 mod command;
 mod dsh;
@@ -231,6 +233,11 @@ impl Integrator {
                     };
                     path_text(adapter.config_path(&ctx))
                 })
+                .or_else(|| {
+                    record
+                        .and_then(|record| record.entries.first())
+                        .map(|entry| normalize_path(&entry.path))
+                })
                 .unwrap_or_default();
             agents.push(AgentIntegration {
                 id: adapter.id().into(),
@@ -241,7 +248,9 @@ impl Integrator {
                 installed: inspection.installed,
                 enabled: inspection.enabled,
                 managed: inspection.managed,
-                version: detected.as_ref().map(|value| value.version.clone()),
+                version: detected
+                    .as_ref()
+                    .and_then(|value| (!value.version.is_empty()).then(|| value.version.clone())),
                 executable: detected.as_ref().map(|value| path_text(&value.executable)),
                 config_root,
                 config_path,
@@ -249,6 +258,7 @@ impl Integrator {
                 path: inspection.path.map(|value| normalize_path(&value)),
                 reload_hint: Some(adapter.reload_hint()),
                 message: inspection.message,
+                hosts: Vec::new(),
                 conflicts: inspection
                     .conflicts
                     .into_iter()
@@ -258,6 +268,62 @@ impl Integrator {
                     })
                     .collect(),
             });
+        }
+        let claude: Vec<_> = agents
+            .iter()
+            .filter(|agent| agent.id == "claude")
+            .cloned()
+            .collect();
+        if !claude.is_empty() {
+            agents.retain(|agent| agent.id != "claude");
+            let mut combined = claude[0].clone();
+            combined.profile = None;
+            combined.hosts = claude
+                .iter()
+                .map(|host| AgentHost {
+                    name: if host.profile.as_deref() == Some("desktop") {
+                        "Claude Desktop"
+                    } else {
+                        "Claude Code"
+                    }
+                    .into(),
+                    error: loaded
+                        .store
+                        .group_problems
+                        .get(&record::management_id(
+                            "claude",
+                            host.profile.as_deref().unwrap_or_default(),
+                        ))
+                        .cloned(),
+                    method: host.method,
+                    state: host.state,
+                    version: host.version.clone(),
+                    config_path: host.config_path.clone(),
+                    reload_hint: host.reload_hint.clone(),
+                    conflicts: host.conflicts.clone(),
+                })
+                .collect();
+            combined.name = claude_name(&combined.hosts).into();
+            combined.managed = claude.iter().any(|host| host.managed)
+                || loaded.store.enabled_groups.iter().any(|id| id == "claude");
+            combined.installed = claude.iter().any(|host| host.installed || host.managed);
+            combined.enabled = claude.iter().all(|host| host.enabled && host.installed)
+                && combined.hosts.iter().all(|host| host.error.is_none());
+            combined.conflicts = claude
+                .iter()
+                .flat_map(|host| host.conflicts.clone())
+                .collect();
+            combined.state = if !combined.conflicts.is_empty() {
+                AgentState::Conflict
+            } else if combined.enabled {
+                AgentState::Installed
+            } else if combined.managed {
+                AgentState::Broken
+            } else {
+                AgentState::Available
+            };
+            combined.reload_hint = None;
+            agents.push(combined);
         }
         Ok(AgentsSnapshot {
             agents,
@@ -276,62 +342,98 @@ impl Integrator {
         let adapters = registry::adapters(&self.paths);
         let mut problems = Vec::new();
         for id in &change.agent_ids {
-            let Some(adapter) = registry::find(&adapters, id) else {
+            let matching: Vec<_> = adapters
+                .iter()
+                .map(Box::as_ref)
+                .filter(|adapter| adapter.id() == id)
+                .collect();
+            if matching.is_empty() {
                 problems.push(AgentProblem {
                     agent_id: id.clone(),
                     message: "unknown Agent".into(),
                 });
                 continue;
-            };
-            let Some(detected) = adapter.detect(&self.paths) else {
-                problems.push(AgentProblem {
-                    agent_id: id.clone(),
-                    message: format!("{} is unavailable", adapter.name()),
-                });
-                continue;
-            };
-            let ctx = AgentContext {
-                integrator: self,
-                detected: &detected,
-            };
-            let management_id = record::management_id(adapter.id(), adapter.profile());
-            let previous = store.records.get(&management_id).cloned();
-            let result = if change.enabled {
-                adapter
-                    .install(&ctx, previous.as_ref(), change.overwrite)
-                    .map(|entries| {
-                        if !store.connection_order.contains(id) {
-                            store.connection_order.push(id.clone());
+            }
+            if id == "claude" {
+                store.enabled_groups.retain(|group| group != id);
+                if change.enabled {
+                    store.enabled_groups.push(id.clone());
+                }
+                record::write(&self.home, &store)?;
+            }
+            for adapter in matching {
+                let management_id = record::management_id(adapter.id(), adapter.profile());
+                let previous = store.records.get(&management_id).cloned();
+                let Some(detected) = adapter.detect(&self.paths) else {
+                    if id == "claude" && (change.enabled || previous.is_none()) {
+                        continue;
+                    }
+                    problems.push(AgentProblem {
+                        agent_id: id.clone(),
+                        message: format!("{} is unavailable", adapter.name()),
+                    });
+                    continue;
+                };
+                let ctx = AgentContext {
+                    integrator: self,
+                    detected: &detected,
+                };
+                let result = if change.enabled {
+                    adapter
+                        .install(&ctx, previous.as_ref(), change.overwrite)
+                        .map(|entries| {
+                            if !store.connection_order.contains(id) {
+                                store.connection_order.push(id.clone());
+                            }
+                            store.records.insert(
+                                management_id.clone(),
+                                ManagedRecord {
+                                    management_id: management_id.clone(),
+                                    agent_id: adapter.id().into(),
+                                    method: adapter.method(),
+                                    profile: adapter.profile().into(),
+                                    template_version: TEMPLATE_VERSION,
+                                    home: self.home.to_string_lossy().into_owned(),
+                                    executable: self.executable.to_string_lossy().into_owned(),
+                                    shared_root: self.shared_root.to_string_lossy().into_owned(),
+                                    updated_at: record::now(),
+                                    entries,
+                                },
+                            );
+                        })
+                } else if let Some(previous) = previous.as_ref() {
+                    adapter.remove(&ctx, previous).map(|()| {
+                        store.records.remove(&management_id);
+                        if !store.records.values().any(|record| record.agent_id == *id) {
+                            store.connection_order.retain(|agent_id| agent_id != id);
                         }
-                        store.records.insert(
-                            management_id.clone(),
-                            ManagedRecord {
-                                management_id,
-                                agent_id: adapter.id().into(),
-                                method: adapter.method(),
-                                profile: adapter.profile().into(),
-                                template_version: TEMPLATE_VERSION,
-                                home: self.home.to_string_lossy().into_owned(),
-                                executable: self.executable.to_string_lossy().into_owned(),
-                                shared_root: self.shared_root.to_string_lossy().into_owned(),
-                                updated_at: record::now(),
-                                entries,
-                            },
-                        );
                     })
-            } else if let Some(previous) = previous.as_ref() {
-                adapter.remove(&ctx, previous).map(|()| {
-                    store.records.remove(&management_id);
-                    store.connection_order.retain(|agent_id| agent_id != id);
-                })
-            } else {
-                Ok(())
-            };
-            if let Err(error) = result {
-                problems.push(AgentProblem {
-                    agent_id: id.clone(),
-                    message: normalize_path(&error.message),
-                });
+                } else {
+                    Ok(())
+                };
+                if id == "claude" {
+                    match &result {
+                        Ok(()) => {
+                            store.group_problems.remove(&management_id);
+                        }
+                        Err(error) => {
+                            store
+                                .group_problems
+                                .insert(management_id.clone(), normalize_path(&error.message));
+                        }
+                    }
+                }
+                if let Err(error) = result {
+                    problems.push(AgentProblem {
+                        agent_id: id.clone(),
+                        message: format!(
+                            "{}: {}",
+                            adapter.profile(),
+                            normalize_path(&error.message)
+                        ),
+                    });
+                }
+                record::write(&self.home, &store)?;
             }
         }
         record::write(&self.home, &store)?;
@@ -358,8 +460,14 @@ impl Integrator {
             let loaded = record::load(&self.home)?;
             let mut store = loaded.store.clone();
             let adapters = registry::adapters(&self.paths);
+            let claude_enabled = store.enabled_groups.iter().any(|id| id == "claude");
             for current in store.records.values_mut() {
-                let Some(adapter) = registry::find(&adapters, &current.agent_id) else {
+                if current.agent_id == "claude" && !claude_enabled {
+                    continue;
+                }
+                let Some(adapter) =
+                    registry::find_profile(&adapters, &current.agent_id, &current.profile)
+                else {
                     continue;
                 };
                 let Some(detected) = adapter.detect(&self.paths) else {
@@ -369,12 +477,69 @@ impl Integrator {
                     integrator: self,
                     detected: &detected,
                 };
-                if let Ok(Some(entries)) = adapter.sync(&ctx, current) {
-                    current.entries = entries;
-                    current.updated_at = record::now();
-                    current.template_version = TEMPLATE_VERSION;
-                    current.executable = self.executable.to_string_lossy().into_owned();
-                    current.shared_root = self.shared_root.to_string_lossy().into_owned();
+                match adapter.sync(&ctx, current) {
+                    Ok(Some(entries)) => {
+                        store.group_problems.remove(&current.management_id);
+                        current.entries = entries;
+                        current.updated_at = record::now();
+                        current.template_version = TEMPLATE_VERSION;
+                        current.executable = self.executable.to_string_lossy().into_owned();
+                        current.shared_root = self.shared_root.to_string_lossy().into_owned();
+                    }
+                    Err(error) if current.agent_id == "claude" => {
+                        store.group_problems.insert(
+                            current.management_id.clone(),
+                            normalize_path(&error.message),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            if store.enabled_groups.iter().any(|id| id == "claude") {
+                for adapter in adapters
+                    .iter()
+                    .map(Box::as_ref)
+                    .filter(|a| a.id() == "claude")
+                {
+                    let management_id = record::management_id(adapter.id(), adapter.profile());
+                    if store.records.contains_key(&management_id) {
+                        continue;
+                    }
+                    let Some(detected) = adapter.detect(&self.paths) else {
+                        continue;
+                    };
+                    let ctx = AgentContext {
+                        integrator: self,
+                        detected: &detected,
+                    };
+                    match adapter.install(&ctx, None, false) {
+                        Ok(entries) => {
+                            store.group_problems.remove(&management_id);
+                            store.records.insert(
+                                management_id.clone(),
+                                ManagedRecord {
+                                    management_id,
+                                    agent_id: adapter.id().into(),
+                                    method: adapter.method(),
+                                    profile: adapter.profile().into(),
+                                    template_version: TEMPLATE_VERSION,
+                                    home: path_text(&self.home),
+                                    executable: path_text(&self.executable),
+                                    shared_root: path_text(&self.shared_root),
+                                    updated_at: record::now(),
+                                    entries,
+                                },
+                            );
+                            if !store.connection_order.iter().any(|id| id == "claude") {
+                                store.connection_order.push("claude".into());
+                            }
+                        }
+                        Err(error) => {
+                            store
+                                .group_problems
+                                .insert(management_id, normalize_path(&error.message));
+                        }
+                    }
                 }
             }
             record::write(&self.home, &store)
@@ -387,7 +552,8 @@ impl Integrator {
     fn cleanup_legacy(&self, legacy: &[record::LegacyRecord]) -> Result<(), AppError> {
         let adapters = registry::adapters(&self.paths);
         for item in legacy {
-            let Some(adapter) = registry::find(&adapters, &item.agent_id) else {
+            let Some(adapter) = registry::find_profile(&adapters, &item.agent_id, &item.profile)
+            else {
                 continue;
             };
             let Some(detected) = adapter.detect(&self.paths) else {
@@ -444,6 +610,17 @@ impl Integrator {
     }
 }
 
+fn claude_name(hosts: &[AgentHost]) -> &str {
+    let mut available = hosts
+        .iter()
+        .filter(|host| host.state != AgentState::Unavailable);
+    match (available.next(), available.next()) {
+        (Some(host), None) => &host.name,
+        (None, _) if hosts.len() == 1 => &hosts[0].name,
+        _ => "Claude",
+    }
+}
+
 fn default_shared_root(home: &Path) -> Result<PathBuf, AppError> {
     absolute_path(
         &absolute_env("OSSIA_HOST_INTEGRATION_ROOT")
@@ -461,5 +638,5 @@ fn default_config_root(agent_id: &str, paths: &HostPaths) -> String {
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/lib.rs"]
+#[path = "../tests/lib.rs"]
 mod tests;

@@ -1,6 +1,30 @@
 use super::*;
 
 #[test]
+fn embedded_documents_are_selected_without_arbitrary_file_access() {
+    let home = tempfile::tempdir().unwrap();
+    let index = crate::guide::document(home.path(), None).unwrap();
+    assert!(index.text.contains("# Ossia guide"));
+    for name in [
+        "editing",
+        "import",
+        "evidence",
+        "library",
+        "output",
+        "operations",
+    ] {
+        let document =
+            crate::guide::document(home.path(), Some(&format!("guide/{name}.md"))).unwrap();
+        assert!(!document.text.is_empty());
+        assert_eq!(document.bytes, document.text.len());
+        assert_eq!(document.lines, document.text.lines().count());
+    }
+    for name in ["../secret", "/etc/passwd", "guide/unknown.md"] {
+        assert!(crate::guide::document(home.path(), Some(name)).is_err());
+    }
+}
+
+#[test]
 fn guide_is_materialized_in_the_data_directory() {
     let home = tempfile::tempdir().unwrap();
     let path = crate::guide::path(home.path());

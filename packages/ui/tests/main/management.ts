@@ -23,6 +23,7 @@ export async function mockManagement(
     initializing = false,
     dshState = 'available',
     workbuddies = [],
+    claude = false,
     initialRuntime = false,
     scores = [],
     archivedScores = [],
@@ -36,6 +37,7 @@ export async function mockManagement(
     omrCustomTokenMasked = null,
     agentPaths = {},
   }: {
+    claude?: boolean | 'desktop' | 'code';
     empty?: boolean;
     initializing?: boolean;
     dshState?: AgentIntegration['state'];
@@ -120,6 +122,7 @@ export async function mockManagement(
     reloadHint: { kind: 'restart-session', agent: 'Codex' },
     message: null,
     conflicts: [],
+    hosts: [],
   };
   const available: AgentIntegration = {
     ...connected,
@@ -190,8 +193,46 @@ export async function mockManagement(
           : [],
     };
   });
+  const claudeAgent: AgentIntegration = {
+    ...connected,
+    id: 'claude',
+    name: 'Claude',
+    icon: 'claude',
+    state: 'broken',
+    enabled: false,
+    hosts: [
+      {
+        name: 'Claude Desktop',
+        error: null,
+        method: 'mcp',
+        state: 'installed',
+        version: '1',
+        configPath: '/claude/desktop.json',
+        reloadHint: { kind: 'claude-desktop-restart' },
+        conflicts: [],
+      },
+      {
+        name: 'Claude Code',
+        error: null,
+        method: 'plugin',
+        state: 'broken',
+        version: '2',
+        configPath: '/claude/code.json',
+        reloadHint: { kind: 'restart-session', agent: 'Claude Code' },
+        conflicts: [],
+      },
+    ],
+  };
+  if (claude === 'desktop' || claude === 'code') {
+    claudeAgent.hosts = claudeAgent.hosts.filter((host) =>
+      claude === 'desktop' ? host.name === 'Claude Desktop' : host.name === 'Claude Code',
+    );
+    claudeAgent.name = claude === 'desktop' ? 'Claude Desktop' : 'Claude Code';
+  }
   const agents: AgentsSnapshot = {
-    agents: empty ? [] : [connected, available, ...workbuddyAgents],
+    agents: empty
+      ? []
+      : [connected, available, ...workbuddyAgents, ...(claude ? [claudeAgent] : [])],
     connectionOrder: empty ? [] : ['codex'],
     syncing: false,
     error: null,
@@ -380,6 +421,7 @@ export async function mockManagement(
             if (!args.change.agentIds.includes(agent.id)) continue;
             agent.installed = args.change.enabled;
             agent.enabled = args.change.enabled;
+            agent.managed = args.change.enabled;
             agent.state = args.change.enabled ? 'installed' : 'available';
             agents.connectionOrder = agents.connectionOrder.filter((id) => id !== agent.id);
             if (args.change.enabled) agents.connectionOrder.push(agent.id);

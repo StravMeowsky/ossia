@@ -51,4 +51,5 @@ pub(crate) fn program_files(name: &str) -> Vec<PathBuf> {
 }
 
 #[cfg(test)]
+#[path = "../tests/scan.rs"]
 mod tests;

@@ -42,6 +42,7 @@ pub struct AgentConflict {
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum AgentNotice {
     RestartSession { agent: String },
+    ClaudeDesktopRestart,
     CodexPluginDisabled,
     CodexPluginMissing,
     CodexUnmanagedConfig,
@@ -54,6 +55,20 @@ pub enum AgentNotice {
     LegacyReinstall,
     HostUnavailable,
     LegacyHostUnavailable,
+}
+
+/// State of one host belonging to a combined Agent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentHost {
+    pub name: String,
+    pub error: Option<String>,
+    pub method: InstallMethod,
+    pub state: AgentState,
+    pub version: Option<String>,
+    pub config_path: String,
+    pub reload_hint: Option<AgentNotice>,
+    pub conflicts: Vec<AgentConflict>,
 }
 
 /// One supported Agent and the resources Ossia can install for it.
@@ -78,6 +93,8 @@ pub struct AgentIntegration {
     pub reload_hint: Option<AgentNotice>,
     pub message: Option<AgentNotice>,
     pub conflicts: Vec<AgentConflict>,
+    #[serde(default)]
+    pub hosts: Vec<AgentHost>,
 }
 
 /// The complete Agent list shown by the management window.

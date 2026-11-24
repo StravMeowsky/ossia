@@ -89,7 +89,7 @@ fn default_integrator_reads_embedded_resources() {
     let skill = integrator.skill().unwrap();
     assert!(skill.contains("# Ossia"));
     assert!(skill.contains("ossia_guide"));
-    assert!(skill.contains("Read the complete index"));
-    assert!(skill.contains("linked documents relevant to the task"));
+    assert!(skill.contains("read its `text`"));
+    assert!(skill.contains("relevant linked path"));
     assert!(!integrator.icon().unwrap().is_empty());
 }

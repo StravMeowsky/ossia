@@ -31,12 +31,12 @@
 
 - For a bug or issue, first reproduce it with a failing test, then verify the
   fix.
-- Mirror the source structure: `packages/ossia-<crate>/tests/` for crate integration
-  tests, `packages/ui/tests/` for `packages/ui/src/`. Each unit test file tests
-  only its corresponding source file.
-- Unit tests that need private internals live under
-  `packages/ossia-<crate>/tests/unit/` and are included with
-  `#[cfg(test)] #[path = "../tests/unit/<module>.rs"] mod tests;` from the owning
-  source file. Keep production visibility unchanged for tests.
+- Organize module tests to mirror the source directory structure; each unit
+  test file tests its corresponding source file. Place Rust tests under the
+  crate's `tests/` and UI tests under `packages/ui/tests/`.
+- Include unit tests that need private internals from the owning module with
+  `#[cfg(test)]` and `#[path = "..."]`. Keep production visibility unchanged.
+  If Cargo would discover these files as integration tests, disable `autotests`
+  and explicitly declare the integration test targets in the crate's manifest.
 - Verify styles through component behavior and the toolchain. Do not test
   stylesheets or source files with regular-expression assertions.

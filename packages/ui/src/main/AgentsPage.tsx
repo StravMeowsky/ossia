@@ -36,7 +36,11 @@ export function AgentsPage({
     );
   }
   const connected = list
-    .filter((agent) => agent.installed)
+    .filter(
+      (agent) =>
+        agent.installed ||
+        ((agent.hosts?.length ?? 0) > 0 && (agent.managed || agent.state === 'conflict')),
+    )
     .sort((left, right) => {
       const order = agents?.connectionOrder ?? [];
       const leftIndex = order.indexOf(left.id);
@@ -62,7 +66,8 @@ export function AgentsPage({
             <div className="agent-strip">
               {list.map((agent) => {
                 const icon = agentIcon(agent);
-                const on = agent.installed && agent.enabled;
+                const on =
+                  agent.hosts.length > 0 ? agent.managed : agent.installed && agent.enabled;
                 const conflict = agent.state === 'conflict';
                 const duplicateName = list.filter((item) => item.name === agent.name).length > 1;
                 const instanceTitle = duplicateName
@@ -137,55 +142,92 @@ export function AgentsPage({
             <ChevronDown aria-hidden="true" />
             {t('integrationDetails')}
           </summary>
-          {connected.map((agent) => (
-            <div
-              className={`agent-detail is-${agent.state}${selected === agent.id ? ' is-selected' : ''}`}
-              key={agent.id}
-            >
-              <div className="agent-detail-head">
-                <strong>{agent.name}</strong>
-                <span>{t(stateKeys[agent.state])}</span>
-              </div>
-              <dl>
-                <dt>{t('agentVersion')}</dt>
-                <dd>
-                  {agent.version ?? t('unavailable')}
-                  {agent.profile && ` (${agent.profile})`}
-                </dd>
-                <dt>{t('integrationMethod')}</dt>
-                <dd>
-                  {agent.method === 'plugin'
-                    ? t('localPlugin')
-                    : agent.method === 'skill'
-                      ? 'Skill'
-                      : 'MCP'}
-                </dd>
-                <dt>{t('agentConfigRoot')}</dt>
-                <dd>
-                  <code>{displayPath(agent.configRoot)}</code>
-                </dd>
-                {agent.path && (
-                  <>
-                    <dt>{t('pluginPath')}</dt>
+          {connected.map((agent) =>
+            agent.hosts.length > 0 ? (
+              agent.hosts.map((host) => (
+                <article
+                  className={`agent-detail is-${host.state}${selected === agent.id ? ' is-selected' : ''}`}
+                  key={`${agent.id}:${host.name}`}
+                >
+                  <div className="agent-detail-head">
+                    <strong>{host.name}</strong>
+                    <span>{t(stateKeys[host.state])}</span>
+                  </div>
+                  <dl>
+                    <dt>{t('agentVersion')}</dt>
+                    <dd>{host.version || t('unavailable')}</dd>
+                    <dt>{t('integrationMethod')}</dt>
                     <dd>
-                      <code>{displayPath(agent.path)}</code>
+                      {host.method === 'plugin'
+                        ? t('localPlugin')
+                        : host.method === 'skill'
+                          ? 'Skill'
+                          : 'MCP'}
                     </dd>
-                  </>
-                )}
-                <dt>{t('targetConfigPath')}</dt>
-                <dd>
-                  <code>{displayPath(agent.configPath)}</code>
-                </dd>
-              </dl>
-              {agent.message && <p className="warn">{noticeText(agent.message)}</p>}
-              {agent.conflicts.map((item) => (
-                <p className="error" key={`${item.target}:${item.kind}`}>
-                  {item.target}: {item.message}
-                </p>
-              ))}
-              {agent.reloadHint && <p className="hint">{noticeText(agent.reloadHint)}</p>}
-            </div>
-          ))}
+                    <dt>{t('targetConfigPath')}</dt>
+                    <dd>
+                      <code>{displayPath(host.configPath)}</code>
+                    </dd>
+                  </dl>
+                  {host.error && <p className="error">{host.error}</p>}
+                  {host.conflicts.map((item) => (
+                    <p className="error" key={`${item.target}:${item.kind}`}>
+                      {item.target}: {item.message}
+                    </p>
+                  ))}
+                  {host.reloadHint && <p className="hint">{noticeText(host.reloadHint)}</p>}
+                </article>
+              ))
+            ) : (
+              <div
+                className={`agent-detail is-${agent.state}${selected === agent.id ? ' is-selected' : ''}`}
+                key={agent.id}
+              >
+                <div className="agent-detail-head">
+                  <strong>{agent.name}</strong>
+                  <span>{t(stateKeys[agent.state])}</span>
+                </div>
+                <dl>
+                  <dt>{t('agentVersion')}</dt>
+                  <dd>
+                    {agent.version ?? t('unavailable')}
+                    {agent.profile && ` (${agent.profile})`}
+                  </dd>
+                  <dt>{t('integrationMethod')}</dt>
+                  <dd>
+                    {agent.method === 'plugin'
+                      ? t('localPlugin')
+                      : agent.method === 'skill'
+                        ? 'Skill'
+                        : 'MCP'}
+                  </dd>
+                  <dt>{t('agentConfigRoot')}</dt>
+                  <dd>
+                    <code>{displayPath(agent.configRoot)}</code>
+                  </dd>
+                  {agent.path && (
+                    <>
+                      <dt>{t('pluginPath')}</dt>
+                      <dd>
+                        <code>{displayPath(agent.path)}</code>
+                      </dd>
+                    </>
+                  )}
+                  <dt>{t('targetConfigPath')}</dt>
+                  <dd>
+                    <code>{displayPath(agent.configPath)}</code>
+                  </dd>
+                </dl>
+                {agent.message && <p className="warn">{noticeText(agent.message)}</p>}
+                {agent.conflicts.map((item) => (
+                  <p className="error" key={`${item.target}:${item.kind}`}>
+                    {item.target}: {item.message}
+                  </p>
+                ))}
+                {agent.reloadHint && <p className="hint">{noticeText(agent.reloadHint)}</p>}
+              </div>
+            ),
+          )}
         </details>
       )}
     </section>

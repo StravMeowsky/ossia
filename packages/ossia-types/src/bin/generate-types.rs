@@ -195,6 +195,7 @@ fn main() {
         AgentState,
         AgentConflict,
         AgentNotice,
+        AgentHost,
         AgentIntegration,
         AgentsSnapshot,
         AgentsChange,

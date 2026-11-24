@@ -5,6 +5,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Select an embedded guide document; omission selects the index.
+#[derive(Debug, Clone, Default, serde::Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GuideArgs {
+    pub document: Option<String>,
+}
+
 const DOCUMENTS: &[(&str, &str)] = &[
     (
         "guide/editing.md",
@@ -32,31 +39,48 @@ const DOCUMENTS: &[(&str, &str)] = &[
     ),
 ];
 
-/// Absolute location and size of the materialized Agent guide.
+/// Text and materialized location of an Agent guide document.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GuideOutcome {
     pub path: String,
     pub bytes: usize,
     pub lines: usize,
+    pub text: String,
 }
 
 pub(crate) fn path(home: &Path) -> PathBuf {
     home.join("docs").join("guide.md")
 }
 
-/// Materialize the embedded guide documents and return the index path and size.
+/// Materialize the embedded guide documents and return the index.
 pub(crate) fn outcome(home: &Path) -> Result<GuideOutcome> {
+    document(home, None)
+}
+
+pub(crate) fn document(home: &Path, document: Option<&str>) -> Result<GuideOutcome> {
+    let (name, content) = match document {
+        None | Some("guide.md") => ("guide.md", GUIDE),
+        Some(name) => DOCUMENTS
+            .iter()
+            .copied()
+            .find(|(path, _)| *path == name)
+            .ok_or_else(|| {
+                crate::AppError::new(crate::ErrorCode::InvalidInput, "unknown guide document")
+            })?,
+    };
     let path = path(home);
     for (name, content) in DOCUMENTS {
         materialize(&home.join("docs").join(name), content.as_bytes())?;
     }
     let bytes = GUIDE.as_bytes();
     materialize(&path, bytes)?;
+    let selected_path = home.join("docs").join(name);
     Ok(GuideOutcome {
-        path: path_text(&path),
-        bytes: bytes.len(),
-        lines: GUIDE.lines().count(),
+        path: path_text(&selected_path),
+        bytes: content.len(),
+        lines: content.lines().count(),
+        text: content.to_string(),
     })
 }
 

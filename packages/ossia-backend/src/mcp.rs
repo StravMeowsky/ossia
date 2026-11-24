@@ -12,7 +12,7 @@ pub struct Mcp {
 // over 32 KiB.
 const INSTRUCTIONS: &str = concat!(
     "Ossia edits one local LilyPond score at a time. ",
-    "Start with ossia_guide; read the index and relevant linked guides. Use ossia_status and ossia_list as needed. ",
+    "Start with ossia_guide; read its text and call it for relevant linked guides. Use ossia_status and ossia_list as needed. ",
     "Keep standalone IDs, hashes and editId private; score URLs are user-facing, so include them for score tasks. ",
     "Describe results in musical terms, not field names. ",
     "Mutate only on an explicit request. ",
@@ -81,9 +81,9 @@ fn write_tool<T: schemars::JsonSchema>(
 
 pub fn tools() -> Vec<Tool> {
     vec![
-        read_tool::<EmptyArgs>(
+        read_tool::<crate::guide::GuideArgs>(
             "ossia_guide",
-            "Return the absolute path, byte size and line count of the local guide index. Read the index and task-relevant linked documents with the host file-read tool.",
+            "Read the Ossia guide index, or pass document as a linked guide path to read a chapter. Returns text, path, byte size and line count.",
         ),
         read_tool::<EmptyArgs>(
             "ossia_status",

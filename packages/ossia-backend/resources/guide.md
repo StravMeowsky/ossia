@@ -4,10 +4,10 @@ Ossia edits one self-contained LilyPond file locally. The browser shows score
 previews and history. Host integration is managed from the desktop window or
 `ossia integrate`; installed integrations launch the same local backend.
 
-`ossia_guide` returns this guide's absolute path, byte size and line count. Read
-this entire guide first, then read the documents needed for the task using the
-host's file reader. Resolve links relative to this guide's directory. Read more
-than one document when the task spans workflows.
+`ossia_guide` returns this guide's text, absolute path, byte size and line count.
+Read this guide first, then call `ossia_guide` with `document` set to each
+relevant linked path, such as `guide/editing.md`. Resolve links relative to
+the current document and read every document needed for the task.
 
 ## Task index
 

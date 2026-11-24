@@ -1,11 +1,20 @@
 [
   {
     "name": "ossia_guide",
-    "description": "Return the absolute path, byte size and line count of the local guide index. Read the index and task-relevant linked documents with the host file-read tool.",
+    "description": "Read the Ossia guide index, or pass document as a linked guide path to read a chapter. Returns text, path, byte size and line count.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
-      "title": "EmptyArgs",
+      "description": "Select an embedded guide document; omission selects the index.",
+      "properties": {
+        "document": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "GuideArgs",
       "type": "object"
     },
     "annotations": {

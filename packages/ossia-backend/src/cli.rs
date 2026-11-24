@@ -43,8 +43,11 @@ pub enum Command {
     Doctor,
     Status,
     Stop,
-    /// Print the materialized Agent guide path, byte size and line count.
-    Guide,
+    /// Print an Agent guide document and its materialized path.
+    Guide {
+        #[arg(long)]
+        document: Option<String>,
+    },
     /// Print the MCP-compatible JSON tool schema for one operation.
     Schema {
         command: String,
@@ -323,7 +326,10 @@ pub async fn run(args: Args) -> Result<Option<serde_json::Value>> {
             server::serve(config).await?;
             Ok(None)
         }
-        Command::Guide => Ok(Some(value(crate::guide::outcome(&config.home)?)?)),
+        Command::Guide { document } => Ok(Some(value(crate::guide::document(
+            &config.home,
+            document.as_deref(),
+        )?)?)),
         Command::Integrate { action } => run_integrate(&config, action).await,
         Command::Doctor => Ok(Some(value(server::doctor(&config).await?)?)),
         Command::Stop => {

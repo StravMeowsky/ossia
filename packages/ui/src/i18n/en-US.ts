@@ -347,6 +347,8 @@ export const enUS = {
   agentOverrideHint: 'Click to overwrite the conflicting configuration and connect',
   agentSyncing: 'Synchronizing connected Agents in the background…',
   agentDetecting: 'Detecting available Agents…',
+  agentClaudeDesktopRestart:
+    'Quit Claude Desktop completely and restart it to load the integration.',
   agentRestartSession:
     'This integration does not apply to existing {agent} sessions. Start a new session or restart {agent}.',
   agentCodexDisabled: 'The Ossia plugin is disabled in Codex. Click to reinstall and enable it.',
@@ -369,7 +371,7 @@ export const enUS = {
   agentHostUnavailable: 'The Agent executable is unavailable.',
   agentLegacyHostUnavailable: 'The Agent for this legacy integration is unavailable.',
   noAgents:
-    'No available Agent detected. We recommend installing DeepSeek Harness, Codex, or WorkBuddy.',
+    'No available Agent detected. We recommend installing Claude, DeepSeek Harness, Codex, or WorkBuddy.',
   integrationDetails: 'Integration details',
   integrationMethod: 'Method',
   localPlugin: 'Local plugin',

@@ -97,5 +97,5 @@ fn unavailable(name: &str, error: impl std::fmt::Display) -> AppError {
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/resources.rs"]
+#[path = "../tests/resources.rs"]
 mod tests;

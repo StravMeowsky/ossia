@@ -205,5 +205,5 @@ pub fn arguments(values: &[&str]) -> Vec<String> {
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/command.rs"]
+#[path = "../tests/command.rs"]
 mod tests;

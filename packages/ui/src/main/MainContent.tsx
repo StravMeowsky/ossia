@@ -427,6 +427,10 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
       void changeAgents([agent.id], true);
       return;
     }
+    if (agent.hosts.length > 0 && agent.managed) {
+      void changeAgents([agent.id], false);
+      return;
+    }
     void changeAgents([agent.id], !(agent.installed && agent.enabled));
   }
 

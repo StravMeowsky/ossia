@@ -51,6 +51,10 @@ pub struct ManagedStore {
     #[serde(default)]
     pub connection_order: Vec<String>,
     #[serde(default)]
+    pub enabled_groups: Vec<String>,
+    #[serde(default)]
+    pub group_problems: BTreeMap<String, String>,
+    #[serde(default)]
     pub records: BTreeMap<String, ManagedRecord>,
 }
 
@@ -59,6 +63,8 @@ impl Default for ManagedStore {
         Self {
             schema_version: SCHEMA_VERSION,
             connection_order: Vec::new(),
+            enabled_groups: Vec::new(),
+            group_problems: BTreeMap::new(),
             records: BTreeMap::new(),
         }
     }
@@ -243,4 +249,5 @@ pub fn storage(error: impl std::fmt::Display) -> AppError {
 }
 
 #[cfg(test)]
+#[path = "../tests/record.rs"]
 mod tests;
