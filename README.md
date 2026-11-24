@@ -38,37 +38,37 @@ Start with an existing score or a simple idea and work with your agent to arrang
 
 ### Create a score
 
-<img src="docs/readme-assets/case-find-score.webp" alt="Creating a Bach score" width="360">
+<img src="docs/readme-assets/case-find-score.webp" alt="Creating a Bach score" width="720">
 
 Create a score for Bach's <em>Sheep May Safely Graze</em>, BWV 208.
 
 ### Arrange a score
 
-<img src="docs/readme-assets/case-arrange.webp" alt="Arranging a score for piano four hands" width="360">
+<img src="docs/readme-assets/case-arrange.webp" alt="Arranging a score for piano four hands" width="720">
 
 Arrange <em>Sheep May Safely Graze</em> for piano four hands and save it as a new score.
 
 ### Compose a melody and accompaniment
 
-<img src="docs/readme-assets/case-compose.webp" alt="Composing a melody with harmony and accompaniment" width="360">
+<img src="docs/readme-assets/case-compose.webp" alt="Composing a melody with harmony and accompaniment" width="720">
 
 Write a beautiful melody, add harmony, and create an accompaniment part.
 
 ### Import an image of a score
 
-<img src="docs/readme-assets/case-import-image.webp" alt="Importing and checking an image of a score" width="360">
+<img src="docs/readme-assets/case-import-image.webp" alt="Importing and checking an image of a score" width="720">
 
 Import this score image, check it carefully against the original, and correct any errors.
 
 ### Analyze and transpose
 
-<img src="docs/readme-assets/case-transpose.webp" alt="Analyzing the key and transposing a score" width="360">
+<img src="docs/readme-assets/case-transpose.webp" alt="Analyzing the key and transposing a score" width="720">
 
 What key is <em>Hollow Knight</em> in? Transpose it to A minor.
 
 ### Arrange for guitar tablature
 
-<img src="docs/readme-assets/case-guitar-tab.webp" alt="Arranging guitar tablature with chord diagrams" width="360">
+<img src="docs/readme-assets/case-guitar-tab.webp" alt="Arranging guitar tablature with chord diagrams" width="720">
 
 Arrange <em>Hollow Knight</em> as a new guitar tablature score and add chord diagrams.
 
@@ -86,7 +86,7 @@ Download an installer for macOS (Apple Silicon) or Windows x64 from [Releases](h
 
 1. Open Ossia and check that the service is running in the upper-right corner. Start it if necessary.
 2. Under **Integrations → Agent**, connect a detected agent such as **Codex** or **DeepSeek Harness**.
-<img src="docs/readme-assets/agent-zh.webp" alt="Agent integration panel" width="720">
+<img src="docs/readme-assets/agent-en.webp" alt="Agent integration panel" width="720">
 
 ### 3. Create, import, or edit a score
 
@@ -112,7 +112,7 @@ On the score page, you can switch scores, restore versions, play music, annotate
 
 Ossia supports several export formats, each with its own options.
 
-<img src="docs/readme-assets/export-zh.webp" alt="Score export panel" width="720">
+<img src="docs/readme-assets/export-en.webp" alt="Score export panel" width="720">
 
 ## Tips
 
