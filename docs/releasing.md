@@ -32,6 +32,12 @@ check, `Auto tag` creates the next patch tag for the latest commit. Include
 `[skip release]` in the first line of that commit message to skip automatic tagging.
 The first release tag must be created manually.
 
+Include `[skip ci]` in a commit message to skip GitHub Actions workflows triggered
+by that push or pull request, including `Check` and website deployment. Without
+a successful `Check`, the commit cannot trigger automatic tagging or satisfy the
+release check gate. Manually dispatched workflows are unaffected. Skipped required
+checks can remain pending and block pull request merges.
+
 ## Tag format
 
 Use annotated tags in one of these forms:
