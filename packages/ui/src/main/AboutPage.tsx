@@ -69,7 +69,12 @@ export function AboutPage({
     update?.state === 'downloading' && update.total
       ? `${Math.floor(((update.done ?? 0) / update.total) * 100)}%`
       : '';
-  const message = update ? stateMessage(update.state, t) : t('updateIdle');
+  const message =
+    debug && update?.state === 'ready'
+      ? t('updateDebugReady')
+      : update
+        ? stateMessage(update.state, t)
+        : t('updateIdle');
   const detail =
     update?.state === 'found' || update?.state === 'ready'
       ? update.latest
@@ -80,15 +85,17 @@ export function AboutPage({
   const label =
     notice !== null
       ? stateMessage(notice, t)
-      : actionable
-        ? t('updateAction')
-        : update?.state === 'downloading'
-          ? [t('updateDownloading'), percent].filter(Boolean).join(' ')
-          : update?.state === 'installing'
-            ? t('updateInstalling')
-            : update?.state === 'checking'
-              ? t('updateChecking')
-              : t('updateCheck');
+      : debug && update?.state === 'ready'
+        ? t('updateDebugReady')
+        : actionable
+          ? t(debug ? 'updateDebugDownload' : 'updateAction')
+          : update?.state === 'downloading'
+            ? [t('updateDownloading'), percent].filter(Boolean).join(' ')
+            : update?.state === 'installing'
+              ? t('updateInstalling')
+              : update?.state === 'checking'
+                ? t('updateChecking')
+                : t('updateCheck');
   const mode =
     notice !== null ||
     (!update?.latest &&
@@ -163,6 +170,11 @@ export function AboutPage({
         <div className="settings-row">
           <div className="setting-copy">
             <span className="setting-label">{t('version')}</span>
+            {update?.state === 'error' && update.error && (
+              <span className="setting-note">
+                {t('updateFailed')}: <span>{update.error}</span>
+              </span>
+            )}
             {debug && (
               <span className="setting-note">
                 {t('devVersionDescription', {
@@ -176,22 +188,20 @@ export function AboutPage({
             <span className="visually-hidden" role="status">
               {statusText}
             </span>
-            {!debug && (
-              <button
-                className="text-button"
-                type="button"
-                disabled={busy}
-                aria-busy={busy}
-                onClick={() => (actionable ? onApply() : onCheck())}
-              >
-                {mode !== 'check' && (
-                  <span className="update-action-icon" aria-hidden="true">
-                    <ArrowUpCircle />
-                  </span>
-                )}
-                <span>{label}</span>
-              </button>
-            )}
+            <button
+              className="text-button"
+              type="button"
+              disabled={busy || (debug && update?.state === 'ready')}
+              aria-busy={busy}
+              onClick={() => (actionable ? onApply() : onCheck())}
+            >
+              {mode !== 'check' && (
+                <span className="update-action-icon" aria-hidden="true">
+                  <ArrowUpCircle />
+                </span>
+              )}
+              <span>{label}</span>
+            </button>
           </div>
         </div>
         <div className="settings-row update-notes-row">
@@ -213,11 +223,6 @@ export function AboutPage({
         <div className="settings-row">
           <div className="setting-copy">
             <span className="setting-label">{t('updateAutoDownload')}</span>
-            {debug && (
-              <span className="setting-note" id="update-auto-download-note">
-                {t('updateDebugUnavailable')}
-              </span>
-            )}
           </div>
           <button
             className="switch"
@@ -225,8 +230,7 @@ export function AboutPage({
             role="switch"
             aria-label={t('updateAutoDownload')}
             aria-checked={preferences?.autoDownload ?? true}
-            aria-describedby={debug ? 'update-auto-download-note' : undefined}
-            disabled={!native || debug || !preferences || preferencesBusy}
+            disabled={!native || !preferences || preferencesBusy}
             onClick={() => onAutoDownload(!(preferences?.autoDownload ?? true))}
           >
             <span />

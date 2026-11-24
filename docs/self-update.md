@@ -26,15 +26,16 @@ The feed contract and a self-hosted mirror guide are in
 - `stable` accepts only non-prerelease releases.
 - `beta` accepts beta releases and stable releases.
 
-Stable is the default. A beta build defaults to beta. Development builds can
-change the channel and open release notes, but automatic downloads stay
-disabled.
+Stable is the default. A beta build defaults to beta. Debug builds can manually
+check and download the latest release in the selected channel, even when its
+version is equal to or older than the build version. Downloads use the normal
+asset selection and checksum verification; debug builds cannot install them.
 
 Distributable packages set the build stamp from their package version; an
 explicit `OSSIA_BUILD_STAMP` must match it. Development builds that bypass the
-package script fall back to an exact Git tag or `git describe`. Only an exact
-release tag can replace itself. Debug builds and builds from source report
-`source`.
+package script fall back to an exact Git tag or `git describe`. Only non-debug
+builds with an exact release tag can replace themselves. Other non-debug builds
+report `source`.
 
 ## Lifecycle
 
@@ -43,7 +44,8 @@ management process remains running, it checks every 24 hours on the stable
 channel and every 6 hours on the beta channel. Manual checks are always
 available. Changing the source, channel or automatic-download preference takes
 effect on the next check; it does not start one immediately. Debug builds skip
-automatic checks, and source builds stop the scheduler after reporting `source`.
+scheduled checks; a manual check downloads when automatic download is enabled.
+Other source builds stop the scheduler after reporting `source`.
 
 Automatic download is enabled by default; a found release downloads immediately
 and waits for the user. Closing or restarting Ossia without choosing **Update**
@@ -91,9 +93,9 @@ the original arguments and exits. The relaunch log is
 The cache is `<data-directory>/update/releases.json`. It retains the current
 source's recent release bodies and selects the range from the installed version
 to the target, capped at five releases. Source and debug builds show the newest
-five visible releases; debug builds include prereleases even when the saved
-channel is stable. Debug builds load the notes when **Open** is pressed because
-automatic checks are disabled.
+five visible releases; on-demand note checks in debug builds include prereleases
+even when the saved channel is stable. If no notes are cached, **Open** loads
+them from the selected source.
 
 Release bodies use `<!-- lang:zh -->` to separate English and Chinese and stop at
 `### Installation` or `### 安装说明`. Releases marked

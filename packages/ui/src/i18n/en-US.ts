@@ -416,7 +416,8 @@ export const enUS = {
   updateFailed: 'Update failed',
   updateTokenRequired: 'GitHub token required',
   updateAutoDownload: 'Download updates automatically',
-  updateDebugUnavailable: 'Development builds cannot download updates automatically',
+  updateDebugDownload: 'Download and verify',
+  updateDebugReady: 'Downloaded and verified',
   updateChannel: 'Update channel',
   updateFeedSource: 'Update source',
   updateFeedSourceDescription:
@@ -430,7 +431,7 @@ export const enUS = {
     'This release contains internal maintenance only; app features and behavior remain unchanged.',
   updateOtherChanges: 'Other changes',
   devVersionDescription:
-    'Development builds are fixed at version {version}; stable releases receive the new version at build time.',
+    'Development build {version} can check, download, and verify the latest release without installing or restarting.',
   devUpdateNotesDescription: 'Development builds show the latest 5 releases.',
   noUpdateNotes: 'No release notes available',
   save: 'Save',

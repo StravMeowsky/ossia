@@ -33,6 +33,11 @@ impl UpdateService {
     }
 
     fn begin_install(&self) -> std::result::Result<PathBuf, Box<InstallOutcome>> {
+        if !self.is_updatable() {
+            let failed = self.fail(&Error::other("this build cannot install updates"));
+            self.set(failed.clone());
+            return Err(Box::new(InstallOutcome::Failed(failed)));
+        }
         if !self.begin_with(true) {
             return Err(Box::new(InstallOutcome::NotStarted(self.snapshot())));
         }

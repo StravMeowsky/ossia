@@ -222,6 +222,9 @@ pub(crate) async fn update_apply(
     let checked = service
         .check(source, token.as_deref(), channel(&preferences), true)
         .await;
+    if !service.is_updatable() {
+        return Ok(checked);
+    }
     if checked.state != UpdateState::Ready || checked.error.is_some() {
         return Ok(checked);
     }

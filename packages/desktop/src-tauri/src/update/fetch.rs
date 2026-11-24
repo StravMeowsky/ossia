@@ -37,10 +37,19 @@ pub fn no_redirect_client() -> Result<Client> {
 }
 
 pub fn api_get(client: &Client, url: &str, token: Option<&str>) -> Result<RequestBuilder> {
+    request(client, url, token, GITHUB_ACCEPT)
+}
+
+fn request(
+    client: &Client,
+    url: &str,
+    token: Option<&str>,
+    accept: &str,
+) -> Result<RequestBuilder> {
     ensure_secure(url)?;
     let request = client
         .get(url)
-        .header(ACCEPT, GITHUB_ACCEPT)
+        .header(ACCEPT, accept)
         .header("X-GitHub-Api-Version", GITHUB_API_VERSION);
     let Some(token) = token else {
         return Ok(request);
@@ -54,7 +63,7 @@ pub fn api_get(client: &Client, url: &str, token: Option<&str>) -> Result<Reques
 }
 
 pub fn asset_get(client: &Client, url: &str, token: Option<&str>) -> Result<RequestBuilder> {
-    Ok(api_get(client, url, token)?.header(ACCEPT, "application/octet-stream"))
+    request(client, url, token, "application/octet-stream")
 }
 
 pub fn ensure_secure(url: &str) -> Result<()> {

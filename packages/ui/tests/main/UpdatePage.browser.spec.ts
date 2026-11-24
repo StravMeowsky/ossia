@@ -35,6 +35,16 @@ const found: UpdateSnapshot = {
   },
 };
 
+test('download failures remain visible and can be retried', async ({ page }) => {
+  await mockManagement(page, {
+    updateState: { ...found, state: 'error', error: 'download: HTTP 403' },
+  });
+  await page.goto('/main.html');
+  await page.getByRole('button', { name: '关于', exact: true }).click();
+  await expect(page.getByText('download: HTTP 403', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '更新', exact: true })).toBeEnabled();
+});
+
 test('About saves the update source and GitHub token', async ({ page }) => {
   await mockManagement(page);
   await page.goto('/main.html');
@@ -334,7 +344,20 @@ test('development builds can set the update channel', async ({ page }) => {
   );
   const autoDownload = page.getByRole('switch', { name: '自动下载更新' });
   await expect(autoDownload).toBeChecked();
-  await expect(autoDownload).toBeDisabled();
+  await expect(autoDownload).toBeEnabled();
+  await expect(page.getByRole('button', { name: '下载验证' })).toBeEnabled();
+});
+
+test('development builds show verified downloads without an install action', async ({ page }) => {
+  await mockManagement(page, {
+    updateState: { ...found, isDebugBuild: true, state: 'ready', staged: true },
+  });
+  await page.goto('/main.html');
+  await page.getByRole('button', { name: '关于', exact: true }).click();
+  await expect(page.getByRole('button', { name: '下载并校验完成' })).toBeDisabled();
+  await expect(
+    page.getByText('开发版 0.1.0 可检查、下载和校验最新发布版，不会安装或重启。'),
+  ).toBeVisible();
 });
 
 test('development builds open release notes on demand', async ({ page }) => {

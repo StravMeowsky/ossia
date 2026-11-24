@@ -3,6 +3,26 @@ use ossia_types::{UpdateChannel, UpdateChannelPreference, UpdateSource, UpdateSt
 use std::fs;
 use std::sync::Arc;
 
+#[tokio::test]
+async fn debug_build_cannot_install_a_staged_download() {
+    let service = UpdateService::for_debug_build("http://127.0.0.1:9", "micooz/ossia", "v0.1.0");
+    let dir = tempfile::tempdir().unwrap();
+    let staged = dir.path().join("update.zip");
+    fs::write(&staged, b"download").unwrap();
+    *service.staged.lock().unwrap() = Some(Staged {
+        path: staged.clone(),
+        version: "0.2.0".into(),
+    });
+    let result = service.install().await;
+    match result {
+        super::InstallOutcome::Failed(snapshot) => {
+            assert!(snapshot.error.unwrap().contains("cannot install"))
+        }
+        _ => panic!("debug install should be rejected"),
+    }
+    assert!(staged.exists());
+}
+
 #[test]
 fn finish_on_quit_discards_an_unused_download() {
     let service = UpdateService::for_build("http://127.0.0.1:9", "micooz/ossia", "v0.1.0");

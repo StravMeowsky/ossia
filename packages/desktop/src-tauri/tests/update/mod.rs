@@ -282,6 +282,26 @@ fn release_feed_filters_by_channel_and_token() {
 }
 
 #[test]
+fn asset_requests_accept_only_binary_data() {
+    let client = super::fetch::no_redirect_client().unwrap();
+    let request = super::fetch::asset_get(
+        &client,
+        "https://api.github.com/repos/micooz/ossia/releases/assets/1",
+        Some("secret"),
+    )
+    .unwrap()
+    .build()
+    .unwrap();
+    let accepts: Vec<_> = request
+        .headers()
+        .get_all(reqwest::header::ACCEPT)
+        .iter()
+        .map(|value| value.to_str().unwrap())
+        .collect();
+    assert_eq!(accepts, ["application/octet-stream"]);
+}
+
+#[test]
 fn signed_asset_redirect_does_not_forward_the_token() {
     let mock = Mock::start(Arc::new(|path, _| {
         if path == "/asset" {
@@ -405,6 +425,29 @@ async fn debug_build_notes_include_all_channels_and_keep_the_newest_five() {
             "0.2.0-beta.1"
         ]
     );
+}
+
+#[tokio::test]
+async fn debug_build_downloads_and_verifies_latest_even_at_same_version() {
+    let asset = Mock::start(Arc::new(|_, _| MockResponse::text("test")));
+    let asset_url = format!("{}/asset", asset.base);
+    let name = super::target::current().unwrap().asset_name();
+    let body = serde_json::json!([{ "tag_name": "v0.2.0", "body": "stable", "assets": [{
+        "name": name, "url": asset_url, "size": 4,
+        "digest": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+    }] }]);
+    let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
+    let service = UpdateService::for_debug_build(&mock.base, "micooz/ossia", "v0.2.0");
+    let found = service
+        .check(UpdateSource::Github, None, UpdateChannel::Stable, false)
+        .await;
+    assert_eq!(found.state, UpdateState::Found);
+    let ready = service
+        .check(UpdateSource::Github, None, UpdateChannel::Stable, true)
+        .await;
+    assert_eq!(ready.state, UpdateState::Ready, "{:?}", ready.error);
+    assert!(ready.staged);
+    service.finish_on_quit();
 }
 
 #[tokio::test]

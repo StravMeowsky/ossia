@@ -317,7 +317,7 @@ impl UpdateService {
         auto_download: bool,
         notes_only: bool,
     ) -> UpdateSnapshot {
-        if !notes_only && !self.is_updatable() {
+        if !notes_only && !self.debug_build && !self.is_updatable() {
             let mut snapshot = self.snapshot.lock().unwrap();
             snapshot.state = UpdateState::Source;
             snapshot.source = source;
@@ -374,12 +374,18 @@ impl UpdateService {
                     }
                 };
                 *self.notes_cache.lock().unwrap() = cache.clone();
-                self.settle(releases[0].clone(), &cache, channel, auto_download)
+                self.settle(
+                    releases[0].clone(),
+                    &cache,
+                    channel,
+                    auto_download,
+                    notes_only,
+                )
             }
             Ok(Err(error)) => self.fail_check(&error),
             Err(error) => self.fail_check(&Error::other(format!("update check: {error}"))),
         };
-        if !notes_only {
+        if !notes_only && !self.debug_build {
             let current = self.snapshot.lock().unwrap();
             if current.source == source && current.channel == channel {
                 self.publish_agent_status(&settled);
@@ -424,10 +430,11 @@ impl UpdateService {
         cache: &NotesCache,
         channel: UpdateChannel,
         auto_download: bool,
+        notes_only: bool,
     ) -> UpdateSnapshot {
         let latest = release.version.clone();
         let current = self.build.to_string();
-        if !self.is_updatable() {
+        if !self.is_updatable() && (!self.debug_build || notes_only) {
             return UpdateSnapshot {
                 state: UpdateState::Source,
                 channel,
@@ -450,16 +457,20 @@ impl UpdateService {
                         downloaded.clone()
                     }),
                     error: None,
-                    notes: notes::select(cache, Some(&current), Some(&downloaded))
-                        .map(Box::new)
-                        .or_else(|| self.snapshot().notes),
+                    notes: notes::select(
+                        cache,
+                        (!self.debug_build).then_some(current.as_str()),
+                        Some(&downloaded),
+                    )
+                    .map(Box::new)
+                    .or_else(|| self.snapshot().notes),
                     ..self.base_snapshot()
                 };
             } else {
                 self.discard_staged();
             }
         }
-        let state = if version::is_newer(&latest, &current) {
+        let state = if self.debug_build || version::is_newer(&latest, &current) {
             UpdateState::Found
         } else {
             UpdateState::Latest
@@ -470,7 +481,12 @@ impl UpdateService {
             channel,
             latest: Some(latest.clone()),
             error: None,
-            notes: notes::select(cache, Some(&current), Some(&latest)).map(Box::new),
+            notes: notes::select(
+                cache,
+                (!self.debug_build).then_some(current.as_str()),
+                Some(&latest),
+            )
+            .map(Box::new),
             ..self.base_snapshot()
         }
     }
