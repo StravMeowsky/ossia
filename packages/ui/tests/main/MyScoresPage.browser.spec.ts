@@ -69,6 +69,7 @@ test('my scores does not show an empty state before scores have loaded', async (
       window as unknown as Window & {
         __TAURI_INTERNALS__: { invoke: (...args: unknown[]) => Promise<unknown> };
         emptyStateFlashes?: number;
+        loadingFlashes?: number;
       }
     ).__TAURI_INTERNALS__;
     const invoke = internals.invoke;
@@ -78,18 +79,21 @@ test('my scores does not show an empty state before scores have loaded', async (
       }
       return invoke(...args);
     };
-    const ownWindow = window as Window & { emptyStateFlashes?: number };
+    const ownWindow = window as Window & { emptyStateFlashes?: number; loadingFlashes?: number };
     ownWindow.emptyStateFlashes = 0;
+    ownWindow.loadingFlashes = 0;
     new MutationObserver(() => {
       if (document.querySelector('.scores-state h2')?.textContent === '还没有乐谱') {
         ownWindow.emptyStateFlashes! += 1;
+      }
+      if (document.querySelector('.scores-state[role="status"]')) {
+        ownWindow.loadingFlashes! += 1;
       }
     }).observe(document.body, { childList: true, subtree: true });
   });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.getByRole('button', { name: '我的乐谱', exact: true }).click();
-    await expect(page.getByRole('status')).toContainText('正在读取乐谱');
     await expect(page.locator('.score-card-title')).toHaveText(['Nocturne A']);
     await page.getByRole('button', { name: 'Agent', exact: true }).click();
   }
@@ -98,6 +102,35 @@ test('my scores does not show an empty state before scores have loaded', async (
       () => (window as Window & { emptyStateFlashes?: number }).emptyStateFlashes,
     ),
   ).toBe(0);
+  expect(
+    await page.evaluate(() => (window as Window & { loadingFlashes?: number }).loadingFlashes),
+  ).toBe(0);
+});
+
+test('my scores shows loading after a slow request', async ({ page }) => {
+  await mockManagement(page, { initialRuntime: true, scores: [scores[0]!] });
+  await page.goto('/main.html');
+  await page.evaluate(() => {
+    const target = window as unknown as Window & {
+      __TAURI_INTERNALS__: { invoke: (command: string, args?: unknown) => Promise<unknown> };
+      releaseScores?: () => void;
+    };
+    const invoke = target.__TAURI_INTERNALS__.invoke;
+    target.__TAURI_INTERNALS__.invoke = async (command, args) => {
+      if (command === 'management_scores') {
+        await new Promise<void>((resolve) => {
+          target.releaseScores = resolve;
+        });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.getByRole('button', { name: '我的乐谱', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '还没有乐谱' })).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('正在读取乐谱');
+  await page.evaluate(() => (window as Window & { releaseScores?: () => void }).releaseScores?.());
+  await expect(page.locator('.score-card-title')).toHaveText(['Nocturne A']);
 });
 
 test('my scores supports layouts, search, sort persistence and browser opening', async ({

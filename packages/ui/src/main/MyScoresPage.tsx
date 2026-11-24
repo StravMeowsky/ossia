@@ -123,6 +123,7 @@ export function MyScoresPage({
     parseScoreSort(localStorage.getItem(SCORE_SORT_KEY)),
   );
   const [loading, setLoading] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
   const [error, setError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
   const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set());
@@ -148,12 +149,15 @@ export function MyScoresPage({
     if ((!native && !browser) || !runtimeRunning) {
       setScores(null);
       setLoading(false);
+      setShowLoading(false);
       setError('');
       return;
     }
     let live = true;
     setLoading(true);
+    setShowLoading(false);
     setError('');
+    const loadingTimer = window.setTimeout(() => setShowLoading(true), 300);
     void loadAllScores(archived, browser)
       .then((items) => {
         if (live) setScores((current) => (sameScores(current, items) ? current : items));
@@ -164,10 +168,15 @@ export function MyScoresPage({
         setError(describe(caught));
       })
       .finally(() => {
-        if (live) setLoading(false);
+        window.clearTimeout(loadingTimer);
+        if (live) {
+          setLoading(false);
+          setShowLoading(false);
+        }
       });
     return () => {
       live = false;
+      window.clearTimeout(loadingTimer);
     };
   }, [archived, browser, native, reloadToken, runtimeInstanceId, runtimeRunning]);
 
@@ -394,10 +403,12 @@ export function MyScoresPage({
           )}
         </div>
       ) : loading || (scores === null && !error) ? (
-        <div className="scores-state" role="status">
-          <LoaderCircle className="spinner" aria-hidden="true" />
-          <h2>{t('loadingScores')}</h2>
-        </div>
+        showLoading ? (
+          <div className="scores-state" role="status">
+            <LoaderCircle className="spinner" aria-hidden="true" />
+            <h2>{t('loadingScores')}</h2>
+          </div>
+        ) : null
       ) : error ? (
         <div className="scores-state is-error">
           <FileMusic aria-hidden="true" />
