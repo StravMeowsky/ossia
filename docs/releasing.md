@@ -92,8 +92,6 @@ Payload restoration:
 
 The check also verifies the installed license and source materials. It does not
 automate GUI startup, code signing or notarization.
-`release.json` records `verification: "runtime-smoke"` and the artifacts that
-were exercised.
 
 ## Release assets
 
@@ -107,8 +105,8 @@ Release assets:
 GitHub provides source archives for the release tag. Each installation includes
 its platform's license tree, `SOURCE-MANIFEST.json`, `THIRD-PARTY-NOTICES.md`,
 and `BUILD-INFO.json` under its resources `licenses` directory. The source
-manifest identifies the exact commit and its GitHub archive URL. Build artifacts
-retain the full `release.json`. Test packages are unsigned and not notarized.
+manifest identifies the exact commit and its GitHub archive URL. Test packages
+are unsigned and not notarized.
 
 ## Self-update
 
@@ -122,7 +120,7 @@ Custom installations can host a compatible mirror as described in
 The package script always sets `OSSIA_BUILD_STAMP` to the canonical tag derived
 from the package version. An explicitly supplied value must match that version.
 The release workflow supplies the annotated tag, while local packaging of the
-committed version needs no separate environment variable. `release.json` records
+committed version needs no separate environment variable. `BUILD-INFO.json` records
 the resulting `buildStamp`. Stable releases are offered on the stable and beta
 channels; pre-releases are offered only on beta.
 

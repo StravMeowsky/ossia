@@ -32,7 +32,6 @@ function writeReleaseFixture(root) {
     const materials = path.join(artifact, 'materials');
     fs.mkdirSync(materials, { recursive: true });
     for (const name of files[target]) fs.writeFileSync(path.join(artifact, name), name);
-    fs.writeFileSync(path.join(artifact, 'release.json'), JSON.stringify({ target }));
     fs.writeFileSync(path.join(materials, 'SOURCE-MANIFEST.json'), '{}');
     fs.writeFileSync(path.join(materials, 'THIRD-PARTY-NOTICES.md'), 'notices');
     fs.mkdirSync(path.join(materials, 'licenses'), { recursive: true });

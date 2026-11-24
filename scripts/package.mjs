@@ -893,7 +893,7 @@ async function verifyArtifacts(target, artifactDir, files, entry) {
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
-    return [APP_BUNDLE, path.basename(disk), path.basename(zip)];
+    return;
   }
   if (spec.platform === 'windows') {
     const installer = files.find((file) => file.endsWith('.exe'));
@@ -914,7 +914,7 @@ async function verifyArtifacts(target, artifactDir, files, entry) {
         await uninstallWindows(root);
       }
     });
-    return [path.basename(installer)];
+    return;
   }
   const deb = files.find((file) => file.endsWith('.deb'));
   const rpm = files.find((file) => file.endsWith('.rpm'));
@@ -930,7 +930,6 @@ async function verifyArtifacts(target, artifactDir, files, entry) {
       fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     }
   }
-  return [path.basename(deb), path.basename(rpm)];
 }
 
 function checksums(files, destination) {
@@ -1093,28 +1092,9 @@ export async function packageTarget(target, options = {}) {
   }
   fs.cpSync(material.destination, path.join(artifactDir, 'materials'), { recursive: true });
   verifyReleaseArtifacts(target, artifactDir, files);
-  const verifiedArtifacts = await verifyArtifacts(target, artifactDir, files, entry);
-  const release = {
-    schemaVersion: 1,
-    appVersion: APP_VERSION,
-    buildStamp: BUILD_STAMP,
-    target,
-    triple: spec.triple,
-    commit: run('git', ['rev-parse', 'HEAD']).trim(),
-    engineBuildId: entry.engineBuildId,
-    engineArchive: entry.archive,
-    signing: spec.platform === 'macos' ? 'ad-hoc-linker-signed' : 'unsigned',
-    notarized: false,
-    verification: 'runtime-smoke',
-    verifiedArtifacts,
-    artifacts: files.map((file) => path.relative(artifactDir, file)),
-  };
-  fs.writeFileSync(path.join(artifactDir, 'release.json'), `${JSON.stringify(release, null, 2)}\n`);
-  checksums(
-    [...files, path.join(artifactDir, 'release.json')],
-    path.join(artifactDir, 'SHA256SUMS'),
-  );
-  return { artifactDir, release, materials: material.manifest };
+  await verifyArtifacts(target, artifactDir, files, entry);
+  checksums(files, path.join(artifactDir, 'SHA256SUMS'));
+  return { artifactDir, materials: material.manifest };
 }
 
 async function main(argv) {
