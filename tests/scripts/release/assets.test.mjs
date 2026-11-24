@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,7 +37,6 @@ function writeReleaseFixture(root) {
     fs.writeFileSync(path.join(materials, 'THIRD-PARTY-NOTICES.md'), 'notices');
     fs.mkdirSync(path.join(materials, 'licenses'), { recursive: true });
     fs.writeFileSync(path.join(materials, 'licenses', 'COPYING'), 'license');
-    fs.writeFileSync(path.join(materials, 'ossia-0.1.0-beta.1-source.tar.gz'), 'same-source');
   }
 }
 
@@ -48,20 +48,19 @@ test('release collection requires every installer and emits checksums', async ()
     fs.mkdirSync(input);
     writeReleaseFixture(input);
     const names = await collectRelease({ input, output, version: 'v0.1.0-beta.1' });
-    assert.equal(names.length, INSTALL_ASSETS.length + 2);
+    assert.equal(names.length, INSTALL_ASSETS.length);
     assert.equal(
       fs.readdirSync(output).sort().join('\n'),
-      [
-        ...INSTALL_ASSETS,
-        'ossia-0.1.0-beta.1-source.tar.gz',
-        'ossia-0.1.0-beta.1-materials.tar.gz',
-        'SHA256SUMS',
-      ]
-        .sort()
-        .join('\n'),
+      [...INSTALL_ASSETS, 'SHA256SUMS'].sort().join('\n'),
     );
     const sums = fs.readFileSync(path.join(output, 'SHA256SUMS'), 'utf8').trim().split('\n');
     assert.equal(sums.length, names.length);
+    for (const name of names) {
+      const digest = createHash('sha256')
+        .update(fs.readFileSync(path.join(output, name)))
+        .digest('hex');
+      assert.ok(sums.includes(`${digest}  ${name}`));
+    }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

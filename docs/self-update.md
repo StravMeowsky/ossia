@@ -70,7 +70,7 @@ The updater matches the complete release asset name for the current target:
 | macOS arm64    | `ossia-darwin-arm64.zip`  |
 | Windows x86_64 | `ossia-windows-amd64.exe` |
 
-DMGs and source/material archives are never selected. GitHub's asset `digest` is
+DMGs are not selected. GitHub's asset `digest` is
 used when present; otherwise the updater reads `SHA256SUMS`. No digest and no
 matching checksum entry is an error.
 

@@ -107,13 +107,11 @@ function clean(root) {
   return run('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root });
 }
 
-/** Require the build to use the same sources as the archive. */
+/** Require the build to use the committed sources. */
 export function assertClean(root = ROOT) {
   const status = clean(root);
   if (status.trim()) {
-    throw new Error(
-      'packaging requires a clean working tree so the source archive matches the app',
-    );
+    throw new Error('packaging requires a clean working tree so the commit matches the app');
   }
 }
 
@@ -290,7 +288,7 @@ function notices(manifest) {
   return `${lines.join('\n')}\n`;
 }
 
-function materials(stage, target, entry, sourceArchive) {
+function materials(stage, target, entry) {
   const destination = path.join(stage, 'materials');
   const licenses = path.join(destination, 'licenses');
   fs.mkdirSync(licenses, { recursive: true });
@@ -334,12 +332,13 @@ function materials(stage, target, entry, sourceArchive) {
       path.join(ROOT, 'vendor/docs/lilypond/2.26.0/notices', file),
       path.join(docsLicenses, file),
     );
+  const commit = run('git', ['rev-parse', 'HEAD']).trim();
   const manifest = {
     documentation: { ...documentation, contentHash: docsManifest.contentHash },
-    schemaVersion: 1,
+    schemaVersion: 2,
     appVersion: APP_VERSION,
     target,
-    commit: run('git', ['rev-parse', 'HEAD']).trim(),
+    commit,
     engine: {
       version: entry.version,
       engineBuildId: entry.engineBuildId,
@@ -356,9 +355,10 @@ function materials(stage, target, entry, sourceArchive) {
         buildScripts: dependencyLock.buildScripts.map((item) => item.path),
       },
     },
-    sourceArchive: {
-      file: path.basename(sourceArchive),
-      sha256: sha256(sourceArchive),
+    source: {
+      tag: BUILD_STAMP,
+      commit,
+      url: `https://github.com/micooz/ossia/archive/${commit}.tar.gz`,
     },
     workspacePackages,
     rustDependencies: rust,
@@ -376,6 +376,10 @@ function materials(stage, target, entry, sourceArchive) {
   fs.copyFileSync(
     path.join(destination, 'THIRD-PARTY-NOTICES.md'),
     path.join(licenses, 'THIRD-PARTY-NOTICES.md'),
+  );
+  fs.writeFileSync(
+    path.join(licenses, 'BUILD-INFO.json'),
+    `${JSON.stringify({ schemaVersion: 1, appVersion: APP_VERSION, buildStamp: BUILD_STAMP, target, triple: specFor(target).triple, commit, engineBuildId: entry.engineBuildId }, null, 2)}\n`,
   );
   return { destination, licenses, manifest };
 }
@@ -546,6 +550,7 @@ export function inspectPayload(root) {
 
 async function verifyPayload(root, label, entry) {
   const { executable, resources } = inspectPayload(root);
+  verifyMaterials(resources, entry, run('git', ['rev-parse', 'HEAD']).trim());
   const version = run(executable, ['--version']).trim();
   if (!version.includes(APP_VERSION)) {
     throw new Error(
@@ -617,6 +622,41 @@ async function verifyPayload(root, label, entry) {
     }
   } finally {
     fs.rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  }
+}
+
+/** Verify that the installed payload contains its license and source information. */
+export function verifyMaterials(resources, entry, commit) {
+  const licenses = path.join(resources, 'licenses');
+  for (const relative of [
+    'Ossia-GPL-3.0-or-later.txt',
+    'THIRD-PARTY-NOTICES.md',
+    'SOURCE-MANIFEST.json',
+    'BUILD-INFO.json',
+    'engine',
+    'documentation',
+    'rust',
+    'npm',
+  ]) {
+    if (!fs.existsSync(path.join(licenses, relative))) {
+      throw new Error(`packaged license materials are missing ${relative}`);
+    }
+  }
+  const manifest = JSON.parse(fs.readFileSync(path.join(licenses, 'SOURCE-MANIFEST.json'), 'utf8'));
+  const build = JSON.parse(fs.readFileSync(path.join(licenses, 'BUILD-INFO.json'), 'utf8'));
+  if (
+    build.commit !== commit ||
+    manifest.source?.commit !== build.commit ||
+    manifest.commit !== build.commit ||
+    manifest.source?.tag !== build.buildStamp ||
+    manifest.source?.url !== `https://github.com/micooz/ossia/archive/${build.commit}.tar.gz` ||
+    manifest.appVersion !== APP_VERSION ||
+    build.appVersion !== APP_VERSION ||
+    build.buildStamp !== BUILD_STAMP ||
+    manifest.target !== build.target ||
+    build.engineBuildId !== entry.engineBuildId
+  ) {
+    throw new Error('packaged source and build information do not match');
   }
 }
 
@@ -845,7 +885,15 @@ async function verifyArtifacts(target, artifactDir, files, entry) {
     await verifyPayload(path.join(artifactDir, APP_BUNDLE), 'app bundle', entry);
     const disk = files.find((file) => file.endsWith('.dmg'));
     await verifyDmg(disk, entry);
-    return [APP_BUNDLE, path.basename(disk)];
+    const zip = files.find((file) => file.endsWith('.zip'));
+    const root = temporaryDirectory('ossia-zip-');
+    try {
+      run('ditto', ['-x', '-k', zip, root]);
+      await verifyPayload(root, 'ZIP', entry);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+    return [APP_BUNDLE, path.basename(disk), path.basename(zip)];
   }
   if (spec.platform === 'windows') {
     const installer = files.find((file) => file.endsWith('.exe'));
@@ -982,16 +1030,7 @@ export async function packageTarget(target, options = {}) {
   const stage = path.join(ROOT, 'target/package', target);
   fs.rmSync(stage, { recursive: true, force: true });
   fs.mkdirSync(stage, { recursive: true });
-  const sourceArchive = path.join(stage, `ossia-${APP_VERSION}-source.tar.gz`);
-  run('git', [
-    'archive',
-    '--format=tar.gz',
-    `--prefix=ossia-${APP_VERSION}/`,
-    '-o',
-    sourceArchive,
-    'HEAD',
-  ]);
-  const material = materials(stage, target, entry, sourceArchive);
+  const material = materials(stage, target, entry);
   const config = overlay(stage, target, entry);
   if (spec.platform === 'linux') {
     const packaged = JSON.parse(fs.readFileSync(config.file, 'utf8'));
@@ -1053,8 +1092,6 @@ export async function packageTarget(target, options = {}) {
     }
   }
   fs.cpSync(material.destination, path.join(artifactDir, 'materials'), { recursive: true });
-  fs.copyFileSync(sourceArchive, path.join(artifactDir, 'materials', path.basename(sourceArchive)));
-  files.push(path.join(artifactDir, 'materials', path.basename(sourceArchive)));
   verifyReleaseArtifacts(target, artifactDir, files);
   const verifiedArtifacts = await verifyArtifacts(target, artifactDir, files, entry);
   const release = {

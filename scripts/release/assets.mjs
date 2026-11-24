@@ -1,7 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFile, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -62,15 +60,10 @@ async function artifactDirectories(input) {
 async function collectInstallAssets(input, output) {
   await mkdir(output, { recursive: true });
   const collected = new Map();
-  const sources = [];
 
   for (const artifact of await artifactDirectories(input)) {
     for (const source of await filesUnder(artifact.dir)) {
       const name = basename(source);
-      if (/^ossia-.*-source\.tar\.gz$/.test(name)) {
-        sources.push(source);
-        continue;
-      }
       if (!/\.(dmg|zip|exe|deb|rpm)$/i.test(name)) continue;
       const publicName = assetName(source);
       if (collected.has(publicName)) {
@@ -87,44 +80,6 @@ async function collectInstallAssets(input, output) {
   if (collected.size !== INSTALL_ASSETS.length) {
     throw new Error(`expected ${INSTALL_ASSETS.length} install assets, got ${collected.size}`);
   }
-  if (sources.length === 0) throw new Error('missing source archive');
-
-  const digests = new Set();
-  for (const source of sources) digests.add(sha256(await readFile(source)));
-  if (digests.size !== 1) throw new Error('source archives differ between targets');
-  return { source: sources[0] };
-}
-
-async function buildMaterialsArchive(input, output, version) {
-  const stage = await mkdtemp(join(os.tmpdir(), 'ossia-materials-'));
-  try {
-    for (const artifact of await artifactDirectories(input)) {
-      const files = await filesUnder(artifact.dir);
-      const release = files.find((file) => basename(file) === 'release.json');
-      const manifest = files.find((file) => basename(file) === 'SOURCE-MANIFEST.json');
-      const notices = files.find((file) => basename(file) === 'THIRD-PARTY-NOTICES.md');
-      if (!release || !manifest || !notices) {
-        throw new Error(`incomplete release materials for ${artifact.target}`);
-      }
-      const manifestRoot = join(stage, 'manifests', artifact.target);
-      await mkdir(manifestRoot, { recursive: true });
-      await copyFile(release, join(manifestRoot, 'release.json'));
-      await copyFile(manifest, join(manifestRoot, 'SOURCE-MANIFEST.json'));
-      await copyFile(notices, join(manifestRoot, 'THIRD-PARTY-NOTICES.md'));
-
-      const licenses = files.find((file) => file.includes(`${join('materials', 'licenses')}`));
-      if (!licenses) throw new Error(`missing license materials for ${artifact.target}`);
-      const licenseRoot = join(stage, 'licenses', artifact.target);
-      await mkdir(licenseRoot, { recursive: true });
-      const materialsRoot = join(artifact.dir, 'materials', 'licenses');
-      await cp(materialsRoot, licenseRoot, { recursive: true });
-    }
-    const archive = join(output, `ossia-${version}-materials.tar.gz`);
-    execFileSync('tar', ['-czf', archive, '-C', stage, '.'], { stdio: 'inherit' });
-    return archive;
-  } finally {
-    await rm(stage, { recursive: true, force: true });
-  }
 }
 
 async function writeChecksums(names, output) {
@@ -136,14 +91,11 @@ async function writeChecksums(names, output) {
   await writeFile(join(output, 'SHA256SUMS'), `${lines.join('\n')}\n`);
 }
 
-/** Collect installers, one source archive and one combined materials archive. */
+/** Collect installers and write their checksums. */
 export async function collectRelease({ input, output, version }) {
-  const normalized = parseTag(`v${version.replace(/^v/, '')}`);
-  const collected = await collectInstallAssets(input, output);
-  const sourceName = `ossia-${normalized}-source.tar.gz`;
-  await copyFile(collected.source, join(output, sourceName));
-  const materials = await buildMaterialsArchive(input, output, normalized);
-  const names = [...INSTALL_ASSETS, sourceName, basename(materials)];
+  parseTag(`v${version.replace(/^v/, '')}`);
+  await collectInstallAssets(input, output);
+  const names = [...INSTALL_ASSETS];
   await writeChecksums(names, output);
   return names;
 }

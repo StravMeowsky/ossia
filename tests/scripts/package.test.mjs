@@ -17,6 +17,7 @@ import {
   packageTarget,
   rustDependencies,
   specFor,
+  verifyMaterials,
 } from '../../scripts/package.mjs';
 import {
   windowsInstallerArgs,
@@ -221,6 +222,52 @@ function writePayload(root, executable) {
   fs.writeFileSync(executable, '');
   fs.chmodSync(executable, 0o755);
 }
+
+test('installed materials identify the matching source and build', () => {
+  const root = temporaryRoot();
+  try {
+    const licenses = path.join(root, 'licenses');
+    for (const directory of ['engine', 'documentation', 'rust', 'npm']) {
+      fs.mkdirSync(path.join(licenses, directory), { recursive: true });
+    }
+    for (const file of ['Ossia-GPL-3.0-or-later.txt', 'THIRD-PARTY-NOTICES.md']) {
+      fs.writeFileSync(path.join(licenses, file), 'notice');
+    }
+    const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+    const commit = 'a'.repeat(40);
+    const build = {
+      appVersion: version,
+      buildStamp: `v${version}`,
+      target: 'test',
+      commit,
+      engineBuildId: 'engine',
+    };
+    const manifest = {
+      appVersion: version,
+      target: 'test',
+      commit,
+      source: {
+        tag: build.buildStamp,
+        commit,
+        url: `https://github.com/micooz/ossia/archive/${commit}.tar.gz`,
+      },
+    };
+    fs.writeFileSync(path.join(licenses, 'BUILD-INFO.json'), JSON.stringify(build));
+    fs.writeFileSync(path.join(licenses, 'SOURCE-MANIFEST.json'), JSON.stringify(manifest));
+    assert.doesNotThrow(() => verifyMaterials(root, { engineBuildId: 'engine' }, commit));
+    fs.rmSync(path.join(licenses, 'THIRD-PARTY-NOTICES.md'));
+    assert.throws(
+      () => verifyMaterials(root, { engineBuildId: 'engine' }, commit),
+      /THIRD-PARTY-NOTICES/,
+    );
+    fs.writeFileSync(path.join(licenses, 'THIRD-PARTY-NOTICES.md'), 'notice');
+    manifest.source.commit = 'different';
+    fs.writeFileSync(path.join(licenses, 'SOURCE-MANIFEST.json'), JSON.stringify(manifest));
+    assert.throws(() => verifyMaterials(root, { engineBuildId: 'engine' }, commit), /do not match/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('targets map to Rust triples and platform bundles', () => {
   assert.deepEqual(specFor('darwin-arm64'), {

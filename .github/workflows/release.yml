@@ -267,7 +267,7 @@ jobs:
             --title "Ossia $TAG" \
             --notes-file notes/release-notes.md
 
-          test "$(gh release view "$TAG" --json assets --jq '.assets | length')" -eq 6
+          diff -u <(ls -1 release | sort) <(gh release view "$TAG" --json assets --jq '.assets[].name' | sort)
       - name: Check before publishing
         id: before-publish
         if: steps.before-stage.outputs.current == 'true'

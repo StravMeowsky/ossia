@@ -65,8 +65,8 @@ unwanted stable tag.
 7. The separate `Ossia update feed` workflow verifies the published release and
    uploads the two update-feed targets, including the macOS DMG download.
 
-Packaging requires a clean Git working tree. The source archive is generated
-from `HEAD` and respects `.gitattributes` export rules.
+Packaging requires a clean Git working tree so the recorded commit matches the
+application.
 
 The release targets are macOS arm64 and Windows x86_64.
 
@@ -86,11 +86,12 @@ target platform's own binary.
 
 Payload restoration:
 
-- macOS verifies the copied `.app` and the app inside the mounted DMG.
+- macOS verifies the copied `.app`, the app inside the mounted DMG and the ZIP.
 - Windows silently installs the NSIS package into a temporary directory, then
   uninstalls it.
 
-The check does not automate GUI startup, code signing or notarization.
+The check also verifies the installed license and source materials. It does not
+automate GUI startup, code signing or notarization.
 `release.json` records `verification: "runtime-smoke"` and the artifacts that
 were exercised.
 
@@ -101,13 +102,13 @@ Release assets:
 - `ossia-darwin-arm64.dmg`
 - `ossia-darwin-arm64.zip`
 - `ossia-windows-amd64.exe`
-- `ossia-<version>-source.tar.gz`
-- `ossia-<version>-materials.tar.gz`
 - `SHA256SUMS`
 
-The materials archive contains each target's `release.json`,
-`SOURCE-MANIFEST.json`, `THIRD-PARTY-NOTICES.md` and license tree. Test packages
-are unsigned and not notarized.
+GitHub provides source archives for the release tag. Each installation includes
+its platform's license tree, `SOURCE-MANIFEST.json`, `THIRD-PARTY-NOTICES.md`,
+and `BUILD-INFO.json` under its resources `licenses` directory. The source
+manifest identifies the exact commit and its GitHub archive URL. Build artifacts
+retain the full `release.json`. Test packages are unsigned and not notarized.
 
 ## Self-update
 
@@ -130,9 +131,8 @@ manual-install artifacts.
 
 For each target, include the generated release notes in the update manifest.
 The About dialog reads release content from the manifest body.
-The update feed contains installers, not source or materials archives. The
-GitHub release contains the corresponding source and third-party materials;
-make those materials available to recipients of the binaries.
+The update feed contains installers. Corresponding source is available from the
+GitHub release, and third-party materials are included in each installation.
 
 Feed publication runs serially across workflow runs. Each target is updated
 individually. The uploader reads the current manifest from COS before merging,
