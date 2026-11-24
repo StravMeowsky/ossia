@@ -99,7 +99,6 @@ jobs:
           key: check-v1-${{ runner.os }}-${{ matrix.target }}-rust-1.91.0-${{ hashFiles('**/Cargo.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             check-v1-${{ runner.os }}-${{ matrix.target }}-rust-1.91.0-${{ hashFiles('**/Cargo.lock') }}-
-            check-v1-${{ runner.os }}-${{ matrix.target }}-rust-1.91.0-
       - name: Restore release dependency cache
         if: steps.check-cache.outputs.cache-hit != 'true' && steps.check-cache.outputs.cache-matched-key == ''
         uses: actions/cache/restore@v6.1.0
@@ -121,7 +120,7 @@ jobs:
       - name: Native watcher isolation
         run: cargo test -p ossia-backend --test watch watcher_debounces_atomic_saves_and_recovers_deleted_file -- --test-threads=1
       - name: Save Rust check cache
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check-cache.outputs.cache-matched-key == ''
         uses: actions/cache/save@v6.1.0
         with:
           path: |
