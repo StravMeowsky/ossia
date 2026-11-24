@@ -13,6 +13,8 @@
   </p>
 </div>
 
+![Ossia 横图](website/assets/cover-zh.png)
+
 Ossia 是一款体验极佳的 AI 原生乐谱制作软件，它为 AI Agent 提供恰当的工具和指引，你只需要与 Agent 对话即可轻松制作乐谱。
 
 > Ossia 基于 [GPL-3.0-or-later](LICENSE) 开源，商业使用、销售、分发时需遵守该协议规则，包括：保留版权及许可声明、向接收者提供对应源代码、分发修改版须继续以 GPL 授权。详细条款请参阅 [许可证](LICENSE)和 [GNU GPL 常见问题](https://www.gnu.org/licenses/gpl-faq.html)。

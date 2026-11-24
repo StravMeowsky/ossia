@@ -13,6 +13,8 @@
   </p>
 </div>
 
+![Ossia cover](website/assets/cover-en.png)
+
 Ossia is AI-native music notation software that gives AI agents the tools and guidance they need to create scores through conversation.
 
 > Ossia is open source under [GPL-3.0-or-later](LICENSE). Commercial use, sale, and distribution are subject to the license, including requirements when distributing the software to retain copyright and license notices, provide recipients with corresponding source code, and license modified versions under the GPL. See the [license](LICENSE) and the [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.html) for details.
