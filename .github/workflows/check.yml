@@ -88,7 +88,21 @@ jobs:
           runtime: node@24
           cache: true
           install: false
-      - uses: actions/cache/restore@v6.1.0
+      - name: Restore Rust check cache
+        id: check-cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+          key: check-v1-${{ runner.os }}-${{ matrix.target }}-rust-1.91.0-${{ hashFiles('**/Cargo.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            check-v1-${{ runner.os }}-${{ matrix.target }}-rust-1.91.0-${{ hashFiles('**/Cargo.lock') }}-
+            check-v1-${{ runner.os }}-${{ matrix.target }}-rust-1.91.0-
+      - name: Restore release dependency cache
+        if: steps.check-cache.outputs.cache-hit != 'true' && steps.check-cache.outputs.cache-matched-key == ''
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -106,6 +120,32 @@ jobs:
       - run: cargo test --workspace --lib --bins --tests -- --test-threads=1 --skip watcher_debounces_atomic_saves_and_recovers_deleted_file
       - name: Native watcher isolation
         run: cargo test -p ossia-backend --test watch watcher_debounces_atomic_saves_and_recovers_deleted_file -- --test-threads=1
+      - name: Save Rust check cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+          key: ${{ steps.check-cache.outputs.cache-primary-key }}
+
+  browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
       - name: Install browser test runtime
         run: pnpm --filter @ossia/ui exec playwright install chrome
       - name: Browser regression
