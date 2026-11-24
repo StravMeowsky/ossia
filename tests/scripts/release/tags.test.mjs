@@ -18,7 +18,7 @@ test('automatic tags always allocate the next stable patch, even after a beta', 
   assert.equal(nextPatchTag(['v0.1.0', 'v0.4.2']), 'v0.4.3');
 });
 
-test('automatic tagging only publishes the committed version', async () => {
+test('automatic tagging respects the latest commit message and allocates the next version', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-tags-'));
   const repo = path.join(root, 'repo');
   const remote = path.join(root, 'remote.git');
@@ -52,16 +52,14 @@ test('automatic tagging only publishes the committed version', async () => {
 
     fs.writeFileSync(path.join(repo, 'change'), 'change');
     git('add', '.');
-    git('commit', '-qm', 'change');
+    git('commit', '-qm', 'docs: update guide [skip release]');
     git('push', '-q', 'origin', 'main');
     assert.deepEqual(await createNextTag(git('rev-parse', 'HEAD'), repo), {
-      status: 'version-mismatch',
+      status: 'skipped',
     });
     assert.equal(git('tag', '--list', 'v0.1.1'), '');
 
-    writeVersion('0.1.1');
-    git('add', '.');
-    git('commit', '-qm', 'version');
+    git('commit', '--allow-empty', '-qm', 'change', '-m', 'Documentation only [skip release]');
     git('push', '-q', 'origin', 'main');
     assert.deepEqual(await createNextTag(git('rev-parse', 'HEAD'), repo), {
       status: 'created',

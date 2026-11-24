@@ -168,6 +168,25 @@ export async function checkVersion(root, tag) {
   return expected;
 }
 
+/** Temporarily inject a release version and restore the source manifests afterward. */
+export async function withReleaseVersion(root, tag, build, options = {}) {
+  const files = [
+    'Cargo.toml',
+    'Cargo.lock',
+    'package.json',
+    'packages/desktop/package.json',
+    'packages/desktop/src-tauri/tauri.conf.json',
+  ];
+  const originals = await Promise.all(files.map((file) => readFile(join(root, file))));
+  try {
+    const version = await setVersion(root, tag, options);
+    await checkVersion(root, tag);
+    return await build(version);
+  } finally {
+    await Promise.all(files.map((file, index) => writeFile(join(root, file), originals[index])));
+  }
+}
+
 async function main(argv) {
   const [command, first, second] = argv;
   const root = process.cwd();

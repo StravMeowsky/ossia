@@ -2,7 +2,7 @@ import { appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 import { runGit } from './git.mjs';
-import { isNewerTag, isReleaseTag, parseTag, readVersions } from './version.mjs';
+import { isNewerTag, isReleaseTag, parseTag } from './version.mjs';
 
 export function highestTag(tags) {
   return tags
@@ -35,15 +35,14 @@ export async function createNextTag(sha, root = process.cwd()) {
     return { status: 'stale' };
   }
 
+  const message = await runGit(['show', '-s', '--format=%B', sha], root);
+  if (message.split('\n', 1)[0].includes('[skip release]')) return { status: 'skipped' };
+
   const existing = (await runGit(['tag', '--points-at', sha], root)).trim().split('\n');
   if (existing.some(isReleaseTag)) return { status: 'tagged' };
 
   const tags = (await runGit(['tag', '--list'], root)).trim().split('\n');
   const tag = nextPatchTag(tags);
-  const versions = await readVersions(root);
-  if (Object.values(versions).some((version) => version !== parseTag(tag))) {
-    return { status: 'version-mismatch' };
-  }
   const remoteMain = await runGit(['ls-remote', '--exit-code', 'origin', 'refs/heads/main'], root);
   if (remoteMain.trim().split(/\s+/)[0] !== sha) return { status: 'stale' };
 

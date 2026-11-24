@@ -3175,7 +3175,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-backend"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "async-stream",
  "axum",
@@ -3210,7 +3210,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-desktop"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "ossia-backend",
  "ossia-integrations",
@@ -3231,7 +3231,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-engine"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "fs2",
  "hound",
@@ -3254,7 +3254,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-integrations"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "dirs 7.0.0",
  "fs2",
@@ -3268,7 +3268,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-library"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "flate2",
@@ -3286,7 +3286,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-omr"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "axum",
  "clap",
@@ -3303,7 +3303,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-score"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "ossia-types",
  "quick-xml",
@@ -3314,7 +3314,7 @@ dependencies = [
 
 [[package]]
 name = "ossia-types"
-version = "0.1.0-beta.20"
+version = "0.1.0"
 dependencies = [
  "schemars 1.2.3",
  "serde",

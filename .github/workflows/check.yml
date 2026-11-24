@@ -6,11 +6,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
-    inputs:
-      tag:
-        description: Release tag whose version should be injected before checks
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -101,12 +96,6 @@ jobs:
             target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: pnpm install --frozen-lockfile
-      - name: Check release version
-        if: inputs.tag != ''
-        shell: bash
-        env:
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: node scripts/release/version.mjs check "$RELEASE_TAG"
       - run: pnpm check
       - run: pnpm check:types
       - run: pnpm check:mcp

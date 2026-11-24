@@ -6,12 +6,12 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { readLock, verifyTree, refreshGoMtimes, sha256 } from './engine.mjs';
-import { resolveBuildStamp, rpmBundleConfig } from './release/version.mjs';
+import { resolveBuildStamp, rpmBundleConfig, withReleaseVersion } from './release/version.mjs';
 import { windowsInstallerArgs, withWindowsInstallState } from './windows-install-state.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const APP_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
-const BUILD_STAMP = resolveBuildStamp(APP_VERSION, process.env.OSSIA_BUILD_STAMP);
+let APP_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+let BUILD_STAMP = resolveBuildStamp(APP_VERSION, process.env.OSSIA_BUILD_STAMP);
 const APP_BUNDLE = 'Ossia.app';
 const DMG_BACKGROUND = path.join(ROOT, 'packages/desktop/src-tauri/dmg/background.png');
 const DMG_VOLUME_ICON = path.join(ROOT, 'packages/desktop/src-tauri/icons/icon.icns');
@@ -1016,6 +1016,25 @@ function verifyReleaseArtifacts(target, artifactDir, files) {
 export async function packageTarget(target, options = {}) {
   if (options.allowDirty) throw new Error('packaging cannot use a dirty source tree');
   assertClean();
+  if (!options.releaseTag) return buildPackage(target);
+
+  const originalVersion = APP_VERSION;
+  const originalStamp = BUILD_STAMP;
+  try {
+    return await withReleaseVersion(ROOT, options.releaseTag, async (version) => {
+      APP_VERSION = version;
+      BUILD_STAMP = resolveBuildStamp(APP_VERSION, options.releaseTag);
+      process.env.OSSIA_BUILD_STAMP = BUILD_STAMP;
+      return buildPackage(target);
+    });
+  } finally {
+    APP_VERSION = originalVersion;
+    BUILD_STAMP = originalStamp;
+    process.env.OSSIA_BUILD_STAMP = originalStamp;
+  }
+}
+
+async function buildPackage(target) {
   const lock = readLock(ROOT, target);
   const entry = assertBuildable(target, lock);
   const spec = specFor(target);
@@ -1101,6 +1120,9 @@ async function main(argv) {
   const target = targetArg(argv);
   const result = await packageTarget(target, {
     allowDirty: argv.includes('--allow-dirty'),
+    releaseTag: argv
+      .find((arg) => arg.startsWith('--release-tag='))
+      ?.slice('--release-tag='.length),
   });
   console.log(JSON.stringify(result, null, 2));
 }

@@ -27,9 +27,10 @@ gh variable set OSSIA_BOT_APP_ID --repo micooz/ossia --body '<app-id>'
 gh secret set OSSIA_BOT_PRIVATE_KEY --repo micooz/ossia < /path/to/ossia-bot.pem
 ```
 
-`Check` runs on pull requests and `main` pushes. `Auto tag` creates
-the next patch tag after a successful `main` check when the committed version
-matches that tag. The first release tag must be created manually.
+`Check` runs on pull requests and `main` pushes. After a successful `main`
+check, `Auto tag` creates the next patch tag for the latest commit. Include
+`[skip release]` in the first line of that commit message to skip automatic tagging.
+The first release tag must be created manually.
 
 ## Tag format
 
@@ -46,15 +47,16 @@ the next beta or patch version is used.
 
 Automatic tagging allocates the next stable patch above every existing release
 tag, including beta tags. During beta testing, create and push beta tags
-manually and avoid pushing unrelated commits to `main` if that would trigger an
-unwanted stable tag.
+manually and use `[skip release]` on commits that should not trigger a stable
+release.
 
 ## Release flow
 
-1. Set the release version with `node scripts/release/version.mjs set <tag>` and commit
-   the manifests and lockfile. `Check` validates on macOS arm64 and Windows
-   x86_64, including browser regression tests on both platforms.
-2. `Release` validates the annotated tag and current version.
+1. Push to `main`. `Check` validates on macOS arm64 and Windows x86_64,
+   including browser regression tests on both platforms. `Auto tag` creates
+   the next stable patch tag after the check succeeds.
+2. `Release` validates the annotated tag. Each package build temporarily injects
+   the tag version into the manifests and lockfile.
 3. Release waits for the latest successful `main` Check for the exact tagged
    commit. DeepSeek notes and offline documentation generation run in parallel;
    both platform builds use the generated documentation artifact.
@@ -65,8 +67,8 @@ unwanted stable tag.
 7. The separate `Ossia update feed` workflow verifies the published release and
    uploads the two update-feed targets, including the macOS DMG download.
 
-Packaging requires a clean Git working tree so the recorded commit matches the
-application.
+Packaging requires a clean Git working tree. Release version injection happens
+after this check and the original files are restored when packaging ends.
 
 The release targets are macOS arm64 and Windows x86_64.
 

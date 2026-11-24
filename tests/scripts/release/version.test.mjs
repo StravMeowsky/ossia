@@ -13,6 +13,7 @@ import {
   resolveBuildStamp,
   rpmBundleConfig,
   setVersion,
+  withReleaseVersion,
 } from '../../../scripts/release/version.mjs';
 
 test('release tags parse stable and numbered beta versions', () => {
@@ -65,11 +66,34 @@ test('version injection updates every manifest and can be checked', async () => 
       '[workspace.package]\nversion = "0.1.0"\nedition = "2021"\n',
     );
     fs.writeFileSync(path.join(root, 'package.json'), '{"version":"0.1.0"}\n');
+    fs.writeFileSync(path.join(root, 'Cargo.lock'), 'original lock\n');
     fs.writeFileSync(path.join(root, 'packages/desktop/package.json'), '{"version":"0.1.0"}\n');
     fs.writeFileSync(
       path.join(root, 'packages/desktop/src-tauri/tauri.conf.json'),
       '{\n  "productName": "ossia",\n  "version": "0.1.0",\n  "bundle": {\n    "targets": ["app"]\n  }\n}\n',
     );
+
+    await assert.rejects(
+      withReleaseVersion(
+        root,
+        'v0.1.1',
+        async (version) => {
+          assert.equal(version, '0.1.1');
+          assert.equal(await checkVersion(root, 'v0.1.1'), '0.1.1');
+          fs.writeFileSync(path.join(root, 'Cargo.lock'), 'modified lock\n');
+          throw new Error('build failed');
+        },
+        { refreshLock: false },
+      ),
+      /build failed/,
+    );
+    assert.equal(await checkVersion(root, 'v0.1.0'), '0.1.0');
+    assert.equal(fs.readFileSync(path.join(root, 'Cargo.lock'), 'utf8'), 'original lock\n');
+    assert.equal(
+      await withReleaseVersion(root, 'v0.1.1', (version) => version, { refreshLock: false }),
+      '0.1.1',
+    );
+    assert.equal(await checkVersion(root, 'v0.1.0'), '0.1.0');
 
     await setVersion(root, 'v0.1.0-beta.1', { refreshLock: false });
     assert.equal(await checkVersion(root, 'v0.1.0-beta.1'), '0.1.0-beta.1');

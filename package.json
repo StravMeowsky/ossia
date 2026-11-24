@@ -1,6 +1,6 @@
 {
   "name": "ossia",
-  "version": "0.1.0-beta.20",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "setup": "pnpm install && pnpm engine:install && pnpm generate:docs",
