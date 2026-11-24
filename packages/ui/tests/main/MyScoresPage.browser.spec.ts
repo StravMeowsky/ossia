@@ -61,6 +61,45 @@ async function setScores(page: Page, next: ManagementScoreSummary[]) {
   }, scoresJson);
 }
 
+test('my scores does not show an empty state before scores have loaded', async ({ page }) => {
+  await mockManagement(page, { initialRuntime: true, scores: [scores[0]!] });
+  await page.goto('/main.html');
+  await page.evaluate(() => {
+    const internals = (
+      window as unknown as Window & {
+        __TAURI_INTERNALS__: { invoke: (...args: unknown[]) => Promise<unknown> };
+        emptyStateFlashes?: number;
+      }
+    ).__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    internals.invoke = async (...args) => {
+      if (args[0] === 'management_scores') {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      return invoke(...args);
+    };
+    const ownWindow = window as Window & { emptyStateFlashes?: number };
+    ownWindow.emptyStateFlashes = 0;
+    new MutationObserver(() => {
+      if (document.querySelector('.scores-state h2')?.textContent === '还没有乐谱') {
+        ownWindow.emptyStateFlashes! += 1;
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.getByRole('button', { name: '我的乐谱', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('正在读取乐谱');
+    await expect(page.locator('.score-card-title')).toHaveText(['Nocturne A']);
+    await page.getByRole('button', { name: 'Agent', exact: true }).click();
+  }
+  expect(
+    await page.evaluate(
+      () => (window as Window & { emptyStateFlashes?: number }).emptyStateFlashes,
+    ),
+  ).toBe(0);
+});
+
 test('my scores supports layouts, search, sort persistence and browser opening', async ({
   page,
 }) => {

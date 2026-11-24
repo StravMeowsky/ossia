@@ -393,7 +393,7 @@ export function MyScoresPage({
             </button>
           )}
         </div>
-      ) : loading ? (
+      ) : loading || (scores === null && !error) ? (
         <div className="scores-state" role="status">
           <LoaderCircle className="spinner" aria-hidden="true" />
           <h2>{t('loadingScores')}</h2>
