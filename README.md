@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="packages/ui/src/main/assets/ossia-icon.svg" width="96" alt="Ossia icon">
-  <h1>Ossia</h1>
+  <img src="website/assets/cover-en.png" alt="Ossia: AI-native music notation software">
   <p><strong>AI-native music notation software, built for a great experience.</strong></p>
   <p>
     <a href="https://github.com/micooz/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/micooz/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
@@ -12,8 +11,6 @@
     English · <a href="README_zh.md">简体中文</a>
   </p>
 </div>
-
-![Ossia cover](website/assets/cover-en.png)
 
 Ossia is AI-native music notation software that gives AI agents the tools and guidance they need to create scores through conversation.
 

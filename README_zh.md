@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="packages/ui/src/main/assets/ossia-icon.svg" width="96" alt="Ossia 图标">
-  <h1>Ossia</h1>
+  <img src="website/assets/cover-zh.png" alt="Ossia：AI 原生乐谱制作软件">
   <p><strong>体验极佳的 AI 原生乐谱制作软件</strong></p>
   <p>
     <a href="https://github.com/micooz/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/micooz/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
@@ -12,8 +11,6 @@
     <a href="README.md">English</a> · 简体中文
   </p>
 </div>
-
-![Ossia 横图](website/assets/cover-zh.png)
 
 Ossia 是一款体验极佳的 AI 原生乐谱制作软件，它为 AI Agent 提供恰当的工具和指引，你只需要与 Agent 对话即可轻松制作乐谱。
 
