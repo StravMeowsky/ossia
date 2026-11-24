@@ -141,3 +141,10 @@ endpoint. If publication fails, rerun `Ossia update feed` or start it manually
 with `gh workflow run update-feed.yml --ref main -f tag=<tag>`. GitHub Release
 remains available independently of the feed. An existing manifest entry cannot
 be replaced with a different installer digest under the same version.
+
+The website workflow publishes `website/` to GitHub Pages and the Ossia object
+store in parallel. The object store serves `website/index.html` as `index.html`
+and `website/assets/` as `assets/`, under the configured release prefix. Keep
+website resources in `assets/`. Uploads use the existing
+`OSSIA_RELEASES_*` secrets, retain old objects, and cache files for 60 seconds.
+Run `Deploy website` manually to retry either deployment.

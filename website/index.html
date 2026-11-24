@@ -1,0 +1,1394 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ossia 安装指南</title>
+    <meta
+      name="description"
+      content="Ossia 测试版的 macOS 与 Windows 安装、未签名包放行、Agent 接入、OMR 配置和更新说明。"
+    />
+    <meta name="theme-color" content="#f6f6f3" />
+    <link rel="icon" href="./assets/ossia-icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f6f6f3;
+        --paper: #fff;
+        --text: #20201d;
+        --muted: #65645e;
+        --border: #d9d7cf;
+        --border-soft: #e9e7e0;
+        --accent: #9a6500;
+        --accent-soft: #fff3c5;
+        --warning: #8d3b31;
+        --warning-soft: #fff3f0;
+        --code: #1e1e1b;
+        --sans:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+          'Microsoft YaHei', sans-serif;
+        --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 15px;
+        line-height: 1.72;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 0.2em;
+      }
+
+      a:hover {
+        color: #6e4800;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      code {
+        padding: 0.14em 0.38em;
+        border: 1px solid var(--border-soft);
+        border-radius: 4px;
+        background: #f7f7f4;
+        font-family: var(--mono);
+        font-size: 0.88em;
+        overflow-wrap: anywhere;
+      }
+
+      .skip-link {
+        position: fixed;
+        z-index: 100;
+        top: 8px;
+        left: 8px;
+        padding: 7px 10px;
+        border-radius: 4px;
+        background: var(--text);
+        color: #fff;
+        transform: translateY(-160%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .doc-header {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .doc-header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: min(1180px, calc(100% - 32px));
+        min-height: 58px;
+        margin: 0 auto;
+        gap: 24px;
+      }
+
+      .doc-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--text);
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .doc-brand img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .doc-brand small {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .doc-meta {
+        color: var(--muted);
+        font-size: 12px;
+        text-align: right;
+      }
+
+      .doc-layout {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 860px);
+        justify-content: center;
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 38px 0 70px;
+        gap: 48px;
+      }
+
+      .toc {
+        position: sticky;
+        top: 86px;
+        align-self: start;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--paper);
+      }
+
+      .toc h2 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .toc ol {
+        display: grid;
+        margin: 0;
+        padding: 0;
+        gap: 3px;
+        list-style: none;
+        counter-reset: toc;
+      }
+
+      .toc li {
+        counter-increment: toc;
+      }
+
+      .toc a {
+        display: block;
+        padding: 5px 0;
+        color: var(--muted);
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      .toc a::before {
+        margin-right: 8px;
+        color: #9a978e;
+        content: counter(toc, decimal-leading-zero);
+        font-family: var(--mono);
+        font-size: 10px;
+      }
+
+      .toc a:hover {
+        color: var(--accent);
+      }
+
+      .document {
+        min-width: 0;
+        padding: 38px 46px 52px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--paper);
+      }
+
+      .doc-title {
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .doc-title h1 {
+        margin: 0 0 9px;
+        font-size: 30px;
+        letter-spacing: -0.035em;
+        line-height: 1.25;
+      }
+
+      .doc-title p {
+        max-width: 700px;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .doc-title-meta {
+        display: flex;
+        flex-wrap: wrap;
+        margin-top: 15px;
+        gap: 6px 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .doc-title-meta strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .product-intro {
+        margin: 24px 0;
+      }
+
+      .notice {
+        margin: 26px 0 0;
+        padding: 14px 16px;
+        border: 1px solid #e3c7c1;
+        border-left: 4px solid var(--warning);
+        border-radius: 4px;
+        background: var(--warning-soft);
+      }
+
+      .notice strong {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--warning);
+        font-size: 14px;
+      }
+
+      .notice p {
+        margin: 0;
+        color: #60423d;
+        font-size: 13px;
+      }
+
+      .doc-section {
+        padding-top: 36px;
+        scroll-margin-top: 78px;
+      }
+
+      .doc-section + .doc-section {
+        margin-top: 36px;
+        border-top: 1px solid var(--border);
+      }
+
+      .doc-section h2 {
+        margin: 0 0 15px;
+        font-size: 23px;
+        letter-spacing: -0.025em;
+        line-height: 1.3;
+      }
+
+      .doc-section h3 {
+        margin: 26px 0 8px;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .doc-section p {
+        margin: 10px 0;
+      }
+
+      .doc-section ul,
+      .doc-section ol {
+        margin: 10px 0;
+        padding-left: 22px;
+      }
+
+      .doc-section li {
+        margin: 5px 0;
+      }
+
+      .section-summary {
+        color: var(--muted);
+      }
+
+      .plain-table {
+        width: 100%;
+        margin: 16px 0 22px;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      .plain-table th,
+      .plain-table td {
+        padding: 9px 10px;
+        border: 1px solid var(--border-soft);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .plain-table th {
+        background: #f7f7f4;
+        color: #57564f;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .plain-table td:first-child {
+        font-weight: 600;
+      }
+
+      .download-table td:last-child {
+        min-width: 250px;
+      }
+
+      .download-table a {
+        font-weight: 600;
+      }
+
+      .file-name {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      .copy-button {
+        padding: 4px 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: #fff;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 11px;
+      }
+
+      .copy-button:hover {
+        border-color: #b7b4aa;
+        color: var(--text);
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        margin: 15px 0;
+        padding: 0;
+        gap: 13px;
+        list-style: none;
+        counter-reset: steps;
+      }
+
+      .steps.is-continued {
+        counter-reset: steps 3;
+      }
+
+      .steps > li {
+        position: relative;
+        min-width: 0;
+        margin: 0;
+        padding-left: 34px;
+        counter-increment: steps;
+      }
+
+      .steps > li::before {
+        position: absolute;
+        top: 3px;
+        left: 0;
+        display: grid;
+        width: 23px;
+        height: 23px;
+        place-items: center;
+        border: 1px solid #e1d5ae;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        color: #755000;
+        content: counter(steps);
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .steps h3 {
+        margin: 0 0 2px;
+        font-size: 14px;
+      }
+
+      .steps p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .step-note {
+        margin-top: 6px !important;
+      }
+
+      .code-block {
+        max-width: 100%;
+        min-width: 0;
+        margin: 10px 0;
+        border: 1px solid #3b3a34;
+        border-radius: 5px;
+        background: var(--code);
+        overflow: hidden;
+      }
+
+      .code-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 34px;
+        padding: 0 8px 0 12px;
+        border-bottom: 1px solid #3a3933;
+        color: #aaa89e;
+        font-size: 11px;
+      }
+
+      .code-head .copy-button {
+        border-color: #555246;
+        background: #2b2a25;
+        color: #ded9ca;
+      }
+
+      .code-block pre {
+        max-width: 100%;
+        margin: 0;
+        padding: 12px;
+        overflow-x: auto;
+        color: #f4efe2;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .code-block pre code {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: inherit;
+        font-family: inherit;
+        font-size: inherit;
+        white-space: pre;
+      }
+
+      .figure-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 16px 0;
+        gap: 14px;
+      }
+
+      figure {
+        max-width: 720px;
+        margin: 18px auto;
+      }
+
+      .shot-link {
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: #f7f7f4;
+        overflow: hidden;
+      }
+
+      .shot-link:hover {
+        border-color: #b6b2a6;
+      }
+
+      figure img {
+        width: 100%;
+        height: auto;
+      }
+
+      .figure-grid figure {
+        max-width: none;
+        margin: 0;
+      }
+
+      figcaption {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      figcaption strong {
+        color: #45443f;
+      }
+
+      .callout {
+        margin: 14px 0;
+        padding: 11px 13px;
+        border-left: 3px solid #caa03d;
+        background: #fffaf0;
+        color: #5b5342;
+        font-size: 13px;
+      }
+
+      .callout strong {
+        color: var(--text);
+      }
+
+      .two-notes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 16px 0;
+        gap: 14px;
+      }
+
+      .two-notes article {
+        padding: 12px 13px;
+        border: 1px solid var(--border-soft);
+        border-radius: 4px;
+      }
+
+      .two-notes h3 {
+        margin: 0 0 5px;
+        font-size: 13px;
+      }
+
+      .two-notes p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .faq details {
+        border-top: 1px solid var(--border-soft);
+      }
+
+      .faq details:first-child {
+        border-top: 0;
+      }
+
+      .faq summary {
+        padding: 10px 0;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .faq details p {
+        margin: 0 0 11px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .lightbox {
+        width: min(1500px, 94vw);
+        max-height: 94vh;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        overflow: visible;
+      }
+
+      .lightbox::backdrop {
+        background: rgba(15, 15, 13, 0.84);
+      }
+
+      .lightbox img {
+        width: auto;
+        max-width: 100%;
+        max-height: 88vh;
+        margin: 0 auto;
+        border-radius: 5px;
+        box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
+      }
+
+      .lightbox-close {
+        position: absolute;
+        z-index: 1;
+        top: 10px;
+        right: 10px;
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid #bbb6aa;
+        border-radius: 50%;
+        background: #fff;
+        color: var(--text);
+        cursor: pointer;
+        line-height: 0;
+      }
+
+      @media (max-width: 900px) {
+        .doc-layout {
+          grid-template-columns: 1fr;
+          padding-top: 24px;
+        }
+
+        .toc {
+          position: static;
+        }
+
+        .toc ol {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .document {
+          padding: 30px 26px 40px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        body {
+          font-size: 14px;
+        }
+
+        .doc-header-inner,
+        .doc-layout {
+          width: min(100% - 20px, 1180px);
+        }
+
+        .doc-meta {
+          display: none;
+        }
+
+        .document {
+          padding: 24px 17px 34px;
+        }
+
+        .doc-title h1 {
+          font-size: 24px;
+        }
+
+        .doc-section h2 {
+          font-size: 20px;
+        }
+
+        .plain-table {
+          font-size: 12px;
+        }
+
+        .plain-table th,
+        .plain-table td {
+          padding: 7px 6px;
+        }
+
+        .figure-grid,
+        .two-notes {
+          grid-template-columns: 1fr;
+        }
+
+        figure {
+          max-width: 100%;
+        }
+
+        .download-table td:last-child {
+          min-width: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+          font-size: 11pt;
+        }
+
+        .doc-header,
+        .toc,
+        .copy-button,
+        .lightbox {
+          display: none !important;
+        }
+
+        .doc-layout {
+          display: block;
+          width: 100%;
+          padding: 0;
+        }
+
+        .document {
+          padding: 0;
+          border: 0;
+        }
+
+        .shot-link {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+
+    <header class="doc-header">
+      <div class="doc-header-inner">
+        <a class="doc-brand" href="#main">
+          <img src="./assets/ossia-icon.svg" width="28" height="28" alt="" />
+          Ossia 安装指南 <small>内部测试版</small>
+        </a>
+        <div class="doc-meta">更新于 2026-11-21</div>
+      </div>
+    </header>
+
+    <div class="doc-layout">
+      <nav class="toc" aria-label="目录">
+        <h2>目录</h2>
+        <ol>
+          <li><a href="#download">下载与版本</a></li>
+          <li><a href="#macos">macOS 安装</a></li>
+          <li><a href="#windows">Windows 安装</a></li>
+          <li><a href="#agent">Agent 接入</a></li>
+          <li><a href="#updates">更新</a></li>
+          <li><a href="#omr">OMR</a></li>
+          <li><a href="#faq">常见问题</a></li>
+        </ol>
+      </nav>
+
+      <main class="document" id="main">
+        <div class="doc-title">
+          <h1>Ossia 测试版安装指南</h1>
+          <p>适用于 macOS Apple Silicon 与 Windows x64，包含安装、Agent 接入、更新和 OMR 配置。</p>
+          <div class="doc-title-meta">
+            <span>macOS <strong>12+ / Apple Silicon</strong></span>
+            <span>Windows <strong>10+ / x64</strong></span>
+          </div>
+        </div>
+
+        <div class="product-intro" aria-label="产品界面">
+          <div class="figure-grid">
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/01-my-scores.png"
+                data-lightbox
+                aria-label="查看我的乐谱界面原图"
+              >
+                <img
+                  src="./assets/screenshots/01-my-scores.png"
+                  alt="Ossia 我的乐谱界面，显示本机乐谱列表和排版预览"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption><strong>图 1</strong> · 我的乐谱：浏览、搜索和预览本机乐谱。</figcaption>
+            </figure>
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/02-about-ossia.png"
+                data-lightbox
+                aria-label="查看关于 Ossia 界面原图"
+              >
+                <img
+                  src="./assets/screenshots/02-about-ossia.png"
+                  alt="Ossia 关于界面，显示版本和更新设置"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption>
+                <strong>图 2</strong> · 关于 Ossia：版本、更新内容和更新通道。
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <aside class="notice">
+          <strong>当前安装包未完成开发者签名和公证</strong>
+          <p>
+            macOS 包没有 Apple Developer ID 签名或公证，Windows
+            包没有代码签名。系统拦截是预期行为，不代表安装包损坏。
+          </p>
+        </aside>
+
+        <section class="doc-section" id="download">
+          <h2>1. 下载与版本</h2>
+          <p class="section-summary">
+            当前提供 Apple Silicon macOS 与 Windows x64。只从以下官方链接下载。
+          </p>
+
+          <table class="plain-table download-table">
+            <thead>
+              <tr>
+                <th>平台</th>
+                <th>当前版本</th>
+                <th>下载</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>macOS</strong>
+                  <br />
+                  Apple Silicon · macOS 12 Monterey 或更高
+                  <span class="file-name">DMG · ossia-darwin-arm64.dmg</span>
+                </td>
+                <td>0.1.0-beta.19</td>
+                <td>
+                  <a
+                    href="https://ossia-releases.maisow.com/darwin-arm64/0.1.0-beta.19/ossia-darwin-arm64.dmg"
+                  >
+                    下载 DMG
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Windows</strong>
+                  <br />
+                  64 位 Windows 10 或 Windows 11
+                  <span class="file-name">EXE / NSIS · ossia-windows-amd64.exe</span>
+                </td>
+                <td>0.1.0-beta.19</td>
+                <td>
+                  <a
+                    href="https://ossia-releases.maisow.com/windows-amd64/0.1.0-beta.19/ossia-windows-amd64.exe"
+                  >
+                    下载 EXE
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="doc-section" id="macos">
+          <h2>2. macOS 安装</h2>
+          <p class="section-summary">
+            macOS 会阻止未签名、未公证的应用。若提示“Ossia.app 已损坏”，通常是 Gatekeeper
+            的下载隔离标记，不是应用真的损坏。
+          </p>
+
+          <ol class="steps">
+            <li>
+              <h3>把 Ossia 拖入“应用程序”</h3>
+              <p>
+                双击 DMG，把 Ossia.app 拖到 Applications（应用程序）文件夹，不要直接双击 DMG
+                内的应用运行。
+              </p>
+            </li>
+            <li>
+              <h3>从“应用程序”启动一次</h3>
+              <p>
+                打开 Finder 的“应用程序”，双击
+                Ossia。若出现安全拦截，先让系统记录这次启动，再继续处理。
+              </p>
+            </li>
+            <li>
+              <h3>遇到“已损坏”时不要移到废纸篓</h3>
+              <p>
+                点击“取消”，然后在终端移除隔离属性。只有文件哈希不符、下载不完整或系统版本不兼容时，才需要重新下载。
+              </p>
+            </li>
+          </ol>
+
+          <div class="figure-grid">
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/03-dmg-drag.png"
+                data-lightbox
+                aria-label="查看 DMG 拖入应用程序原图"
+              >
+                <img
+                  src="./assets/screenshots/03-dmg-drag.png"
+                  alt="把 Ossia.app 从 DMG 拖入 Applications 文件夹"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption><strong>图 3</strong> · 将 Ossia.app 拖入 Applications。</figcaption>
+            </figure>
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/04-finder-app.png"
+                data-lightbox
+                aria-label="查看 Finder 中的 Ossia.app 原图"
+              >
+                <img
+                  src="./assets/screenshots/04-finder-app.png"
+                  alt="Finder 应用程序目录中的 Ossia.app"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption>
+                <strong>图 4</strong> · 安装后的应用位于 <code>/Applications</code>。
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="figure-grid">
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/05-macos-damaged.png"
+                data-lightbox
+                aria-label="查看 macOS 已损坏提示原图"
+              >
+                <img
+                  src="./assets/screenshots/05-macos-damaged.png"
+                  alt="macOS 提示 Ossia.app 已损坏，无法打开"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption><strong>图 5</strong> · 未公证测试包常见的 Gatekeeper 提示。</figcaption>
+            </figure>
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/06-terminal-app.png"
+                data-lightbox
+                aria-label="查看终端应用原图"
+              >
+                <img
+                  src="./assets/screenshots/06-terminal-app.png"
+                  alt="macOS 启动台中的终端应用"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption><strong>图 6</strong> · 在 Spotlight 中搜索“终端”。</figcaption>
+            </figure>
+          </div>
+
+          <ol class="steps is-continued">
+            <li>
+              <h3>打开“终端”</h3>
+              <p>
+                用 Spotlight 搜索“终端”或“Terminal”，也可以在“启动台 → 其他”中打开。无需管理员权限。
+              </p>
+            </li>
+            <li>
+              <h3>移除隔离标记</h3>
+              <p>执行以下命令，然后重新打开 Ossia：</p>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Terminal</span>
+                  <button class="copy-button" type="button" data-copy="#xattr-command">
+                    复制命令
+                  </button>
+                </div>
+                <pre><code id="xattr-command">xattr -dr com.apple.quarantine /Applications/Ossia.app/</code></pre>
+              </div>
+              <p class="step-note">命令成功时通常没有输出，返回新的命令提示符即表示执行完成。</p>
+            </li>
+            <li>
+              <h3>可选：检查隔离属性</h3>
+              <p>输出中不再出现 <code>com.apple.quarantine</code> 即表示已清除。</p>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Terminal</span>
+                  <button class="copy-button" type="button" data-copy="#xattr-check">
+                    复制命令
+                  </button>
+                </div>
+                <pre><code id="xattr-check">xattr -l /Applications/Ossia.app</code></pre>
+              </div>
+            </li>
+          </ol>
+
+          <figure>
+            <a
+              class="shot-link"
+              href="./assets/screenshots/07-xattr-command.png"
+              data-lightbox
+              aria-label="查看 xattr 命令原图"
+            >
+              <img
+                src="./assets/screenshots/07-xattr-command.png"
+                alt="在终端中执行 xattr 移除隔离属性"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>
+              <strong>图 7</strong> · 路径固定为 <code>/Applications/Ossia.app/</code>。
+            </figcaption>
+          </figure>
+
+          <div class="two-notes">
+            <article>
+              <h3>图形界面替代方案</h3>
+              <p>
+                若提示的是“无法验证开发者”，可前往“系统设置 → 隐私与安全性”，点击“仍要打开”。 macOS
+                15 及以后主要使用这一入口。
+              </p>
+            </article>
+            <article>
+              <h3>不要全局关闭 Gatekeeper</h3>
+              <p>
+                不要使用 <code>spctl --master-disable</code>
+                关闭整个系统保护。只对从本文官方链接下载的 Ossia 安装包移除隔离属性。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="doc-section" id="windows">
+          <h2>3. Windows 安装</h2>
+          <p class="section-summary">
+            SmartScreen 会拦截未签名安装包。确认文件来自本文链接后继续。
+          </p>
+
+          <ol class="steps">
+            <li>
+              <h3>运行 <code>ossia-windows-amd64.exe</code></h3>
+              <p>双击安装包。如果浏览器提示文件不常见，先核对下载地址。</p>
+            </li>
+            <li>
+              <h3>在蓝色提示中点“更多信息”</h3>
+              <p>SmartScreen 首次只显示“不运行”按钮，展开后才会出现运行选项。</p>
+            </li>
+            <li>
+              <h3>点击“仍要运行”</h3>
+              <p>随后按 NSIS 安装向导完成安装。默认会创建开始菜单和桌面入口。</p>
+            </li>
+          </ol>
+
+          <div class="figure-grid">
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/08-smartscreen-more-info.png"
+                data-lightbox
+                aria-label="查看 SmartScreen 更多信息原图"
+              >
+                <img
+                  src="./assets/screenshots/08-smartscreen-more-info.png"
+                  alt="Windows SmartScreen 提示中的更多信息链接"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption><strong>图 8</strong> · 点击“更多信息”展开运行按钮。</figcaption>
+            </figure>
+            <figure>
+              <a
+                class="shot-link"
+                href="./assets/screenshots/09-smartscreen-run-anyway.png"
+                data-lightbox
+                aria-label="查看 SmartScreen 仍要运行原图"
+              >
+                <img
+                  src="./assets/screenshots/09-smartscreen-run-anyway.png"
+                  alt="Windows SmartScreen 中的仍要运行按钮"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption><strong>图 9</strong> · 确认来源后点击“仍要运行”。</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section class="doc-section" id="agent">
+          <h2>4. Agent 接入</h2>
+          <p class="section-summary">
+            Ossia 的本地服务负责乐谱库、渲染和导出。接入 DeepSeek Harness、Codex 或 WorkBuddy
+            后，可以直接在 Agent 中创建、编辑、检查与导出版本。
+          </p>
+
+          <ol class="steps">
+            <li>
+              <h3>确认本地服务正在运行</h3>
+              <p>
+                启动 Ossia，管理窗口右上角应显示绿色的“服务运行中”。若未启动，先点击“启动服务”。
+              </p>
+            </li>
+            <li>
+              <h3>在“接入 → Agent”中连接宿主</h3>
+              <p>
+                点击 DeepSeek Harness、Codex 或 WorkBuddy 的卡片完成接入。接入后需要新建会话；
+                已经打开的 Agent 会话不会自动获得插件。WorkBuddy 首次调用前还需要在连接器中信任
+                Ossia MCP。
+              </p>
+            </li>
+            <li>
+              <h3>在新会话中运行自检</h3>
+              <p>
+                在 DeepSeek Harness 输入 <code>/ossia 自检一下</code>，让 Agent 检查后端、LilyPond
+                引擎、离线手册、乐谱库和版本状态。
+              </p>
+            </li>
+          </ol>
+
+          <figure>
+            <a
+              class="shot-link"
+              href="./assets/screenshots/10-agent-connected.png"
+              data-lightbox
+              aria-label="查看 Agent 接入界面原图"
+            >
+              <img
+                src="./assets/screenshots/10-agent-connected.png"
+                alt="Ossia 的 Agent 接入页面显示 DeepSeek Harness 已接入"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>
+              <strong>图 10</strong> · 接入详情会显示本机插件路径和配置目标，界面随宿主版本变化。
+            </figcaption>
+          </figure>
+
+          <figure>
+            <a
+              class="shot-link"
+              href="./assets/screenshots/11-dsh-model.png"
+              data-lightbox
+              aria-label="查看 DeepSeek Harness 输入自检命令原图"
+            >
+              <img
+                src="./assets/screenshots/11-dsh-model.png"
+                alt="在 DeepSeek Harness 输入 /ossia 自检一下"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption><strong>图 11</strong> · 输入自检命令。模型选择仅为示例。</figcaption>
+          </figure>
+
+          <figure>
+            <a
+              class="shot-link"
+              href="./assets/screenshots/12-self-check.png"
+              data-lightbox
+              aria-label="查看 Ossia 自检结果原图"
+            >
+              <img
+                src="./assets/screenshots/12-self-check.png"
+                alt="Ossia 自检结果：后端、引擎、手册、乐谱库和版本状态"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>
+              <strong>图 12</strong> · 截图来自旧版本；当前版本号和下载地址以页首及下载区为准。
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="doc-section" id="updates">
+          <h2>5. 更新</h2>
+          <p class="section-summary">
+            Ossia 启动 5 秒后检查一次更新，并在保持运行时继续检查：测试版每 6 小时、稳定版每 24
+            小时检查一次。也可以在“设置 → 关于”手动检查。
+          </p>
+
+          <h3>检查更新</h3>
+          <table class="plain-table">
+            <tbody>
+              <tr>
+                <td>打开位置</td>
+                <td>设置 → 关于</td>
+              </tr>
+              <tr>
+                <td>当前版本</td>
+                <td>以“设置 → 关于”页显示的版本号为准</td>
+              </tr>
+              <tr>
+                <td>更新通道</td>
+                <td>测试版</td>
+              </tr>
+              <tr>
+                <td>自动下载</td>
+                <td>默认开启；下载后仍需手动点击“更新”</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>直接退出 Ossia 会丢弃尚未安装的下载。</p>
+
+          <figure>
+            <a
+              class="shot-link"
+              href="./assets/screenshots/13-update-settings.png"
+              data-lightbox
+              aria-label="查看 Ossia 更新设置原图"
+            >
+              <img
+                src="./assets/screenshots/13-update-settings.png"
+                alt="Ossia 关于页面的版本、自动下载更新和更新通道"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>
+              <strong>图 13</strong> · 截图来自旧版本；安装后会显示当前版本号。
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="doc-section" id="omr">
+          <h2>6. OMR</h2>
+          <p class="section-summary">
+            PDF、PNG、JPEG 和 TIFF 导入依赖远程识别服务。普通 LilyPond、MusicXML 和 MIDI
+            不需要访问密钥。
+          </p>
+          <h3>配置访问密钥</h3>
+          <ol class="steps">
+            <li>
+              <h3>打开“设置 → 常规 → 乐谱识别”</h3>
+              <p>服务类型选择“Ossia OMR”。若使用自建服务，则选择“自定义”并填写服务地址。</p>
+            </li>
+            <li>
+              <h3>填写并保存访问密钥</h3>
+              <p>
+                在“访问密钥”中粘贴 Ossia
+                提供的密钥，然后点击“保存”。保存后界面只显示掩码，不提供登录或连接测试按钮。
+              </p>
+            </li>
+          </ol>
+
+          <figure>
+            <a
+              class="shot-link"
+              href="./assets/screenshots/14-omr-settings.png"
+              data-lightbox
+              aria-label="查看 OMR 设置界面原图"
+            >
+              <img
+                src="./assets/screenshots/14-omr-settings.png"
+                alt="Ossia 设置中的 Ossia OMR 服务类型和访问密钥"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>
+              <strong>图 14</strong> · 不需要识别图片或 PDF 时，可以暂时跳过访问密钥。
+            </figcaption>
+          </figure>
+
+          <div class="callout">
+            <strong>访问密钥是私密信息。</strong>
+            不要把密钥写进乐谱、聊天记录、脚本参数或公开页面。Ossia
+            内置与自定义服务分别保存密钥，切换服务不会自动复用。
+          </div>
+        </section>
+
+        <section class="doc-section" id="faq">
+          <h2>7. 常见问题</h2>
+          <div class="faq">
+            <details>
+              <summary>macOS 提示“Ossia.app 已损坏”，一定要删除吗？</summary>
+              <p>
+                不需要。确认 Ossia.app 已放入“应用程序”，然后运行
+                <code>xattr -dr com.apple.quarantine /Applications/Ossia.app/</code
+                >，再重新打开应用。
+              </p>
+            </details>
+            <details>
+              <summary>运行 xattr 后仍然无法打开怎么办？</summary>
+              <p>
+                确认安装包来自本文链接，并核对系统架构。仍失败时删除应用后重新下载；不要通过关闭整个
+                Gatekeeper 来排查单个应用。
+              </p>
+            </details>
+            <details>
+              <summary>Windows 只有“不运行”按钮？</summary>
+              <p>
+                点击 SmartScreen
+                提示左侧的“更多信息”，随后会出现“仍要运行”。如果仍无按钮，请检查企业策略或安全软件拦截。
+              </p>
+            </details>
+            <details>
+              <summary>Agent 列表里没有检测到 DeepSeek Harness、Codex 或 WorkBuddy？</summary>
+              <p>
+                先安装并至少启动一次宿主应用，再回到 Ossia 的“接入 →
+                Agent”。接入后重启宿主或新建会话。
+              </p>
+            </details>
+            <details>
+              <summary>点击“检查更新”没有发现新版本？</summary>
+              <p>
+                在“设置 → 关于”把更新通道切换为“测试版”，再点击“检查更新”。稳定版通道不会收到 beta
+                包。
+              </p>
+            </details>
+            <details>
+              <summary>为什么没有 Intel Mac、Linux 或 Windows ARM64？</summary>
+              <p>当前发布只包含 Apple Silicon macOS 和 Windows x64。其他目标需要单独构建和验证。</p>
+            </details>
+            <details>
+              <summary>关闭窗口后后台还在运行吗？</summary>
+              <p>
+                默认情况下关闭管理窗口会隐藏到系统托盘，本地服务继续运行。需要彻底停止时，从托盘菜单选择“退出
+                Ossia”。
+              </p>
+            </details>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="lightbox" id="lightbox" aria-label="查看原始截图">
+      <button class="lightbox-close" type="button" aria-label="关闭大图">
+        <svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true">
+          <path
+            d="M3.5 3.5l8 8m0-8l-8 8"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="1.6"
+          />
+        </svg>
+      </button>
+      <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" />
+    </dialog>
+    <script>
+      const lightbox = document.querySelector('#lightbox');
+      const lightboxImage = lightbox?.querySelector('img');
+
+      function fallbackCopy(text) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.append(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+      }
+
+      document.querySelectorAll('[data-copy]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const target = document.querySelector(button.dataset.copy);
+          const text = target?.textContent?.trim();
+          if (!text) return;
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(text);
+            } else {
+              fallbackCopy(text);
+            }
+            const original = button.textContent;
+            button.textContent = '已复制';
+            window.setTimeout(() => {
+              button.textContent = original;
+            }, 1400);
+          } catch {
+            button.textContent = '复制失败';
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-lightbox]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          if (!lightbox || !lightboxImage) return;
+          event.preventDefault();
+          lightboxImage.src = link.href;
+          lightboxImage.alt = link.querySelector('img')?.alt ?? '';
+          lightbox.showModal();
+        });
+      });
+
+      lightbox?.addEventListener('click', (event) => {
+        if (event.target === lightbox) lightbox.close();
+      });
+
+      document.querySelector('.lightbox-close')?.addEventListener('click', () => {
+        lightbox?.close();
+      });
+    </script>
+  </body>
+</html>

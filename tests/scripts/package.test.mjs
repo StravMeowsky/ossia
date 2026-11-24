@@ -33,10 +33,10 @@ test('private resources stay untracked and out of the source archive', () => {
   try {
     const privateFiles = [
       '.docs/private.md',
-      'docs/install-guide/index.html',
       'packages/ossia-omr/src/main.rs',
     ];
     const publicFiles = [
+      'website/index.html',
       'packages/ossia-backend/src/lib.rs',
       'scripts/release/cos.mjs',
       'scripts/release/update-feed.mjs',

@@ -1,0 +1,65 @@
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'scripts/release/cos.mjs'
+      - 'scripts/release/upload-website.mjs'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: website
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  cos:
+    if: github.repository == 'micooz/ossia'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Publish website to object storage
+        env:
+          OSSIA_RELEASES_PREFIX: ${{ secrets.OSSIA_RELEASES_PREFIX }}
+          OSSIA_RELEASES_BUCKET: ${{ secrets.OSSIA_RELEASES_BUCKET }}
+          OSSIA_RELEASES_REGION: ${{ secrets.OSSIA_RELEASES_REGION }}
+          OSSIA_RELEASES_SECRET_ID: ${{ secrets.OSSIA_RELEASES_SECRET_ID }}
+          OSSIA_RELEASES_SECRET_KEY: ${{ secrets.OSSIA_RELEASES_SECRET_KEY }}
+          OSSIA_RELEASES_SECURITY_TOKEN: ${{ secrets.OSSIA_RELEASES_SECURITY_TOKEN }}
+          OSSIA_RELEASES_ACL: ${{ secrets.OSSIA_RELEASES_ACL }}
+        run: node scripts/release/upload-website.mjs
