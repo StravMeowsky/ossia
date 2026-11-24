@@ -106,6 +106,10 @@ body {
   color: var(--text);
 }
 
+#root:focus {
+  outline: none;
+}
+
 button,
 select {
   color: inherit;
