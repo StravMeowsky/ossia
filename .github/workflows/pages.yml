@@ -24,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      pages_artifact: ${{ steps.pages-artifact.outputs.name }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -42,6 +44,12 @@ jobs:
           name: website-build
           path: dist/website
           if-no-files-found: error
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          name: github-pages-${{ github.run_attempt }}
+          path: dist/website
+      - id: pages-artifact
+        run: echo "name=github-pages-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
   pages:
     needs: build
@@ -50,16 +58,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: website-build
-          path: dist/website
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist/website
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ needs.build.outputs.pages_artifact }}
 
   cos:
     needs: build
