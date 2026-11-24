@@ -1,0 +1,522 @@
+{
+  "hero.bannerAlt": {
+    "en": "Ossia — AI-native music notation software",
+    "zh": "Ossia — AI 原生乐谱制作软件"
+  },
+  "hero.title": {
+    "en": "Create scores through conversation.",
+    "zh": "用自然语言制作乐谱"
+  },
+  "hero.description": {
+    "en": "Create, arrange, analyze, and refine sheet music alongside your AI agent. Start with a sentence, a score file, or a photo.",
+    "zh": "与你的 AI Agent 一起创作、改编、分析并打磨乐谱。从一句灵感、一份文件，或一张纸谱照片开始。"
+  },
+  "hero.download": {
+    "en": "Download Ossia",
+    "zh": "下载 Ossia"
+  },
+  "hero.guide": {
+    "en": "Installation guide",
+    "zh": "安装与上手指南"
+  },
+  "features.title": {
+    "en": "Create, refine, and export in one place",
+    "zh": "从创作到导出，一站完成"
+  },
+  "features.conversationTitle": {
+    "en": "Works with your AI agent",
+    "zh": "接入你常用的 AI Agent"
+  },
+  "features.conversationDescription": {
+    "en": "Connect Codex, DeepSeek Harness, or WorkBuddy in a click. Create, arrange, transpose, and proofread scores in plain language—for piano, guitar, ukulele, violin, and ensembles.",
+    "zh": "一键接入 Codex、DeepSeek Harness 或 WorkBuddy，直接用对话创建、改编、移调与校对乐谱——涵盖钢琴、吉他、尤克里里、小提琴及室内乐重奏。"
+  },
+  "features.refineTitle": {
+    "en": "Play, annotate, and version",
+    "zh": "试听、手绘与版本回溯"
+  },
+  "features.refineDescription": {
+    "en": "Listen back, annotate specific passages, and draw freely—even on a touchscreen. Full version history lets you compare revisions and return to any earlier score.",
+    "zh": "在清爽的乐谱页中即时回放、精细标注与自由手绘，触控屏同样流畅。每次修改均保留完整版本历史，随时对比或回到任意时刻。"
+  },
+  "features.importTitle": {
+    "en": "Start from what you have",
+    "zh": "从手头的素材出发"
+  },
+  "features.importDescription": {
+    "en": "Import MusicXML, MIDI, PDF, or score images, and export publication-ready PDF, PNG, SVG, MIDI, or WAV. Optional OMR support helps recognize scans and PDFs faster.",
+    "zh": "导入 MusicXML、MIDI、PDF 或纸谱照片，导出高清 PDF、PNG、SVG 乐谱及 MIDI、WAV 音频。面对图片与 PDF，还可启用可选的 OMR 服务辅助识别。"
+  },
+  "features.libraryLinkLabel": {
+    "en": "View full image: Ossia score library",
+    "zh": "查看大图：Ossia 乐谱库"
+  },
+  "features.libraryAlt": {
+    "en": "Ossia score library interface",
+    "zh": "Ossia 乐谱库界面"
+  },
+  "local.title": {
+    "en": "Your music stays yours.",
+    "zh": "你的作品，始终留在你手里。"
+  },
+  "local.description": {
+    "en": "Your score library, source files, and complete version history live on your own device. Share scores across your local network to read, annotate, and draw in real time on another laptop or tablet.",
+    "zh": "乐谱库、原始素材与完整版本历史全部保存在你的设备本地，不依赖云端。通过局域网链接，还能在电脑与平板间即时共享乐谱，手绘与标注实时同步。"
+  },
+  "local.scoreLinkLabel": {
+    "en": "View full image: Score view with annotations and drawing tools",
+    "zh": "查看大图：乐谱浏览与手绘标注页面"
+  },
+  "local.scoreImageAlt": {
+    "en": "Ossia browser score page showing Bach Prelude notation, hand-drawn chord markings, and drawing tools",
+    "zh": "Ossia 浏览器乐谱页面，展示巴赫前奏曲乐谱、手绘和弦标注与绘画工具栏"
+  },
+  "example.title": {
+    "en": "Start with a sentence.",
+    "zh": "从一句话开始"
+  },
+  "example.quote": {
+    "en": "“Add chord symbols to every measure of BWV 846.”",
+    "zh": "“为 BWV 846 的每个小节添加和弦标记。”"
+  },
+  "example.description": {
+    "en": "Your agent reads the score, analyzes every bass inversion measure by measure, writes the chord symbols, verifies every note against the original, and saves a new version—ready for your next refinement.",
+    "zh": "Agent 会先读懂现有乐谱、逐小节分析低音与转位、写入和弦标记，并在核对全部音符无误后保存为新版本。你也可以继续对话，反复打磨直到满意。"
+  },
+  "example.promptLabel": {
+    "en": "Or try asking",
+    "zh": "你还可以这样说"
+  },
+  "example.prompt1": {
+    "en": "Arrange for piano four hands",
+    "zh": "改编成钢琴四手联弹"
+  },
+  "example.prompt2": {
+    "en": "Analyze key & transpose to A minor",
+    "zh": "分析调性并移调到 A 小调"
+  },
+  "example.prompt3": {
+    "en": "Convert to guitar tab with chord diagrams",
+    "zh": "转为吉他六线谱并标注和弦图"
+  },
+  "example.imageLinkLabel": {
+    "en": "View full image: Agent session adding chord symbols to BWV 846",
+    "zh": "查看大图：与 Agent 协作逐小节标注 BWV 846 和弦"
+  },
+  "example.imageAlt": {
+    "en": "Agent conversation on the left and live updated BWV 846 score page on the right",
+    "zh": "左侧为 Agent 对话，右侧为实时更新的 BWV 846 乐谱页面"
+  },
+  "download.title": {
+    "en": "Start your next score.",
+    "zh": "开始你的下一份乐谱"
+  },
+  "download.releaseDescription": {
+    "en": "Choose the installer for your platform.",
+    "zh": "选择与你系统对应的安装包下载"
+  },
+  "download.sourceLabel": {
+    "en": "Download source",
+    "zh": "下载源"
+  },
+  "download.sourceOssia": {
+    "en": "Ossia",
+    "zh": "Ossia 源"
+  },
+  "download.sourceGithub": {
+    "en": "GitHub",
+    "zh": "GitHub"
+  },
+  "download.macTitle": {
+    "en": "Download for macOS",
+    "zh": "下载 macOS 版"
+  },
+  "download.macMeta": {
+    "en": "macOS 12+ · Apple Silicon · DMG",
+    "zh": "macOS 12+ · Apple Silicon · DMG"
+  },
+  "download.windowsTitle": {
+    "en": "Download for Windows",
+    "zh": "下载 Windows 版"
+  },
+  "download.windowsMeta": {
+    "en": "Windows 10 / 11 · x64 · EXE",
+    "zh": "Windows 10 / 11 · x64 · EXE"
+  },
+  "download.sourceHintOssia": {
+    "en": "Ossia source (optimized for mainland China)",
+    "zh": "Ossia 源（为中国大陆网络优化）"
+  },
+  "download.sourceHintGithub": {
+    "en": "GitHub source (global)",
+    "zh": "GitHub 源（适合全球访问）"
+  },
+  "download.allReleases": {
+    "en": "View all releases",
+    "zh": "查看全部版本"
+  },
+  "guide.landmarkLabel": {
+    "en": "Installation and quick-start guide",
+    "zh": "安装与上手指南"
+  },
+  "guide.title": {
+    "en": "Installation & quick start",
+    "zh": "安装与上手指南"
+  },
+  "guide.screenshotNote": {
+    "en": "Screenshots below may show a Chinese UI and evolve across releases. Click any image to view it full size.",
+    "zh": "下方截图可能随版本迭代略有变化，点击任意图片均可放大查看细节。"
+  },
+  "guide.unsignedTitle": {
+    "en": "First-time install note: installers are not yet signed",
+    "zh": "首次安装说明：安装包尚未签名"
+  },
+  "guide.unsignedDescription": {
+    "en": "The macOS app is not yet signed or notarized with an Apple Developer ID, and the Windows installer is unsigned, so your OS may block the first launch. Confirm you downloaded from official GitHub Releases and follow the one-time steps below.",
+    "zh": "当前 macOS 安装包尚未进行 Apple Developer ID 签名与公证，Windows 安装包也未进行代码签名，系统首次打开时可能出现安全拦截。请确认从官方 GitHub Releases 下载，并按下方步骤放行（仅首次安装时需要）。"
+  },
+  "guide.navigationLabel": {
+    "en": "In this guide",
+    "zh": "指南目录"
+  },
+  "guide.navigationTitle": {
+    "en": "In this guide",
+    "zh": "指南目录"
+  },
+  "guide.macLink": {
+    "en": "Install on macOS",
+    "zh": "macOS 安装"
+  },
+  "guide.windowsLink": {
+    "en": "Install on Windows",
+    "zh": "Windows 安装"
+  },
+  "guide.agentLink": {
+    "en": "Connect an AI agent",
+    "zh": "接入 AI Agent"
+  },
+  "guide.updatesLink": {
+    "en": "Updates",
+    "zh": "检查与获取更新"
+  },
+  "guide.omrLink": {
+    "en": "Recognize images & PDFs",
+    "zh": "识别图片与 PDF"
+  },
+  "guide.faqLink": {
+    "en": "FAQ",
+    "zh": "常见问题"
+  },
+  "mac.title": {
+    "en": "Install on macOS",
+    "zh": "macOS 安装"
+  },
+  "mac.intro": {
+    "en": "Move Ossia into Applications before opening it. Because the app is not yet signed or notarized, macOS Gatekeeper may block the first launch.",
+    "zh": "请先将 Ossia 移入“应用程序”再启动。由于应用尚未签名与公证，macOS Gatekeeper 在首次打开时可能会阻止运行。"
+  },
+  "mac.installStep": {
+    "en": "Open the DMG and drag Ossia.app into Applications. Do not launch the app directly from the DMG.",
+    "zh": "双击打开 DMG，将 Ossia.app 拖入 Applications（应用程序），请勿直接从 DMG 中运行。"
+  },
+  "mac.launchStep": {
+    "en": "Open Ossia from Applications in Finder. If macOS reports that the app is damaged, click Cancel and open Terminal.",
+    "zh": "在访达（Finder）的“应用程序”中打开 Ossia。若系统提示应用“已损坏”，请点击“取消”，随后打开“终端（Terminal）”。"
+  },
+  "mac.dragImageLink": {
+    "en": "View full image: Drag Ossia into Applications",
+    "zh": "查看大图：将 Ossia 拖入应用程序"
+  },
+  "mac.dragImageAlt": {
+    "en": "Drag Ossia into Applications",
+    "zh": "将 Ossia 拖入应用程序"
+  },
+  "mac.dragImageCaption": {
+    "en": "Drag Ossia into Applications",
+    "zh": "将 Ossia 拖入应用程序"
+  },
+  "mac.finderImageLink": {
+    "en": "View full image: Ossia in Finder",
+    "zh": "查看大图：访达中的 Ossia"
+  },
+  "mac.finderImageAlt": {
+    "en": "Ossia in Finder",
+    "zh": "访达中的 Ossia"
+  },
+  "mac.finderImageCaption": {
+    "en": "Ossia in Finder",
+    "zh": "访达中的 Ossia"
+  },
+  "mac.warningImageLink": {
+    "en": "View full image: macOS security warning",
+    "zh": "查看大图：macOS 安全提示"
+  },
+  "mac.warningImageAlt": {
+    "en": "macOS security warning",
+    "zh": "macOS 安全提示"
+  },
+  "mac.warningImageCaption": {
+    "en": "macOS security warning",
+    "zh": "macOS 安全提示"
+  },
+  "mac.terminalImageLink": {
+    "en": "View full image: Open Terminal",
+    "zh": "查看大图：打开终端"
+  },
+  "mac.terminalImageAlt": {
+    "en": "Open Terminal",
+    "zh": "打开终端"
+  },
+  "mac.terminalImageCaption": {
+    "en": "Open Terminal",
+    "zh": "打开终端"
+  },
+  "mac.removeQuarantineStep": {
+    "en": "Run this command in Terminal to clear the quarantine attribute, then open Ossia again. A successful run normally produces no output.",
+    "zh": "在终端运行以下命令移除应用的隔离标记，完成后重新打开 Ossia。命令执行成功时通常不会有任何输出。"
+  },
+  "mac.copyRemoveCommand": {
+    "en": "Copy command",
+    "zh": "复制命令"
+  },
+  "mac.checkQuarantineStep": {
+    "en": "Optional: verify the attributes with the command below. The flag is cleared once com.apple.quarantine no longer appears.",
+    "zh": "可选：运行以下命令确认状态；当输出中不再包含 com.apple.quarantine 时，即表示已成功清除。"
+  },
+  "mac.copyCheckCommand": {
+    "en": "Copy command",
+    "zh": "复制命令"
+  },
+  "mac.commandImageLink": {
+    "en": "View full image: Command in Terminal",
+    "zh": "查看大图：在终端中运行命令"
+  },
+  "mac.commandImageAlt": {
+    "en": "Command in Terminal",
+    "zh": "在终端中运行命令"
+  },
+  "mac.commandImageCaption": {
+    "en": "Command in Terminal",
+    "zh": "在终端中运行命令"
+  },
+  "mac.securityNote": {
+    "en": "If macOS says the developer cannot be verified, you can also select Open Anyway under System Settings → Privacy & Security. Never disable Gatekeeper system-wide—only clear quarantine for apps downloaded from a trusted official source.",
+    "zh": "若提示“无法验证开发者”，也可前往“系统设置 → 隐私与安全性”点击“仍要打开”。请勿全局关闭 Gatekeeper，仅对确认来自官方来源的应用移除隔离标记。"
+  },
+  "windows.title": {
+    "en": "Install on Windows",
+    "zh": "Windows 安装"
+  },
+  "windows.intro": {
+    "en": "Windows SmartScreen may warn about the unsigned installer. Confirm the download came from official Releases, then continue as follows.",
+    "zh": "未签名的安装包可能触发 Windows SmartScreen 拦截。确认来自官方 Releases 后，按以下步骤放行即可。"
+  },
+  "windows.runInstallerStep": {
+    "en": "Run the downloaded ossia-windows-amd64.exe installer.",
+    "zh": "双击运行下载好的 ossia-windows-amd64.exe。"
+  },
+  "windows.moreInfoStep": {
+    "en": "Click More info in the blue SmartScreen prompt.",
+    "zh": "在蓝色的 SmartScreen 提示界面中点击“更多信息”。"
+  },
+  "windows.runAnywayStep": {
+    "en": "Click Run anyway, then follow the setup wizard.",
+    "zh": "点击“仍要运行”，然后按安装向导完成安装。"
+  },
+  "windows.moreInfoImageLink": {
+    "en": "View full image: SmartScreen More info",
+    "zh": "查看大图：SmartScreen 更多信息"
+  },
+  "windows.moreInfoImageAlt": {
+    "en": "SmartScreen More info",
+    "zh": "SmartScreen 更多信息"
+  },
+  "windows.moreInfoImageCaption": {
+    "en": "SmartScreen More info",
+    "zh": "SmartScreen 更多信息"
+  },
+  "windows.runAnywayImageLink": {
+    "en": "View full image: SmartScreen Run anyway",
+    "zh": "查看大图：SmartScreen 仍要运行"
+  },
+  "windows.runAnywayImageAlt": {
+    "en": "SmartScreen Run anyway",
+    "zh": "SmartScreen 仍要运行"
+  },
+  "windows.runAnywayImageCaption": {
+    "en": "SmartScreen Run anyway",
+    "zh": "SmartScreen 仍要运行"
+  },
+  "agent.title": {
+    "en": "Connect an AI agent",
+    "zh": "接入 AI Agent"
+  },
+  "agent.intro": {
+    "en": "Connect a supported agent to create, arrange, inspect, and export scores directly through conversation.",
+    "zh": "接入支持的 AI Agent 后，你就能直接在对话中完成乐谱的创建、改编、分析与导出。"
+  },
+  "agent.startServiceStep": {
+    "en": "Launch Ossia and make sure the upper-right indicator reads “Service running.” Start the service manually if needed.",
+    "zh": "启动 Ossia，确认右上角显示“服务运行中”；若未运行，请先手动启动服务。"
+  },
+  "agent.connectStep": {
+    "en": "Under Integrations → Agent, connect your installed Codex, DeepSeek Harness, or WorkBuddy. For WorkBuddy, also trust Ossia MCP inside its connector before first use.",
+    "zh": "前往“接入 → Agent”，连接已安装的 Codex、DeepSeek Harness 或 WorkBuddy。使用 WorkBuddy 时，首次使用前还需在其连接器中信任 Ossia MCP。"
+  },
+  "agent.newConversationStep": {
+    "en": "Open a new agent conversation and start with /ossia or $ossia—for example: “/ossia create an eight-bar C major piano exercise for a beginner.” You can also ask the agent to run a self-check first.",
+    "zh": "新建一个 Agent 会话，以 /ossia 或 $ossia 开头发起任务——例如：“/ossia 为初学者写一首 8 小节 C 大调钢琴练习曲”。你也可以先让 Agent 运行一次自检，确认环境一切就绪。"
+  },
+  "agent.integrationImageLink": {
+    "en": "View full image: Agent integration",
+    "zh": "查看大图：Agent 接入面板"
+  },
+  "agent.integrationImageAlt": {
+    "en": "Agent integration",
+    "zh": "Agent 接入面板"
+  },
+  "agent.integrationImageCaption": {
+    "en": "Agent integration",
+    "zh": "Agent 接入面板"
+  },
+  "agent.selfCheckCommandImageLink": {
+    "en": "View full image: Agent self-check command",
+    "zh": "查看大图：Agent 自检命令"
+  },
+  "agent.selfCheckCommandImageAlt": {
+    "en": "Agent self-check command",
+    "zh": "Agent 自检命令"
+  },
+  "agent.selfCheckCommandImageCaption": {
+    "en": "Agent self-check command",
+    "zh": "Agent 自检命令"
+  },
+  "agent.selfCheckResultImageLink": {
+    "en": "View full image: Self-check result",
+    "zh": "查看大图：自检结果"
+  },
+  "agent.selfCheckResultImageAlt": {
+    "en": "Self-check result",
+    "zh": "自检结果"
+  },
+  "agent.selfCheckResultImageCaption": {
+    "en": "Self-check result",
+    "zh": "自检结果"
+  },
+  "updates.title": {
+    "en": "Updates",
+    "zh": "检查与获取更新"
+  },
+  "updates.description": {
+    "en": "Check for updates and pick an update source under Settings → About (Ossia is optimized for mainland China; GitHub serves globally). After an update downloads, click Update to install it—quitting Ossia beforehand discards an uninstalled download. Beta and stable releases use separate update channels.",
+    "zh": "在“设置 → 关于”中可以检查更新，并按网络环境选择更新源（Ossia 源为中国大陆优化，GitHub 源供全球访问）。自动下载完成后仍需点击“更新”执行安装；若在安装前退出 Ossia，尚未安装的下载包会被丢弃。Beta 与稳定版使用独立更新通道。"
+  },
+  "updates.settingsImageLink": {
+    "en": "View full image: Update settings",
+    "zh": "查看大图：更新设置"
+  },
+  "updates.settingsImageAlt": {
+    "en": "Update settings",
+    "zh": "更新设置"
+  },
+  "updates.settingsImageCaption": {
+    "en": "Update settings",
+    "zh": "更新设置"
+  },
+  "omr.title": {
+    "en": "Recognize images & PDFs",
+    "zh": "识别图片与 PDF"
+  },
+  "omr.description": {
+    "en": "MusicXML and MIDI imports need no key. To recognize image and PDF scores more reliably, open Settings → General → Score recognition, select Ossia OMR or a custom OMR service, and provide its access key. Keep your key private.",
+    "zh": "导入 MusicXML 和 MIDI 无需任何密钥。若希望更高效地识别图片与 PDF 乐谱，可前往“设置 → 常规 → 乐谱识别”，选择 Ossia OMR 或自定义光学乐谱识别（OMR）服务并填入访问密钥。密钥属于私密信息，请勿公开分享。"
+  },
+  "omr.settingsImageLink": {
+    "en": "View full image: Score recognition settings",
+    "zh": "查看大图：乐谱识别设置"
+  },
+  "omr.settingsImageAlt": {
+    "en": "Score recognition settings",
+    "zh": "乐谱识别设置"
+  },
+  "omr.settingsImageCaption": {
+    "en": "Score recognition settings",
+    "zh": "乐谱识别设置"
+  },
+  "faq.title": {
+    "en": "Frequently asked questions",
+    "zh": "常见问题"
+  },
+  "faq.damagedAppQuestion": {
+    "en": "macOS says the app is damaged—what should I do?",
+    "zh": "macOS 提示“应用已损坏”怎么办？"
+  },
+  "faq.damagedAppAnswer": {
+    "en": "Verify that the installer came from official GitHub Releases and Ossia.app is in Applications, then run the quarantine-removal command in the macOS section above.",
+    "zh": "请先确认安装包来自官方 GitHub Releases，并已将 Ossia.app 放入“应用程序”，随后按上方 macOS 安装步骤移除隔离标记即可。"
+  },
+  "faq.runAnywayQuestion": {
+    "en": "Why doesn’t Windows show “Run anyway”?",
+    "zh": "Windows 没有显示“仍要运行”按钮怎么办？"
+  },
+  "faq.runAnywayAnswer": {
+    "en": "Click More info in the SmartScreen prompt first to reveal the button. If it still does not appear, check your organization’s device policies or security software.",
+    "zh": "请先点击 SmartScreen 窗口中的“更多信息”展开该按钮。若依然无法看到，请检查当前设备的企业安全策略或第三方杀毒软件设置。"
+  },
+  "faq.agentDetectionQuestion": {
+    "en": "Why isn’t my AI agent detected?",
+    "zh": "Ossia 没有检测到我的 AI Agent 怎么办？"
+  },
+  "faq.agentDetectionAnswer": {
+    "en": "Install and launch the agent app at least once, then return to Ossia to connect it. Start a fresh conversation afterward so the integration loads.",
+    "zh": "请先安装并至少启动一次对应的 Agent 客户端，再返回 Ossia 点击连接。连接完成后，记得在 Agent 中新建会话。"
+  },
+  "faq.updateQuestion": {
+    "en": "Why is no update showing up?",
+    "zh": "为什么检查不到新版本？"
+  },
+  "faq.updateAnswer": {
+    "en": "Check both the update source and channel under Settings → About. The stable channel does not receive beta releases.",
+    "zh": "请前往“设置 → 关于”核对更新源与更新通道。稳定版通道不会接收 beta 预发布版本。"
+  },
+  "faq.backgroundQuestion": {
+    "en": "Does Ossia keep running after I close its window?",
+    "zh": "关闭窗口后，Ossia 还在运行吗？"
+  },
+  "faq.backgroundAnswer": {
+    "en": "Yes—Ossia stays running in the system tray by default so your AI agent can keep working with it. To stop it completely, choose Quit Ossia from the tray menu.",
+    "zh": "是的，关闭主窗口后 Ossia 会默认驻留系统托盘，以便随时响应 AI Agent 的调用。如需彻底停止，请在托盘菜单中选择“退出 Ossia”。"
+  },
+  "navigation.skip": {
+    "en": "Skip to content",
+    "zh": "跳到正文"
+  },
+  "navigation.features": {
+    "en": "Features",
+    "zh": "功能"
+  },
+  "navigation.download": {
+    "en": "Download",
+    "zh": "下载"
+  },
+  "navigation.guide": {
+    "en": "Guide",
+    "zh": "安装与指南"
+  },
+  "footer.tagline": {
+    "en": "Open-source AI-native music notation · GPL-3.0",
+    "zh": "开源 AI 原生乐谱制作软件 · GPL-3.0"
+  },
+  "footer.source": {
+    "en": "Source code",
+    "zh": "源代码"
+  },
+  "footer.releases": {
+    "en": "Releases",
+    "zh": "发行版本"
+  },
+  "footer.license": {
+    "en": "Open source license",
+    "zh": "开源许可证"
+  }
+}

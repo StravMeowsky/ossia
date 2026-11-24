@@ -65,7 +65,10 @@ release.
 5. The publish job creates a draft release and verifies its exact asset set.
 6. The publish job publishes the GitHub release as a Pre-release or Latest release.
 7. The separate `Ossia update feed` workflow verifies the published release and
-   uploads the two update-feed targets, including the macOS DMG download.
+   uploads the two update-feed targets, including the macOS DMG download. For
+   the newest stable release, it also updates `darwin-arm64/latest/ossia-darwin-arm64.dmg`
+   and `windows-amd64/latest/ossia-windows-amd64.exe`. Beta and older releases
+   do not replace these links; the latest files use a 60-second cache.
 
 Packaging requires a clean Git working tree. Release version injection happens
 after this check and the original files are restored when packaging ends.
@@ -142,9 +145,10 @@ with `gh workflow run update-feed.yml --ref main -f tag=<tag>`. GitHub Release
 remains available independently of the feed. An existing manifest entry cannot
 be replaced with a different installer digest under the same version.
 
-The website workflow publishes `website/` to GitHub Pages and the Ossia object
-store in parallel. The object store serves `website/index.html` as `index.html`
-and `website/assets/` as `assets/`, under the configured release prefix. Keep
-website resources in `assets/`. Uploads use the existing
-`OSSIA_RELEASES_*` secrets, retain old objects, and cache files for 60 seconds.
-Run `Deploy website` manually to retry either deployment.
+Run `pnpm dev:website` for local development, `pnpm build:website` to build into
+`dist/website/`, and `pnpm preview:website` to preview the build. The website
+workflow builds once and publishes the same output to GitHub Pages and the Ossia
+object store. COS uploads use the existing `OSSIA_RELEASES_*` secrets and retain
+old objects. HTML and fixed-path assets are cached for 60 seconds; hashed assets
+are cached for one year with `immutable`. GitHub Pages controls its own cache
+headers. Run `Deploy website` manually to retry either deployment.

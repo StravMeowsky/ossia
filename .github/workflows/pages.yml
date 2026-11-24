@@ -22,21 +22,47 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.1
+        with:
+          node-version: 24
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:website
+      - uses: actions/upload-artifact@v4
+        with:
+          name: website-build
+          path: dist/website
+          if-no-files-found: error
+
   pages:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: website-build
+          path: dist/website
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: website
+          path: dist/website
       - id: deployment
         uses: actions/deploy-pages@v4
 
   cos:
+    needs: build
     if: github.repository == 'micooz/ossia'
     runs-on: ubuntu-latest
     permissions:
@@ -53,6 +79,10 @@ jobs:
           cache: true
           install: false
       - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: website-build
+          path: dist/website
       - name: Publish website to object storage
         env:
           OSSIA_RELEASES_PREFIX: ${{ secrets.OSSIA_RELEASES_PREFIX }}

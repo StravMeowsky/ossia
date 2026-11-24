@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { cosClient, objectKey, putObject } from './cos.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const SHORT_CACHE = 'public, max-age=60';
+const LONG_CACHE = 'public, max-age=31536000, immutable';
 const CONTENT_TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.gif': 'image/gif',
@@ -43,7 +45,13 @@ export async function uploadWebsite({ directory, prefix = '', upload }) {
       else if (entry.isFile()) {
         const contentType = CONTENT_TYPES[extname(entry.name).toLowerCase()];
         if (!contentType) throw new Error(`unsupported website file type: ${name}`);
-        uploads.push({ file, key: objectKey(prefix, 'assets', name), contentType });
+        const hashed = /^[^/]+-[\w-]{16}\.[a-z0-9]+$/i.test(name);
+        uploads.push({
+          file,
+          key: objectKey(prefix, 'assets', name),
+          contentType,
+          cacheControl: hashed ? LONG_CACHE : SHORT_CACHE,
+        });
       } else throw new Error(`unsupported website entry: ${name}`);
     }
   }
@@ -52,6 +60,7 @@ export async function uploadWebsite({ directory, prefix = '', upload }) {
     file: join(root, 'index.html'),
     key: objectKey(prefix, 'index.html'),
     contentType: CONTENT_TYPES['.html'],
+    cacheControl: SHORT_CACHE,
   });
   for (const item of uploads) await upload(item);
 }
@@ -70,7 +79,7 @@ async function main() {
     securityToken: process.env.OSSIA_RELEASES_SECURITY_TOKEN?.trim() || undefined,
   });
   await uploadWebsite({
-    directory: join(ROOT, 'website'),
+    directory: join(ROOT, 'dist/website'),
     prefix: process.env.OSSIA_RELEASES_PREFIX?.trim() || '',
     upload: async (item) => {
       await putObject({
@@ -78,7 +87,6 @@ async function main() {
         bucket,
         region,
         ...item,
-        cacheControl: 'public, max-age=60',
         acl: process.env.OSSIA_RELEASES_ACL?.trim() || 'public-read',
       });
       console.log(`Uploaded ${item.key}`);

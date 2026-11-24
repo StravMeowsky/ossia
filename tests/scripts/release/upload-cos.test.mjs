@@ -344,3 +344,104 @@ test('upload CLI can retry an existing version with identical bytes', () => {
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('latest installer uploads follow the newest stable release only', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-latest-'));
+  try {
+    const asset = path.join(directory, 'installer.exe');
+    const notes = path.join(directory, 'notes.md');
+    const current = path.join(directory, 'index.json');
+    const env = path.join(directory, '.env');
+    fs.writeFileSync(asset, 'installer');
+    fs.writeFileSync(notes, 'Notes');
+    fs.writeFileSync(env, 'OSSIA_RELEASES_URL=https://example.com\n');
+    fs.writeFileSync(
+      current,
+      JSON.stringify({
+        schemaVersion: 1,
+        target: 'windows-amd64',
+        releases: [{ version: '1.2.0', prerelease: false, assets: [] }],
+      }),
+    );
+    function uploads(tag) {
+      return JSON.parse(
+        execFileSync(
+          process.execPath,
+          [
+            'scripts/release/upload-update.mjs',
+            '--env-file',
+            env,
+            '--tag',
+            tag,
+            '--target',
+            'windows-amd64',
+            '--asset',
+            asset,
+            '--notes-file',
+            notes,
+            '--current-index',
+            current,
+            '--stage-dir',
+            path.join(directory, 'stage'),
+            '--dry-run',
+          ],
+          { encoding: 'utf8' },
+        ),
+      ).uploads;
+    }
+    assert.ok(uploads('v1.3.0').includes('windows-amd64/latest/ossia-windows-amd64.exe'));
+    assert.ok(!uploads('v1.3.1-beta.1').some((key) => key.includes('/latest/')));
+    assert.ok(!uploads('v1.1.0').some((key) => key.includes('/latest/')));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('stable macOS publication uploads the DMG at the latest installer path', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-latest-mac-'));
+  try {
+    const asset = path.join(directory, 'asset.zip');
+    const dmg = path.join(directory, 'ossia-darwin-arm64.dmg');
+    const notes = path.join(directory, 'notes.md');
+    const current = path.join(directory, 'index.json');
+    const env = path.join(directory, '.env');
+    fs.writeFileSync(asset, 'zip');
+    fs.writeFileSync(dmg, 'dmg');
+    fs.writeFileSync(notes, 'Notes');
+    fs.writeFileSync(env, 'OSSIA_RELEASES_URL=https://example.com\n');
+    fs.writeFileSync(
+      current,
+      JSON.stringify({ schemaVersion: 1, target: 'darwin-arm64', releases: [] }),
+    );
+    const uploads = JSON.parse(
+      execFileSync(
+        process.execPath,
+        [
+          'scripts/release/upload-update.mjs',
+          '--env-file',
+          env,
+          '--tag',
+          'v1.0.0',
+          '--target',
+          'darwin-arm64',
+          '--asset',
+          asset,
+          '--extra',
+          dmg,
+          '--notes-file',
+          notes,
+          '--current-index',
+          current,
+          '--stage-dir',
+          path.join(directory, 'stage'),
+          '--dry-run',
+        ],
+        { encoding: 'utf8' },
+      ),
+    ).uploads;
+    assert.ok(uploads.includes('darwin-arm64/latest/ossia-darwin-arm64.dmg'));
+    assert.ok(!uploads.includes('darwin-arm64/latest/ossia-darwin-arm64.zip'));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
