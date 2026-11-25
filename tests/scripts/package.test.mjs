@@ -31,8 +31,9 @@ function temporaryRoot() {
 test('private resources stay untracked and out of the source archive', () => {
   const root = temporaryRoot();
   try {
-    const privateFiles = ['.docs/private.md', 'packages/ossia-omr/src/main.rs'];
+    const privateFiles = ['.docs/private.md'];
     const publicFiles = [
+      'packages/ossia-omr/src/main.rs',
       'website/index.html',
       'packages/ossia-backend/src/lib.rs',
       'scripts/release/cos.mjs',
