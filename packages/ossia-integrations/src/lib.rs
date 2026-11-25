@@ -1,4 +1,5 @@
 mod agent;
+mod antigravity;
 mod claude_code;
 mod claude_desktop;
 mod codex;
@@ -269,6 +270,9 @@ impl Integrator {
                     })
                     .collect(),
             });
+        }
+        if let Some(agent) = agents.iter_mut().find(|agent| agent.id == "antigravity") {
+            antigravity::present_hosts(agent, &antigravity::hosts(&self.paths));
         }
         let claude: Vec<_> = agents
             .iter()

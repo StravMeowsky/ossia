@@ -1,11 +1,12 @@
 use crate::agent::AgentAdapter;
-use crate::{claude_code, claude_desktop, codex, dsh, pi, workbuddy, HostPaths};
+use crate::{antigravity, claude_code, claude_desktop, codex, dsh, pi, workbuddy, HostPaths};
 
 pub(crate) fn adapters(paths: &HostPaths) -> Vec<Box<dyn AgentAdapter>> {
     let mut adapters: Vec<Box<dyn AgentAdapter>> = vec![
         Box::new(codex::Codex),
         Box::new(dsh::Dsh),
         Box::new(pi::Pi),
+        Box::new(antigravity::Antigravity),
         Box::new(claude_desktop::ClaudeDesktop),
         Box::new(claude_code::ClaudeCode),
     ];

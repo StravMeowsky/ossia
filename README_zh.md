@@ -92,6 +92,8 @@ Ossia 当前提供 macOS（Apple Silicon）和 Windows x64 平台的安装包，
 
 - Codex
 - DeepSeek Harness
+- Antigravity
+- Antigravity CLI
 - Claude Code
 - Claude Desktop
 - WorkBuddy

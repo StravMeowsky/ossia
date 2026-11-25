@@ -1,5 +1,6 @@
 import type { AgentIntegration, AgentNotice, AgentState } from '../generated/protocol.ts';
 import type { MessageKey } from '../i18n.tsx';
+import antigravityIcon from './assets/agents/antigravity.svg';
 import claudeIcon from './assets/agents/claude.svg';
 import codexIcon from './assets/agents/codex.svg';
 import dshIcon from './assets/agents/dsh.svg';
@@ -39,6 +40,7 @@ export const noticeKeys: Record<AgentNotice['kind'], MessageKey> = {
 };
 
 const agentIcons: Record<string, { src: string; monochrome?: boolean }> = {
+  antigravity: { src: antigravityIcon },
   claude: { src: claudeIcon },
   codex: { src: codexIcon },
   dsh: { src: dshIcon },

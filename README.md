@@ -92,6 +92,8 @@ Ossia currently supports:
 
 - Codex
 - DeepSeek Harness
+- Antigravity
+- Antigravity CLI
 - Claude Code
 - Claude Desktop
 - WorkBuddy
