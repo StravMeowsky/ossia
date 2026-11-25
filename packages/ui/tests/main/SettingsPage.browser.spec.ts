@@ -110,7 +110,7 @@ test('score recognition settings save a masked key and survive ordinary preferen
 
   const omr = page.locator('.settings-group').filter({ hasText: '乐谱识别' });
   await expect(omr.locator('.settings-row')).toHaveCount(2);
-  await expect(omr.getByRole('group', { name: '服务类型' })).toBeVisible();
+  await expect(omr.getByRole('group', { name: '服务提供方' })).toBeVisible();
   await expect(omr.getByLabel('服务地址')).toHaveCount(0);
   await expect(omr.getByLabel('访问密钥')).toHaveAttribute('placeholder', '访问密钥');
   const center = (locator: Locator) =>

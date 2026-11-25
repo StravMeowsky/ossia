@@ -428,8 +428,12 @@
     "zh": "识别图片与 PDF"
   },
   "omr.description": {
-    "en": "MusicXML and MIDI imports need no key. To recognize image and PDF scores more reliably, open Settings → General → Score recognition, select Ossia OMR or a custom OMR service, and provide its access key. Keep your key private.",
-    "zh": "导入 MusicXML 和 MIDI 无需任何密钥。若希望更高效地识别图片与 PDF 乐谱，可前往“设置 → 常规 → 乐谱识别”，选择 Ossia OMR 或自定义光学乐谱识别（OMR）服务并填入访问密钥。密钥属于私密信息，请勿公开分享。"
+    "en": "MusicXML and MIDI imports need no key. To recognize image and PDF scores more reliably, open Settings → General → Score recognition service (OMR), select Ossia OMR or a custom OMR service, and provide its access key. Keep your key private.",
+    "zh": "导入 MusicXML 和 MIDI 无需任何密钥。若希望更高效地识别图片与 PDF 乐谱，可前往“设置 → 常规 → 乐谱识别服务（OMR）”，选择 Ossia OMR 或自部署 OMR 服务并填入访问密钥。密钥属于私密信息，请勿公开分享。"
+  },
+  "omr.selfHostingLink": {
+    "en": "Ossia OMR self-hosting guide",
+    "zh": "Ossia OMR 自部署指南"
   },
   "omr.settingsImageLink": {
     "en": "View full image: Score recognition settings",

@@ -1,0 +1,30 @@
+[Unit]
+Description=Ossia remote Audiveris OMR service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ossia-omr
+Group=ossia-omr
+EnvironmentFile=/etc/ossia-omr.env
+ExecStart=/usr/local/bin/ossia-omr serve
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+MemoryHigh=1100M
+MemoryMax=1300M
+MemorySwapMax=2G
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/ossia-omr
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

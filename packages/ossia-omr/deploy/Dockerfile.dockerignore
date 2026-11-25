@@ -1,0 +1,12 @@
+*
+!Cargo.toml
+!Cargo.lock
+!packages/
+!packages/**
+**/.DS_Store
+**/.env
+**/.env.*
+**/node_modules
+**/target
+**/dist
+**/*.log

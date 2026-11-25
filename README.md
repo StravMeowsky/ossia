@@ -140,9 +140,11 @@ Under **Settings → About**, you can enable automatic update downloads and choo
 
 ### Can Ossia import scores from PDFs or images?
 
-Yes. You can configure an optical music recognition (OMR) service under **Settings → General → Score recognition** to help convert PDFs or images into scores.
+Yes. You can configure an optical music recognition (OMR) service under **Settings → General → Score recognition service (OMR)** to help convert PDFs or images into scores.
 
 OMR is optional. Without it, your agent may still be able to recognize a score when using a capable model.
+
+> To run your own service, see the [Ossia OMR self-hosting guide](packages/ossia-omr/deploy/README.md).
 
 ### Can Ossia transcribe audio?
 

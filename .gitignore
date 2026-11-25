@@ -2,7 +2,6 @@
 .env*
 !.env.example
 /.docs/
-/packages/ossia-omr/
 /.ossia/
 
 # Dependencies and system files
