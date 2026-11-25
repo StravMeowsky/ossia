@@ -97,14 +97,14 @@ when a job fails or exceeds its deadline.
 
 Available settings:
 
-| Variable | Purpose |
-| --- | --- |
-| `OSSIA_OMR_HOME` | Absolute data directory; default `/var/lib/ossia-omr`. The supplied systemd unit allows writes there. |
-| `OSSIA_OMR_LISTEN` | IP address and port; default `127.0.0.1:3212`. |
-| `OSSIA_OMR_TOKEN` | Required bearer token. |
-| `AUDIVERIS_BIN` | Audiveris executable; default `/opt/audiveris/bin/Audiveris`. |
-| `OSSIA_OMR_LANGUAGES` | Comma- or plus-separated OCR language names, matching files in `<home>/tessdata`. |
-| `OSSIA_OMR_MAX_JOB_SECONDS` | Per-job deadline in seconds; default `1800`. |
+| Variable                    | Purpose                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `OSSIA_OMR_HOME`            | Absolute data directory; default `/var/lib/ossia-omr`. The supplied systemd unit allows writes there. |
+| `OSSIA_OMR_LISTEN`          | IP address and port; default `127.0.0.1:3212`.                                                        |
+| `OSSIA_OMR_TOKEN`           | Required bearer token.                                                                                |
+| `AUDIVERIS_BIN`             | Audiveris executable; default `/opt/audiveris/bin/Audiveris`.                                         |
+| `OSSIA_OMR_LANGUAGES`       | Comma- or plus-separated OCR language names, matching files in `<home>/tessdata`.                     |
+| `OSSIA_OMR_MAX_JOB_SECONDS` | Per-job deadline in seconds; default `1800`.                                                          |
 
 If changing the data directory, update both the environment file and the
 systemd unit's `ReadWritePaths` and directory ownership. Restart the service

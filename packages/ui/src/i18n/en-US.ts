@@ -45,7 +45,8 @@ export const enUS = {
   storageCleanupFailed: 'Could not clean storage',
   remoteOmr: 'Score recognition service (OMR)',
   omrService: 'Service provider',
-  omrServiceDescription: 'Choose the Ossia OMR online service or connect to a self-hosted OMR service.',
+  omrServiceDescription:
+    'Choose the Ossia OMR online service or connect to a self-hosted OMR service.',
   omrServiceOssia: 'Ossia OMR',
   omrServiceCustom: 'Custom',
   omrUrl: 'Service address',
