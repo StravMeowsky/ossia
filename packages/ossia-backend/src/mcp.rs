@@ -95,7 +95,7 @@ pub fn tools() -> Vec<Tool> {
         ),
         tool::<UpdateMetadataArgs>(
             "ossia_update_metadata",
-            "Update one active score's library metadata. Currently supports title only. Trims surrounding whitespace, rejects blank, control-character and over-200-character titles, and does not modify source, rendered output or version history. Returns DocumentSummary.",
+            "Update one active score's library metadata: title, composer, instruments and period, which the desktop library shows and filters by. Omitted fields stay unchanged; an empty composer, period or instrument list clears it. Trims whitespace, rejects blank, control-character and over-200-character values, and does not modify source, rendered output or version history. Returns DocumentSummary.",
             ToolAnnotations::new()
                 .read_only(false)
                 .destructive(false)

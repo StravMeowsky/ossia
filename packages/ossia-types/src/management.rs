@@ -10,6 +10,18 @@ pub struct ManagementScoreSummary {
     pub created_at: String,
     pub updated_at: String,
     pub archived_at: Option<String>,
+    /// Composer used to group and filter the library.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub composer: Option<String>,
+    /// Instruments the score is written for; absent when none are recorded.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub instruments: Option<Vec<String>>,
+    /// Musical period or style, such as Baroque, Classical or Romantic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub period: Option<String>,
 }
 
 /// One bounded page of management score metadata.

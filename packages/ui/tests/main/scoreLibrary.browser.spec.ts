@@ -2,9 +2,12 @@ import { expect, test } from '@playwright/test';
 
 import type { ManagementScoreSummary } from '../../src/generated/protocol.ts';
 import {
+  catalogLabel,
   DEFAULT_SCORE_LAYOUT,
   DEFAULT_SCORE_SORT,
   filterAndSortScores,
+  NO_CATALOG_FILTER,
+  scoreCatalogOptions,
   friendlyScoreTime,
   parseScoreLayout,
   parseScoreSort,
@@ -113,4 +116,54 @@ test('stored score layout and sort values validate to defaults', () => {
   expect(parseScoreSort('created-asc')).toEqual({ metric: 'created', direction: 'asc' });
   expect(parseScoreSort('bad')).toEqual(DEFAULT_SCORE_SORT);
   expect(serializeScoreSort({ metric: 'updated', direction: 'asc' })).toBe('updated-asc');
+});
+
+test('catalog filters narrow by composer, instrument and period and search composers', () => {
+  const at = localDate(2026, 1, 1);
+  const scores: ManagementScoreSummary[] = [
+    {
+      ...score('00000000-0000-4000-8000-000000000011', 'Allemanda', at, at),
+      composer: 'Johann Sebastian Bach',
+      instruments: ['Violin'],
+      period: 'Baroque',
+    },
+    {
+      ...score('00000000-0000-4000-8000-000000000012', 'Nocturne', at, at),
+      composer: 'Frédéric Chopin',
+      instruments: ['Piano'],
+      period: 'Romantic',
+    },
+    {
+      ...score('00000000-0000-4000-8000-000000000013', 'Sonata', at, at),
+      composer: 'Ludwig van Beethoven',
+      instruments: ['Violin', 'Piano'],
+      period: 'Classical',
+    },
+    score('00000000-0000-4000-8000-000000000014', 'Sketch', at, at),
+  ];
+  const options = scoreCatalogOptions(scores, 'en-US');
+  expect(options.composers).toEqual([
+    'Frédéric Chopin',
+    'Johann Sebastian Bach',
+    'Ludwig van Beethoven',
+  ]);
+  expect(options.instruments).toEqual(['Piano', 'Violin']);
+  expect(options.periods).toEqual(['Baroque', 'Classical', 'Romantic']);
+
+  const titles = (filter: typeof NO_CATALOG_FILTER, query = '') =>
+    filterAndSortScores(scores, query, DEFAULT_SCORE_SORT, 'en-US', filter)
+      .map((item) => item.title)
+      .sort();
+  expect(titles(NO_CATALOG_FILTER)).toEqual(['Allemanda', 'Nocturne', 'Sketch', 'Sonata']);
+  expect(titles({ ...NO_CATALOG_FILTER, instrument: 'Violin' })).toEqual(['Allemanda', 'Sonata']);
+  expect(titles({ ...NO_CATALOG_FILTER, instrument: 'Violin', period: 'Classical' })).toEqual([
+    'Sonata',
+  ]);
+  expect(titles({ ...NO_CATALOG_FILTER, composer: 'Frédéric Chopin' })).toEqual(['Nocturne']);
+  expect(titles(NO_CATALOG_FILTER, 'chopin')).toEqual(['Nocturne']);
+
+  expect(catalogLabel('Baroque', 'zh-CN')).toBe('巴洛克');
+  expect(catalogLabel('Violin', 'zh-CN')).toBe('小提琴');
+  expect(catalogLabel('Theremin', 'zh-CN')).toBe('Theremin');
+  expect(catalogLabel('Baroque', 'en-US')).toBe('Baroque');
 });

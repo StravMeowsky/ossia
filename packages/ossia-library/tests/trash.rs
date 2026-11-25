@@ -203,6 +203,9 @@ fn version_one_library_migrates_in_place() {
              DROP TABLE drawings;
              DROP TABLE score_settings;
              DROP TABLE purge_intents;
+             ALTER TABLE documents DROP COLUMN composer;
+             ALTER TABLE documents DROP COLUMN instruments;
+             ALTER TABLE documents DROP COLUMN period;
              ALTER TABLE documents DROP COLUMN trash_source_hash;
              ALTER TABLE documents DROP COLUMN deleted_at;
              PRAGMA user_version=1;",
@@ -225,7 +228,9 @@ fn version_two_library_migrates_and_can_store_a_drawing() {
         doc = import(&library, &TestEngine, "existing", b"A c'1");
     }
     let conn = rusqlite::Connection::open(root.path().join("library.sqlite")).unwrap();
-    conn.execute_batch("DROP TABLE drawings; DROP TABLE score_settings; PRAGMA user_version=2;")
+    conn.execute_batch(
+        "DROP TABLE drawings; DROP TABLE score_settings; ALTER TABLE documents DROP COLUMN composer; ALTER TABLE documents DROP COLUMN instruments; ALTER TABLE documents DROP COLUMN period; PRAGMA user_version=2;",
+    )
         .unwrap();
     drop(conn);
     let library = Library::open(root.path()).unwrap();
@@ -258,7 +263,7 @@ fn version_three_library_migrates_and_can_store_score_settings() {
         doc = import(&library, &TestEngine, "existing", b"A c'1");
     }
     let conn = rusqlite::Connection::open(root.path().join("library.sqlite")).unwrap();
-    conn.execute_batch("DROP TABLE score_settings; PRAGMA user_version=3;")
+    conn.execute_batch("DROP TABLE score_settings; ALTER TABLE documents DROP COLUMN composer; ALTER TABLE documents DROP COLUMN instruments; ALTER TABLE documents DROP COLUMN period; PRAGMA user_version=3;")
         .unwrap();
     drop(conn);
     let library = Library::open(root.path()).unwrap();
@@ -273,6 +278,48 @@ fn version_three_library_migrates_and_can_store_score_settings() {
     drop(library);
     let library = Library::open(root.path()).unwrap();
     assert_eq!(library.score_settings(doc.document_id).unwrap(), saved);
+}
+
+#[test]
+fn version_four_library_migrates_and_can_store_a_catalog() {
+    let root = tempfile::tempdir().unwrap();
+    let doc;
+    {
+        let library = Library::open(root.path()).unwrap();
+        doc = import(&library, &TestEngine, "existing", b"A c'1");
+    }
+    let conn = rusqlite::Connection::open(root.path().join("library.sqlite")).unwrap();
+    conn.execute_batch("ALTER TABLE documents DROP COLUMN composer; ALTER TABLE documents DROP COLUMN instruments; ALTER TABLE documents DROP COLUMN period; PRAGMA user_version=4;")
+        .unwrap();
+    drop(conn);
+    let library = Library::open(root.path()).unwrap();
+    let listed = library.management_score_page(false, 10, 0).unwrap();
+    assert_eq!(listed.items[0].composer, None);
+    assert_eq!(listed.items[0].instruments, None);
+    library
+        .update_catalog(
+            doc.document_id,
+            Some(" Johann Sebastian Bach "),
+            Some(&["Violin".into(), "violin".into(), " ".into(), "Piano".into()]),
+            Some("Baroque"),
+        )
+        .unwrap();
+    drop(library);
+    let library = Library::open(root.path()).unwrap();
+    let item = &library.management_score_page(false, 10, 0).unwrap().items[0];
+    assert_eq!(item.composer.as_deref(), Some("Johann Sebastian Bach"));
+    assert_eq!(
+        item.instruments.as_deref(),
+        Some(&["Violin".to_string(), "Piano".to_string()][..])
+    );
+    assert_eq!(item.period.as_deref(), Some("Baroque"));
+    library
+        .update_catalog(doc.document_id, Some(""), Some(&[]), None)
+        .unwrap();
+    let item = &library.management_score_page(false, 10, 0).unwrap().items[0];
+    assert_eq!(item.composer, None);
+    assert_eq!(item.instruments, None);
+    assert_eq!(item.period.as_deref(), Some("Baroque"));
 }
 
 #[test]

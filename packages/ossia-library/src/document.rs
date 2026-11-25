@@ -6,6 +6,63 @@ impl Library {
         self.observe_source(id)
     }
 
+    /// Change the catalog fields used to group the library. `None` leaves a field unchanged;
+    /// an empty value clears it.
+    pub fn update_catalog(
+        &self,
+        id: DocumentId,
+        composer: Option<&str>,
+        instruments: Option<&[String]>,
+        period: Option<&str>,
+    ) -> Result<DocumentSummary> {
+        let composer = composer.map(|value| catalog_text("composer", value)).transpose()?;
+        let period = period.map(|value| catalog_text("period", value)).transpose()?;
+        let instruments = instruments
+            .map(|values| {
+                if values.len() > 20 {
+                    return Err(AppError::invalid("at most 20 instruments are allowed"));
+                }
+                let mut list: Vec<String> = Vec::new();
+                for value in values {
+                    if let Some(name) = catalog_text("instrument", value)? {
+                        if !list.iter().any(|known| known.eq_ignore_ascii_case(&name)) {
+                            list.push(name);
+                        }
+                    }
+                }
+                Ok((!list.is_empty())
+                    .then(|| serde_json::to_string(&list).map_err(storage_error))
+                    .transpose()?)
+            })
+            .transpose()?;
+
+        let mut conn = self.db()?;
+        let tx = conn.transaction().map_err(storage_error)?;
+        db::document(&tx, id)?;
+        for (column, value) in [
+            ("composer", composer),
+            ("instruments", instruments),
+            ("period", period),
+        ] {
+            if let Some(value) = value {
+                tx.execute(
+                    &format!("UPDATE documents SET {column}=?1 WHERE document_id=?2"),
+                    params![value, id.to_string()],
+                )
+                .map_err(storage_error)?;
+            }
+        }
+        tx.execute(
+            "UPDATE documents SET updated_at=?1 WHERE document_id=?2",
+            params![db::now(), id.to_string()],
+        )
+        .map_err(storage_error)?;
+        let doc = db::document(&tx, id)?;
+        let summary = self.document_summary(&tx, &doc)?;
+        tx.commit().map_err(storage_error)?;
+        Ok(summary)
+    }
+
     /// Replace one active document's library title without touching its source or history.
     pub fn update_title(&self, id: DocumentId, title: &str) -> Result<DocumentSummary> {
         let title = title.trim();
@@ -184,4 +241,20 @@ impl Library {
             edit_state,
         })
     }
+}
+
+/// Trim a catalog value; empty clears it, and the same limits as titles apply.
+fn catalog_text(field: &str, value: &str) -> Result<Option<String>> {
+    let value = value.trim();
+    if value.chars().count() > 200 {
+        return Err(AppError::invalid(format!(
+            "{field} must be at most 200 characters"
+        )));
+    }
+    if value.chars().any(char::is_control) {
+        return Err(AppError::invalid(format!(
+            "{field} must not contain control characters"
+        )));
+    }
+    Ok((!value.is_empty()).then(|| value.to_string()))
 }

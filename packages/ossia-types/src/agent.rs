@@ -181,12 +181,29 @@ pub struct ListArgs {
     pub offset: usize,
 }
 
-/// Replace one active score's library title.
+/// Update one active score's library metadata. Omitted fields stay unchanged.
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct UpdateMetadataArgs {
     pub document_id: DocumentId,
-    pub title: String,
+    /// Library title.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub title: Option<String>,
+    /// Composer's name as usually written, such as "Johann Sebastian Bach"; empty clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub composer: Option<String>,
+    /// Instruments the score is written for, such as ["Violin"] or ["Violin", "Piano"]; an
+    /// empty list clears them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub instruments: Option<Vec<String>>,
+    /// Musical period or style: Medieval, Renaissance, Baroque, Classical, Romantic, Modern or
+    /// Contemporary when one fits; empty clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub period: Option<String>,
 }
 
 /// Compact document metadata without render manifests or check evidence.

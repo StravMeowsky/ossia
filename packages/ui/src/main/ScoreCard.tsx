@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import type { ManagementScoreSummary } from '../generated/protocol.ts';
 import { useI18n } from '../i18n.tsx';
-import { friendlyScoreTime, type ScoreSortMetric } from './scoreLibrary.ts';
+import { catalogLabel, friendlyScoreTime, type ScoreSortMetric } from './scoreLibrary.ts';
 import type { ScorePreviewView } from './useScorePreviews.ts';
 
 interface ScoreCardProps {
@@ -76,6 +76,13 @@ export function ScoreCard({
             : friendly.date;
   const timeText = t(timeMetric === 'created' ? 'createdOn' : 'updatedOn', { time });
   const title = score.title || score.documentId;
+  const catalog = [
+    score.composer,
+    ...(score.instruments ?? []).map((name) => catalogLabel(name, language)),
+    score.period && catalogLabel(score.period, language),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   function previewContent() {
     if (preview.state === 'ready' && preview.dataUrl) {
@@ -157,6 +164,11 @@ export function ScoreCard({
             >
               {title}
             </button>
+          )}
+          {catalog && (
+            <p className="score-card-catalog" title={catalog}>
+              {catalog}
+            </p>
           )}
           <p className="score-card-time">{timeText}</p>
         </div>

@@ -17,12 +17,16 @@ import type { ManagementScorePage, ManagementScoreSummary } from '../generated/p
 import { useI18n } from '../i18n.tsx';
 import { ScoreCard } from './ScoreCard.tsx';
 import {
+  catalogLabel,
   filterAndSortScores,
+  NO_CATALOG_FILTER,
   parseScoreLayout,
   parseScoreSort,
   SCORE_LAYOUT_KEY,
   SCORE_SORT_KEY,
+  scoreCatalogOptions,
   serializeScoreSort,
+  type ScoreCatalogFilter,
   type ScoreLayout,
   type ScoreSort,
   type ScoreSortMetric,
@@ -116,6 +120,7 @@ export function MyScoresPage({
   const [archived, setArchived] = useState(false);
   const [scores, setScores] = useState<ManagementScoreSummary[] | null>(null);
   const [query, setQuery] = useState('');
+  const [catalog, setCatalog] = useState<ScoreCatalogFilter>(NO_CATALOG_FILTER);
   const [layout, setLayout] = useState<ScoreLayout>(() =>
     parseScoreLayout(localStorage.getItem(SCORE_LAYOUT_KEY)),
   );
@@ -204,7 +209,32 @@ export function MyScoresPage({
     };
   }, [archived, browser, native, runtimeInstanceId, runtimeRunning, loading]);
 
-  const visibleScores = filterAndSortScores(scores ?? [], query, sort, language);
+  const visibleScores = filterAndSortScores(scores ?? [], query, sort, language, catalog);
+  const catalogOptions = scoreCatalogOptions(scores ?? [], language);
+  const catalogFilters = [
+    {
+      key: 'composer',
+      label: t('filterComposer'),
+      all: t('allComposers'),
+      options: catalogOptions.composers,
+      display: (value: string) => value,
+    },
+    {
+      key: 'instrument',
+      label: t('filterInstrument'),
+      all: t('allInstruments'),
+      options: catalogOptions.instruments,
+      display: (value: string) => catalogLabel(value, language),
+    },
+    {
+      key: 'period',
+      label: t('filterPeriod'),
+      all: t('allPeriods'),
+      options: catalogOptions.periods,
+      display: (value: string) => catalogLabel(value, language),
+    },
+  ] as const;
+  const catalogActive = Object.values(catalog).some((value) => value !== null);
 
   function setBusy(id: string, busy: boolean) {
     setBusyIds((current) => {
@@ -307,7 +337,7 @@ export function MyScoresPage({
     };
   }
 
-  const filtered = query.trim().length > 0;
+  const filtered = query.trim().length > 0 || catalogActive;
 
   return (
     <section className="scores-page" aria-busy={loading}>
@@ -384,6 +414,45 @@ export function MyScoresPage({
           )}
         </div>
       </div>
+
+      {catalogFilters.some((filter) => filter.options.length > 0) && (
+        <div className="score-catalog-filters">
+          {catalogFilters.map(
+            (filter) =>
+              filter.options.length > 0 && (
+                <label key={filter.key} className="score-catalog-filter">
+                  <span className="visually-hidden">{filter.label}</span>
+                  <select
+                    aria-label={filter.label}
+                    value={catalog[filter.key] ?? ''}
+                    onChange={(event) =>
+                      setCatalog((current) => ({
+                        ...current,
+                        [filter.key]: event.target.value || null,
+                      }))
+                    }
+                  >
+                    <option value="">{filter.all}</option>
+                    {filter.options.map((value) => (
+                      <option key={value} value={value}>
+                        {filter.display(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ),
+          )}
+          {catalogActive && (
+            <button
+              className="score-catalog-clear"
+              type="button"
+              onClick={() => setCatalog(NO_CATALOG_FILTER)}
+            >
+              {t('clearFilters')}
+            </button>
+          )}
+        </div>
+      )}
 
       {(!native && !browser) || !runtimeRunning ? (
         <div className="scores-state">

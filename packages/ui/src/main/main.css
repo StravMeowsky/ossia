@@ -660,6 +660,57 @@ code.setting-value {
   gap: 12px;
 }
 
+.score-catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.score-catalog-filter select {
+  height: 30px;
+  max-width: 220px;
+  padding: 0 26px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.score-catalog-filter select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.score-catalog-clear {
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.score-catalog-clear:hover {
+  color: var(--text);
+}
+
+.score-card-catalog {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .score-search {
   display: flex;
   width: min(360px, 46%);

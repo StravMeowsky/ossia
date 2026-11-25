@@ -95,3 +95,55 @@ async fn update_metadata_changes_only_the_library_title() {
 
     f.finish().await;
 }
+
+#[tokio::test]
+async fn update_metadata_sets_and_clears_the_library_catalog() {
+    let f = Fixture::new(false).await;
+    let result = ipc::dispatch(
+        &f.runtime,
+        "update_metadata",
+        json!({
+            "documentId": f.doc.document_id,
+            "composer": "Frédéric Chopin",
+            "instruments": ["Piano"],
+            "period": "Romantic"
+        }),
+    )
+    .unwrap();
+    let summary: DocumentSummary = serde_json::from_value(result).unwrap();
+    assert_eq!(summary.title, f.doc.title);
+    let page = f.runtime.library.management_score_page(false, 10, 0).unwrap();
+    let item = page
+        .items
+        .iter()
+        .find(|item| item.document_id == f.doc.document_id)
+        .unwrap();
+    assert_eq!(item.composer.as_deref(), Some("Frédéric Chopin"));
+    assert_eq!(item.instruments.as_deref(), Some(&["Piano".to_string()][..]));
+    assert_eq!(item.period.as_deref(), Some("Romantic"));
+
+    ipc::dispatch(
+        &f.runtime,
+        "update_metadata",
+        json!({"documentId": f.doc.document_id, "period": ""}),
+    )
+    .unwrap();
+    let page = f.runtime.library.management_score_page(false, 10, 0).unwrap();
+    let item = page
+        .items
+        .iter()
+        .find(|item| item.document_id == f.doc.document_id)
+        .unwrap();
+    assert_eq!(item.period, None);
+    assert_eq!(item.composer.as_deref(), Some("Frédéric Chopin"));
+
+    let error = ipc::dispatch(
+        &f.runtime,
+        "update_metadata",
+        json!({"documentId": f.doc.document_id}),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, ErrorCode::InvalidInput);
+
+    f.finish().await;
+}

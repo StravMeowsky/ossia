@@ -75,23 +75,50 @@
   },
   {
     "name": "ossia_update_metadata",
-    "description": "Update one active score's library metadata. Currently supports title only. Trims surrounding whitespace, rejects blank, control-character and over-200-character titles, and does not modify source, rendered output or version history. Returns DocumentSummary.",
+    "description": "Update one active score's library metadata: title, composer, instruments and period, which the desktop library shows and filters by. Omitted fields stay unchanged; an empty composer, period or instrument list clears it. Trims whitespace, rejects blank, control-character and over-200-character values, and does not modify source, rendered output or version history. Returns DocumentSummary.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
-      "description": "Replace one active score's library title.",
+      "description": "Update one active score's library metadata. Omitted fields stay unchanged.",
       "properties": {
+        "composer": {
+          "description": "Composer's name as usually written, such as \"Johann Sebastian Bach\"; empty clears it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "documentId": {
           "format": "uuid",
           "type": "string"
         },
+        "instruments": {
+          "description": "Instruments the score is written for, such as [\"Violin\"] or [\"Violin\", \"Piano\"]; an\nempty list clears them.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "period": {
+          "description": "Musical period or style: Medieval, Renaissance, Baroque, Classical, Romantic, Modern or\nContemporary when one fits; empty clears it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "title": {
-          "type": "string"
+          "description": "Library title.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
-        "documentId",
-        "title"
+        "documentId"
       ],
       "title": "UpdateMetadataArgs",
       "type": "object"

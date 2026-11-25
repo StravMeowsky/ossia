@@ -220,10 +220,19 @@ pub(crate) fn migrate(conn: &mut Connection, from: u32) -> Result<()> {
          PRAGMA user_version = 3;",
     ).map_err(storage_error)?;
     }
-    tx.execute_batch(
+    if from <= 3 {
+        tx.execute_batch(
         "CREATE TABLE score_settings (document_id TEXT PRIMARY KEY NOT NULL REFERENCES documents(document_id) ON DELETE CASCADE, revision INTEGER NOT NULL CHECK(revision > 0), body TEXT NOT NULL);
          PRAGMA user_version = 4;",
     ).map_err(storage_error)?;
+    }
+    tx.execute_batch(
+        "ALTER TABLE documents ADD COLUMN composer TEXT;
+         ALTER TABLE documents ADD COLUMN instruments TEXT;
+         ALTER TABLE documents ADD COLUMN period TEXT;
+         PRAGMA user_version = 5;",
+    )
+    .map_err(storage_error)?;
     tx.commit().map_err(storage_error)?;
     Ok(())
 }

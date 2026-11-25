@@ -572,11 +572,12 @@ test('touch drag pans the score without native page gestures', async ({ context,
         }),
       );
     fire('pointerdown', 500, 400);
-    fire('pointermove', 580, 350);
-    fire('pointerup', 580, 350);
+    fire('pointermove', 420, 350);
+    fire('pointerup', 420, 350);
   });
 
-  await expect.poll(async () => (await host.boundingBox())!.x).toBeGreaterThan(before.x + 70);
+  // The page starts at its left edge, so the drag can only move it left (and up).
+  await expect.poll(async () => (await host.boundingBox())!.x).toBeLessThan(before.x);
   await expect.poll(async () => (await host.boundingBox())!.y).toBeLessThan(before.y - 40);
 });
 
@@ -820,7 +821,7 @@ test('resizing preserves the current score position', async ({ context, page }) 
   await expect.poll(async () => (await host.boundingBox())!.y).toBeCloseTo(before.y, 0);
 });
 
-test('zoomed score can be panned without scrollbar bounds', async ({ context, page }) => {
+test('zoomed score pans without scrollbars and stops at its edges', async ({ context, page }) => {
   await mockScoreRuntime(context);
   await page.setViewportSize({ width: 1300, height: 900 });
   await page.goto(`/scores?documentId=${firstId}`);
@@ -828,7 +829,7 @@ test('zoomed score can be panned without scrollbar bounds', async ({ context, pa
   const host = page.locator('.page-host').first();
   await expect(host).toBeVisible();
   const bounds = await host.boundingBox();
-  for (let index = 0; index < 2; index++) {
+  for (let index = 0; index < 4; index++) {
     await scroll.dispatchEvent('wheel', {
       deltaY: -100,
       ctrlKey: true,
@@ -839,16 +840,21 @@ test('zoomed score can be panned without scrollbar bounds', async ({ context, pa
   }
   const before = (await host.boundingBox())!.x;
   await page.keyboard.down('Control');
-  await page.mouse.move(800, 400);
+  await page.mouse.move(1200, 400);
   await page.mouse.down();
-  await page.mouse.move(400, 400);
+  for (const x of [900, 600, 300, 100]) await page.mouse.move(x, 400);
+  for (const x of [400, 700, 1000, 1200]) await page.mouse.move(x, 400);
+  for (const x of [900, 600, 300, 100]) await page.mouse.move(x, 400);
   await page.mouse.up();
   await page.keyboard.up('Control');
-  await expect.poll(async () => (await host.boundingBox())!.x).toBeLessThan(before - 350);
+  await expect.poll(async () => (await host.boundingBox())!.x).toBeLessThan(before);
+  const viewport = (await scroll.boundingBox())!;
+  const stopped = (await page.locator('.score-pages').boundingBox())!;
+  expect(stopped.x + stopped.width).toBeCloseTo(viewport.x + viewport.width - 32, 0);
   expect(await scroll.evaluate((node) => getComputedStyle(node).overflow)).toBe('hidden');
 });
 
-test('modifier drag pans the score when it fits the viewport', async ({ context, page }) => {
+test('modifier drag keeps a score that fits the viewport in place', async ({ context, page }) => {
   await mockScoreRuntime(context);
   await page.setViewportSize({ width: 1300, height: 900 });
   await page.goto(`/scores?documentId=${firstId}`);
@@ -861,7 +867,8 @@ test('modifier drag pans the score when it fits the viewport', async ({ context,
   await page.mouse.move(620, 400);
   await page.mouse.up();
   await page.keyboard.up('Control');
-  await expect.poll(async () => (await host.boundingBox())!.x).toBeLessThan(before - 60);
+  await page.waitForTimeout(50);
+  expect((await host.boundingBox())!.x).toBeCloseTo(before, 0);
 });
 
 test('narrow topbar keeps one row and collapses the score selector to a menu icon', async ({

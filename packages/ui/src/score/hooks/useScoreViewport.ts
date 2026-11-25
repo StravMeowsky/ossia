@@ -96,32 +96,38 @@ export function useScoreViewport({
   } | null>(null);
 
   /**
-   * Keep the pages from scrolling past their first top or last bottom edge: the top stops at the
-   * canvas padding, the bottom at the viewport's bottom padding, and a score shorter than the
-   * viewport stays where the layout puts it.
+   * Keep the pages inside the viewport: an edge stops at the canvas padding once it reaches it,
+   * and along an axis where the score fits the viewport it stays where the layout puts it.
    */
-  const clampVertical = useCallback((next: ScoreViewPan): ScoreViewPan => {
+  const clampPan = useCallback((next: ScoreViewPan): ScoreViewPan => {
     const element = viewport.current;
     const pages = element?.querySelector<HTMLElement>('.score-pages');
     if (!element || !pages) return next;
     const bounds = element.getBoundingClientRect();
     const content = pages.getBoundingClientRect();
-    if (!bounds.height || !content.height) return next;
-    const top = content.top - panRef.current.y;
-    const bottom = content.bottom - panRef.current.y;
-    const highest = bounds.top + CANVAS_TOP_PADDING - top;
-    const lowest = bounds.bottom - CANVAS_PADDING - bottom;
-    const y = lowest >= highest ? 0 : Math.min(highest, Math.max(lowest, next.y));
-    return y === next.y ? next : { x: next.x, y };
+    if (!bounds.width || !bounds.height || !content.width || !content.height) return next;
+    const clamp = (value: number, highest: number, lowest: number) =>
+      lowest >= highest ? 0 : Math.min(highest, Math.max(lowest, value));
+    const x = clamp(
+      next.x,
+      bounds.left + CANVAS_PADDING - (content.left - panRef.current.x),
+      bounds.right - CANVAS_PADDING - (content.right - panRef.current.x),
+    );
+    const y = clamp(
+      next.y,
+      bounds.top + CANVAS_TOP_PADDING - (content.top - panRef.current.y),
+      bounds.bottom - CANVAS_PADDING - (content.bottom - panRef.current.y),
+    );
+    return x === next.x && y === next.y ? next : { x, y };
   }, []);
 
   const applyPan = useCallback(
     (requested: ScoreViewPan) => {
-      const next = clampVertical(requested);
+      const next = clampPan(requested);
       panRef.current = next;
       setPan((current) => (current.x === next.x && current.y === next.y ? current : next));
     },
-    [clampVertical],
+    [clampPan],
   );
 
   const panBy = useCallback(

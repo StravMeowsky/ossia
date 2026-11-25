@@ -30,7 +30,7 @@ impl Library {
         };
         let mut statement = conn
             .prepare(&format!(
-                "SELECT document_id,title,created_at,updated_at,deleted_at
+                "SELECT document_id,title,created_at,updated_at,deleted_at,composer,instruments,period
                  FROM documents WHERE {condition}
                  ORDER BY {order} LIMIT ?1 OFFSET ?2"
             ))
@@ -48,20 +48,38 @@ impl Library {
                         row.get::<_, String>(2)?,
                         row.get::<_, String>(3)?,
                         row.get::<_, Option<String>>(4)?,
+                        row.get::<_, Option<String>>(5)?,
+                        row.get::<_, Option<String>>(6)?,
+                        row.get::<_, Option<String>>(7)?,
                     ))
                 },
             )
             .map_err(storage_error)?;
         let items = rows
             .map(|row| {
-                let (document_id, title, created_at, updated_at, archived_at) =
-                    row.map_err(storage_error)?;
+                let (
+                    document_id,
+                    title,
+                    created_at,
+                    updated_at,
+                    archived_at,
+                    composer,
+                    instruments,
+                    period,
+                ) = row.map_err(storage_error)?;
                 Ok(ManagementScoreSummary {
                     document_id: db::parse(document_id)?,
                     title,
                     created_at,
                     updated_at,
                     archived_at,
+                    composer,
+                    instruments: instruments
+                        .map(|text| serde_json::from_str::<Vec<String>>(&text))
+                        .transpose()
+                        .map_err(storage_error)?
+                        .filter(|list| !list.is_empty()),
+                    period,
                 })
             })
             .collect::<Result<Vec<_>>>()?;

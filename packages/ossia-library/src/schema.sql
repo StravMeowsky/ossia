@@ -16,7 +16,10 @@ CREATE TABLE documents (
     updated_at TEXT NOT NULL,
     last_render TEXT,
     deleted_at TEXT,
-    trash_source_hash TEXT REFERENCES contents(hash)
+    trash_source_hash TEXT REFERENCES contents(hash),
+    composer TEXT,
+    instruments TEXT,
+    period TEXT
 );
 CREATE TABLE versions (
     version_id TEXT PRIMARY KEY NOT NULL,

@@ -103,7 +103,12 @@ the separate workflow above. For waiting and paging, see [Operations](operations
 Use `ossia_update_metadata` with `documentId` and `title` to change the library
 name shown by `ossia_list`, the score page and the score switcher. Surrounding
 whitespace is removed; blank, control-character and over-200-character titles
-are rejected. The operation works during an active edit and does not change
+are rejected. The same operation sets the catalog the desktop library groups and
+filters by: `composer` (the name as usually written), `instruments` (such as
+`["Violin"]` or `["Violin", "Piano"]`) and `period` (Medieval, Renaissance,
+Baroque, Classical, Romantic, Modern or Contemporary when one fits). Omitted
+fields stay unchanged; an empty value clears one. After creating or importing a
+score whose composer, instruments or period are known, set them. The operation works during an active edit and does not change
 `score.ly`, rendering or version history. To change the title printed on the
 score, edit the LilyPond `\header` field through the source workflow instead.
 
