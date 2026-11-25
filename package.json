@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "setup": "pnpm install && pnpm engine:install && pnpm generate:docs",
-    "generate:docs": "node --no-warnings=ExperimentalWarning scripts/docs/generate.mjs --download",
+    "generate:docs": "node scripts/docs/generate.mjs --download",
     "generate:mcp": "cargo run --quiet -p ossia-backend --bin generate-mcp --",
     "generate:types": "cargo run --quiet -p ossia-types --bin generate-types --",
     "engine:install": "node scripts/engine/engine.mjs install --download",
@@ -21,10 +21,10 @@
     "test:ui": "pnpm --filter @ossia/ui test",
     "test:ui:native": "pnpm --filter @ossia/ui test:native",
     "verify": "pnpm verify:playback && pnpm verify:audition",
-    "verify:audition": "node --experimental-strip-types scripts/verify/audition-cases.mjs",
-    "verify:playback": "node --experimental-strip-types scripts/verify/playback-cases.mjs",
-    "audit:audition": "node --experimental-strip-types scripts/verify/audition-audit.mjs",
-    "audit:playback": "node --experimental-strip-types scripts/verify/playback-audit.mjs",
+    "verify:audition": "node scripts/verify/audition-cases.mjs",
+    "verify:playback": "node scripts/verify/playback-cases.mjs",
+    "audit:audition": "node scripts/verify/audition-audit.mjs",
+    "audit:playback": "node scripts/verify/playback-audit.mjs",
     "build:backend": "pnpm build:ui && cargo build -p ossia-desktop --no-default-features",
     "build:desktop": "pnpm --filter @ossia/desktop build",
     "build:ui": "pnpm --filter @ossia/ui build",
@@ -38,7 +38,7 @@
     "vite-plus": "^1.5.1"
   },
   "engines": {
-    "node": ">=22.9.0"
+    "node": ">=22.18.0"
   },
   "packageManager": "pnpm@12.4.1"
 }
