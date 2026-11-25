@@ -29,11 +29,15 @@ export function auditSelection({ layout, geometry, selection }) {
     const rhythmic = page.objects.filter(
       (object) => !object.hitOnly && object.span && rhythmicKinds.has(object.kind),
     );
-    const originsByStaff = staffVoices.map((spans) =>
-      rhythmic.filter((object) =>
-        spans.some(
-          (span) => span.byteStart <= object.span.byteStart && span.byteEnd > object.span.byteStart,
-        ),
+    const originsByStaff = staffVoices.map((spans, staffIndex) =>
+      rhythmic.filter(
+        (object) =>
+          object.staffIndex === staffIndex &&
+          (selection.engraved ||
+            spans.some(
+              (span) =>
+                span.byteStart <= object.span.byteStart && span.byteEnd > object.span.byteStart,
+            )),
       ),
     );
     for (const [systemIndex, system] of page.systems.entries()) {
@@ -77,12 +81,11 @@ export function auditSelection({ layout, geometry, selection }) {
             issues.push({ kind: 'unresolved-measure-target', ...detail, locator });
             continue;
           }
-          // Cross-staff notes keep the source voice of their original staff.
           const origins =
-            originsByStaff[staffIndex]?.filter(({ bbox, staffIndex: owner }) => {
+            originsByStaff[staffIndex]?.filter(({ bbox }) => {
               const x = center(bbox.x0, bbox.x1);
               const y = center(bbox.y0, bbox.y1);
-              return owner === staffIndex && x >= x0 && x < x1 && y >= staff.top && y <= staff.bot;
+              return x >= x0 && x < x1 && y >= staff.top && y <= staff.bot;
             }) ?? [];
           const missing = origins.filter(
             ({ span }) =>

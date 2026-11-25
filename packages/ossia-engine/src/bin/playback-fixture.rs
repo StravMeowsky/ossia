@@ -80,8 +80,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let selection_geometry = ossia_score::selection_geometry(&index, &layout)?;
     let selection = check_selection
         .then(|| {
-            let reliable = selection_geometry.has_engraved_measures()
-                || ossia_score::music_identity_with_index(&index, &source).reliable;
+            let engraved = selection_geometry.has_engraved_measures();
+            let reliable =
+                engraved || ossia_score::music_identity_with_index(&index, &source).reliable;
             let pages = selection_geometry
                 .iter()
                 .map(|page| {
@@ -92,6 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             Ok::<_, ossia_types::AppError>(serde_json::json!({
+                "engraved": engraved,
                 "reliable": reliable,
                 "measureCountError": index.measure_count().err(),
                 "staves": index.staves,

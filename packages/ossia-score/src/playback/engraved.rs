@@ -1,5 +1,5 @@
 use super::timing::seconds_at;
-use crate::{EngravedNote, MidiFile, ScoreLayout};
+use crate::{EngravedNote, MidiFile, ScoreIndex, ScoreLayout};
 use ossia_types::{GeometryPage, PlaybackNoteGroup, SelectionTarget};
 use std::collections::{HashMap, HashSet};
 
@@ -7,11 +7,26 @@ struct Head<'a> {
     id: &'a str,
     note: EngravedNote,
     staff: Option<usize>,
-    voice: Option<String>,
+    voice: Option<&'a str>,
 }
 
 fn tick(note: EngravedNote, ppqn: u64) -> Option<u64> {
-    moment_ticks(i128::from(note.numerator), note.denominator, ppqn)
+    if note.grace_numerator == 0 {
+        return moment_ticks(i128::from(note.numerator), note.denominator, ppqn);
+    }
+    if note.denominator == 0 || note.grace_denominator == 0 {
+        return None;
+    }
+    // LilyPond's MIDI writer scales grace time by 9/40 and truncates the full moment.
+    let main = i128::from(note.numerator) * 40;
+    let grace = i128::from(note.grace_numerator) * 9;
+    let numerator = (main.checked_mul(i128::from(note.grace_denominator))?)
+        .checked_add(grace.checked_mul(i128::from(note.denominator))?)?
+        .checked_mul(4 * i128::from(ppqn))?;
+    let denominator = i128::from(note.denominator)
+        .checked_mul(i128::from(note.grace_denominator))?
+        .checked_mul(40)?;
+    (numerator / denominator).try_into().ok()
 }
 
 fn moment_ticks(numerator: i128, denominator: u64, ppqn: u64) -> Option<u64> {
@@ -117,6 +132,7 @@ fn rest_groups(
 
 /// Replace positional guesses only when engraved moments prove one constant pitch offset per voice.
 pub(super) fn note_groups(
+    index: &ScoreIndex,
     layout: &ScoreLayout,
     pages: &[GeometryPage],
     midi: &MidiFile,
@@ -169,13 +185,28 @@ pub(super) fn note_groups(
                 id: element_id,
                 note,
                 staff: element.region.staff_index,
-                voice: element.region.voice.clone(),
+                voice: element.region.voice.as_deref(),
             })
         })
         .collect::<Vec<_>>();
     if heads.is_empty() {
         return;
     }
+    let mut voice_staves = HashMap::<_, Option<usize>>::new();
+    for staff in &index.staves {
+        for voice in &staff.voices {
+            voice_staves
+                .entry(voice.as_str())
+                .and_modify(|owner| *owner = owner.filter(|i| *i == staff.staff_index))
+                .or_insert(Some(staff.staff_index));
+        }
+    }
+    // Staff changes move the printed head while keeping the same source voice.
+    let source_staff = |head: &Head<'_>| {
+        head.voice
+            .and_then(|voice| voice_staves.get(voice).copied().flatten())
+            .or(head.staff)
+    };
     let by_id = heads
         .iter()
         .map(|head| (head.id, head))
@@ -188,7 +219,7 @@ pub(super) fn note_groups(
         chain.sort_by_key(|id| tick(by_id[id.as_str()].note, ppqn));
         continuations.extend(chain.into_iter().skip(1));
     }
-    let mut offsets = HashMap::<(Option<usize>, Option<String>), HashSet<i16>>::new();
+    let mut offsets = HashMap::<(Option<usize>, Option<&str>), HashSet<i16>>::new();
     for head in &heads {
         if head.note.grace_numerator != 0 || continuations.contains(head.id) {
             continue;
@@ -209,7 +240,7 @@ pub(super) fn note_groups(
             .map(|note| i16::from(note.note) - head.note.pitch as i16)
             .collect::<HashSet<_>>();
         offsets
-            .entry((head.staff, head.voice.clone()))
+            .entry((source_staff(head), head.voice))
             .and_modify(|values| values.retain(|value| candidates.contains(value)))
             .or_insert(candidates);
     }
@@ -217,7 +248,7 @@ pub(super) fn note_groups(
     let mut replaced = HashSet::new();
     for head in &heads {
         let Some(offsets) = offsets
-            .get(&(head.staff, head.voice.clone()))
+            .get(&(source_staff(head), head.voice))
             .filter(|set| set.len() == 1)
         else {
             continue;
@@ -237,25 +268,11 @@ pub(super) fn note_groups(
             .tracks
             .iter()
             .flat_map(|track| track.notes.iter().map(move |note| (track.track, note)))
-            .filter(|(_, note)| {
-                if note.note != pitch as u8 {
-                    return false;
-                }
-                if head.note.grace_numerator == 0 {
-                    return note.time == time;
-                }
-                let grace = head.note.grace_numerator as f64 / head.note.grace_denominator as f64
-                    * 4.
-                    * ppqn as f64;
-                note.time < time && note.time as f64 >= time as f64 + grace
-            })
+            .filter(|(_, note)| note.note == pitch as u8 && note.time == time)
             .collect::<Vec<_>>();
         let Some((track, note)) = matching.first().copied() else {
             continue;
         };
-        if matching.iter().any(|(_, other)| other.time != note.time) {
-            continue;
-        }
         let start = seconds_at(note.time, ppqn, midi);
         // Unison performers can have different releases; their shared pitch and
         // attack are certain even when this head's performer is unresolved.
@@ -270,6 +287,11 @@ pub(super) fn note_groups(
         // Accurate groups can already join notation and TAB for one source note.
         if groups.iter().any(|group| {
             group.element_ids.iter().any(|id| id == head.id)
+                && group.element_ids.iter().all(|id| {
+                    by_id
+                        .get(id.as_str())
+                        .is_none_or(|other| other.voice == head.voice)
+                })
                 && group.pitches == [pitch as u8]
                 && group
                     .start_seconds
@@ -286,7 +308,7 @@ pub(super) fn note_groups(
             element_ids: vec![head.id.to_owned()],
             pitches: vec![pitch as u8],
             staff_index: head.staff,
-            voice: head.voice.clone(),
+            voice: head.voice.map(str::to_owned),
             start_seconds: Some(start),
             duration_seconds,
             part_id: (matching.len() == 1).then(|| format!("{track}:{}", note.channel)),

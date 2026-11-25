@@ -9,6 +9,12 @@ pnpm verify
 The combined command generates one render bundle per score source. Playback,
 audition and selection checks share its SVG, MIDI and geometry data.
 
+Pass case IDs to run all three checks for those scores:
+
+```sh
+pnpm verify bach-goldberg-aria
+```
+
 Run a suite on all cases or select case IDs:
 
 ```sh
@@ -35,7 +41,7 @@ independent pitch, timing and source-position expectations; they must not be
 copied from current output.
 CI installs the locked LilyPond engine on macOS and runs `pnpm verify`.
 
-To add a case, add a self-contained `.ly` excerpt and an entry in `cases.json`.
+To add a case, add a self-contained `.ly` source and an entry in `cases.json`.
 Confirm the case fails for the reported problem before applying its fix; retain
 the original score where necessary to reproduce the issue.
 For `mapped` or `playhead` checks, specify `time` in seconds, MIDI `pitch`, and

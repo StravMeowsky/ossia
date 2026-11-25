@@ -6,8 +6,8 @@ import { runPlaybackCases } from './playback-cases.mjs';
 import { fixtureRenderer, fixtures } from './render-fixture.mjs';
 import { runSelectionCases } from './selection-cases.mjs';
 
-/** Run all verification suites against a shared render of each fixture source. */
-export async function runVerification() {
+/** Run all verification suites for the selected cases, sharing renders by source. */
+export async function runVerification(ids = []) {
   const render = fixtureRenderer('all');
   const renders = new Map();
   const renderOnce = (entry) => {
@@ -22,11 +22,11 @@ export async function runVerification() {
     { name: 'selection', run: runSelectionCases },
   ]) {
     console.log(`Verifying ${name} fixtures`);
-    const status = await run([], renderOnce);
+    const status = await run(ids, renderOnce);
     if (status) return status;
   }
   return 0;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-  process.exitCode = await runVerification();
+  process.exitCode = await runVerification(process.argv.slice(2));

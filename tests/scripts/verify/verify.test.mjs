@@ -52,3 +52,13 @@ test('stops after a failed audit and returns its status', async () => {
   assert.equal(await runVerification(), 1);
   assert.equal(runSelectionCases.mock.calls.length, 0);
 });
+
+test('passes selected case IDs to every suite', async () => {
+  const ids = ['first', 'second'];
+  assert.equal(await runVerification(ids), 0);
+  for (const suite of [runPlaybackCases, runAuditionCases, runSelectionCases])
+    assert.deepEqual(
+      suite.mock.calls.map(([ids]) => ids),
+      [['first', 'second']],
+    );
+});

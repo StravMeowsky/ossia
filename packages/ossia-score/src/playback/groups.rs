@@ -840,7 +840,15 @@ pub(super) fn note_groups(
             groups = visual_groups;
         }
     }
-    super::engraved::note_groups(layout, &pages, midi, ppqn, &element_pitches, &mut groups);
+    super::engraved::note_groups(
+        index,
+        layout,
+        &pages,
+        midi,
+        ppqn,
+        &element_pitches,
+        &mut groups,
+    );
     merge_tied_groups(&mut groups, &pages);
     groups.retain(|group| group.start_seconds.is_some());
     groups.sort_by(|a, b| {
@@ -849,6 +857,24 @@ pub(super) fn note_groups(
             .total_cmp(&b.start_seconds.unwrap_or(f64::INFINITY))
             .then_with(|| a.element_ids.cmp(&b.element_ids))
     });
+    // The visual pass can leave MIDI-only placeholders that engraving has since resolved.
+    for onset in groups
+        .chunk_by_mut(|a, b| a.start_seconds == b.start_seconds)
+        .filter(|onset| onset[0].element_ids.is_empty())
+    {
+        let covered = onset
+            .iter()
+            .filter(|group| !group.element_ids.is_empty())
+            .flat_map(|group| group.pitches.iter().copied())
+            .collect::<HashSet<_>>();
+        for group in onset
+            .iter_mut()
+            .filter(|group| group.element_ids.is_empty())
+        {
+            group.pitches.retain(|pitch| !covered.contains(pitch));
+        }
+    }
+    groups.retain(|group| !group.element_ids.is_empty() || !group.pitches.is_empty());
     let element_positions = pages
         .iter()
         .flat_map(|page| {

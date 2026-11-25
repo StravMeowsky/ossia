@@ -120,15 +120,10 @@ for (const fixture of fixtures) {
         );
         const point =
           points.find((p) => {
-            const target = hitElement(scorePage, p.x, p.y)?.region.target;
-            return (
-              target?.kind === 'element' &&
-              element.region.target.kind === 'element' &&
-              target.elementId === element.region.target.elementId
-            );
+            return hitElement(scorePage, p.x, p.y) === element;
           }) ?? points[4]!;
         const overlay = page.locator(`[data-page="${scorePage.page}"] .overlay`);
-        let box = (await overlay.boundingBox())!;
+        const box = (await overlay.boundingBox())!;
         const view = scorePage.viewBox!;
         const viewport = (await page.locator('.score-scroll').boundingBox())!;
         const targetY = box.y + ((point.y - view.y0) / (view.y1 - view.y0)) * box.height;
@@ -142,16 +137,51 @@ for (const fixture of fixtures) {
                 requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
               ),
           );
-          box = (await overlay.boundingBox())!;
         }
-        await overlay.click({
-          position: {
-            x: ((point.x - view.x0) / (view.x1 - view.x0)) * box.width,
-            y: ((point.y - view.y0) / (view.y1 - view.y0)) * box.height,
+        // The browser can round a fractional click outside a stem's hit region.
+        const pixels = await overlay.evaluate(
+          (node, points) => {
+            if (!(node instanceof SVGSVGElement)) throw new Error('Missing score overlay');
+            const transform = node.getScreenCTM()!;
+            const inverse = transform.inverse();
+            return points.flatMap((point) => {
+              const screen = new DOMPoint(point.x, point.y).matrixTransform(transform);
+              return [Math.floor(screen.x), Math.ceil(screen.x)].flatMap((x) =>
+                [Math.floor(screen.y), Math.ceil(screen.y)].map((y) => {
+                  const score = new DOMPoint(x, y).matrixTransform(inverse);
+                  return { x, y, scoreX: score.x, scoreY: score.y };
+                }),
+              );
+            });
           },
-          modifiers: alt ? ['Alt'] : [],
-        });
-        return hitElement(scorePage, point.x, point.y)!;
+          [point, ...points],
+        );
+        const targets = pixels.map((pixel) => ({
+          ...pixel,
+          hit: hitElement(scorePage, pixel.scoreX, pixel.scoreY),
+        }));
+        const target =
+          targets.find(({ hit }) => hit === element) ??
+          targets.find(({ hit }) => {
+            if (!hit || !heads.includes(hit) || !heads.includes(element)) return false;
+            const { x0, x1, y0, y1 } = element.bounds;
+            return (
+              hit.bounds.x0 === x0 &&
+              hit.bounds.x1 === x1 &&
+              hit.bounds.y0 === y0 &&
+              hit.bounds.y1 === y1 &&
+              groupFor(hit).startSeconds === groupFor(element).startSeconds &&
+              groupFor(hit).pitches[0] === groupFor(element).pitches[0]
+            );
+          });
+        expect(target, `Clickable pixel for ${element.region.label}`).toBeDefined();
+        if (alt) await page.keyboard.down('Alt');
+        try {
+          await page.mouse.click(target!.x, target!.y);
+        } finally {
+          if (alt) await page.keyboard.up('Alt');
+        }
+        return target!.hit!;
       };
       const assertGroup = async (
         group: ScorePlayback['groups'][number],

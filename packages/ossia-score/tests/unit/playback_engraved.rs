@@ -3,7 +3,7 @@ use crate::{
     build_index, build_layout, selection_geometry, MidiDivision, MidiNote, MidiTrack, SvgPage,
 };
 
-fn fixture(pitches: &[u8]) -> (ScoreLayout, Vec<GeometryPage>, MidiFile) {
+fn fixture(pitches: &[u8]) -> (ScoreIndex, ScoreLayout, Vec<GeometryPage>, MidiFile) {
     let source = "music = { c'4 d'4 }\n\\score { \\new Staff \\music }";
     let index = build_index(source);
     let svg = format!(
@@ -45,14 +45,22 @@ fn fixture(pitches: &[u8]) -> (ScoreLayout, Vec<GeometryPage>, MidiFile) {
         tempos: Vec::new(),
         time_signatures: Vec::new(),
     };
-    (layout, pages.pages, midi)
+    (index, layout, pages.pages, midi)
 }
 
 #[test]
 fn exact_events_bind_each_head_to_one_sounding_pitch_without_coordinates() {
-    let (layout, pages, midi) = fixture(&[60, 62]);
+    let (index, layout, pages, midi) = fixture(&[60, 62]);
     let mut groups = Vec::new();
-    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    note_groups(
+        &index,
+        &layout,
+        &pages,
+        &midi,
+        480,
+        &HashMap::new(),
+        &mut groups,
+    );
     groups.sort_by(|a, b| a.start_seconds.partial_cmp(&b.start_seconds).unwrap());
     assert_eq!(groups.len(), 2);
     assert_eq!(groups[0].pitches, [60]);
@@ -63,15 +71,23 @@ fn exact_events_bind_each_head_to_one_sounding_pitch_without_coordinates() {
 
 #[test]
 fn ambiguous_octave_doubling_does_not_choose_a_performer_by_pitch_proximity() {
-    let (layout, pages, midi) = fixture(&[60, 62, 72, 74]);
+    let (index, layout, pages, midi) = fixture(&[60, 62, 72, 74]);
     let mut groups = Vec::new();
-    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    note_groups(
+        &index,
+        &layout,
+        &pages,
+        &midi,
+        480,
+        &HashMap::new(),
+        &mut groups,
+    );
     assert!(groups.is_empty());
 }
 
 #[test]
 fn source_pitch_evidence_disambiguates_octave_doubling() {
-    let (layout, pages, midi) = fixture(&[60, 62, 72, 74]);
+    let (index, layout, pages, midi) = fixture(&[60, 62, 72, 74]);
     let hints = pages[0]
         .elements
         .iter()
@@ -90,14 +106,14 @@ fn source_pitch_evidence_disambiguates_octave_doubling() {
         })
         .collect();
     let mut groups = Vec::new();
-    note_groups(&layout, &pages, &midi, 480, &hints, &mut groups);
+    note_groups(&index, &layout, &pages, &midi, 480, &hints, &mut groups);
     assert_eq!(groups.len(), 2);
     assert!(groups.iter().all(|group| group.pitches[0] < 72));
 }
 
 #[test]
 fn muted_heads_remain_silent() {
-    let (layout, pages, midi) = fixture(&[60, 62]);
+    let (index, layout, pages, midi) = fixture(&[60, 62]);
     let id = match &pages[0].elements[0].region.target {
         SelectionTarget::Element { element_id } => element_id.clone(),
         _ => unreachable!(),
@@ -111,7 +127,15 @@ fn muted_heads_remain_silent() {
         duration_seconds: Some(0.5),
         part_id: None,
     }];
-    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    note_groups(
+        &index,
+        &layout,
+        &pages,
+        &midi,
+        480,
+        &HashMap::new(),
+        &mut groups,
+    );
     assert!(groups
         .iter()
         .find(|group| group.element_ids.contains(&id))
@@ -164,7 +188,7 @@ fn moments_reject_negative_non_integral_and_zero_denominator_ticks() {
 
 #[test]
 fn accurate_groups_keep_their_joined_notation_targets() {
-    let (layout, pages, midi) = fixture(&[60, 62]);
+    let (index, layout, pages, midi) = fixture(&[60, 62]);
     let id = match &pages[0].elements[0].region.target {
         SelectionTarget::Element { element_id } => element_id.clone(),
         _ => unreachable!(),
@@ -178,7 +202,15 @@ fn accurate_groups_keep_their_joined_notation_targets() {
         duration_seconds: Some(0.5),
         part_id: Some("0:0".into()),
     }];
-    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    note_groups(
+        &index,
+        &layout,
+        &pages,
+        &midi,
+        480,
+        &HashMap::new(),
+        &mut groups,
+    );
     assert_eq!(groups.len(), 2);
     assert_eq!(groups[0].element_ids, [id, "paired-tab".into()]);
     assert_eq!(groups[0].part_id.as_deref(), Some("0:0"));
@@ -186,12 +218,20 @@ fn accurate_groups_keep_their_joined_notation_targets() {
 
 #[test]
 fn unison_attacks_keep_one_pitch_when_performer_release_is_ambiguous() {
-    let (layout, pages, mut midi) = fixture(&[60, 62, 60, 62]);
+    let (index, layout, pages, mut midi) = fixture(&[60, 62, 60, 62]);
     for note in midi.tracks[0].notes.iter_mut().skip(2) {
         note.duration = Some(240);
     }
     let mut groups = Vec::new();
-    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    note_groups(
+        &index,
+        &layout,
+        &pages,
+        &midi,
+        480,
+        &HashMap::new(),
+        &mut groups,
+    );
     assert_eq!(groups.len(), 2);
     assert!(groups.iter().all(|group| group.pitches.len() == 1
         && group.duration_seconds.is_none()
@@ -231,13 +271,21 @@ fn rests_use_engraved_moments_and_durations_across_tempo_changes() {
     );
     let layout = build_layout(&index, &[SvgPage { page: 1, svg: &svg }]).unwrap();
     let pages = selection_geometry(&index, &layout).unwrap();
-    let (_, _, mut midi) = fixture(&[]);
+    let (_, _, _, mut midi) = fixture(&[]);
     midi.tempos = vec![crate::MidiTempo {
         tick: 480,
         microseconds_per_quarter: 1_000_000,
     }];
     let mut groups = Vec::new();
-    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    note_groups(
+        &index,
+        &layout,
+        &pages,
+        &midi,
+        480,
+        &HashMap::new(),
+        &mut groups,
+    );
     groups.sort_by(|a, b| a.start_seconds.partial_cmp(&b.start_seconds).unwrap());
     assert_eq!(groups.len(), 3);
     assert_eq!(groups[0].start_seconds, Some(0.));

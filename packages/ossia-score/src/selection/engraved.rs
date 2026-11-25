@@ -14,7 +14,7 @@ impl Moment {
     }
 }
 
-/// Index an unnumbered grid only when every cell has same-staff source evidence
+/// Index an unnumbered grid only when every cell has engraved source evidence
 /// and successive engraved columns agree with the native score timeline.
 pub(super) fn measures(index: &ScoreIndex, layout: &ScoreLayout) -> Option<EngravedMeasures> {
     if layout.columns.is_empty()
@@ -29,6 +29,13 @@ pub(super) fn measures(index: &ScoreIndex, layout: &ScoreLayout) -> Option<Engra
     }
     let mut measures = BTreeMap::<_, Vec<SourceSpan>>::new();
     let mut moments = BTreeMap::<u32, Vec<Moment>>::new();
+    let voice_spans = index
+        .staves
+        .iter()
+        .flat_map(|staff| &staff.voices)
+        .filter_map(|voice| index.voice(voice))
+        .map(|voice| voice.music_span)
+        .collect::<Vec<_>>();
     for (page_index, page) in layout.pages.iter().enumerate() {
         if page.page as usize != page_index + 1 || page.systems.is_empty() {
             return None;
@@ -93,14 +100,10 @@ pub(super) fn measures(index: &ScoreIndex, layout: &ScoreLayout) -> Option<Engra
             let (ordinal, _) = columns.iter().find(|(_, column)| {
                 column.system_index == system && x >= column.x0 && x < column.x1
             })?;
-            if !index.staves[staff]
-                .voices
+            // The engraved staff follows staff changes while the source stays in its voice.
+            if !voice_spans
                 .iter()
-                .filter_map(|voice| index.voice(voice))
-                .any(|voice| {
-                    voice.music_span.byte_start <= span.byte_start
-                        && span.byte_end <= voice.music_span.byte_end
-                })
+                .any(|voice| voice.byte_start <= span.byte_start && span.byte_end <= voice.byte_end)
             {
                 return None;
             }

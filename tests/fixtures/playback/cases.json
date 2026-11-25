@@ -573,5 +573,40 @@
         "to": 21
       }
     ]
+  },
+  {
+    "id": "bach-goldberg-aria",
+    "source": "bach-goldberg-aria.ly",
+    "origin": "Bach, Goldberg Variations, BWV 988: Aria, complete keyboard score (Mutopia 979)",
+    "selection": { "measures": 32, "staves": 2 },
+    "checks": [
+      {
+        "kind": "playhead",
+        "time": 3.5,
+        "pitch": 78,
+        "needle": "fis8 \\appoggiatura e16"
+      },
+      {
+        "kind": "playhead",
+        "time": 8.5,
+        "pitch": 66,
+        "duration": 0.25,
+        "needle": "g,4\\prallmordent g4.\\downprall fis16 g16",
+        "offset": 31
+      },
+      {
+        "kind": "mapped",
+        "time": 9.885416666666666,
+        "pitch": 64,
+        "needle": "e8 d2"
+      },
+      {
+        "kind": "mapped",
+        "time": 26,
+        "pitch": 64,
+        "needle": "f4\\rest \\staffUpper e4",
+        "offset": 20
+      }
+    ]
   }
 ]

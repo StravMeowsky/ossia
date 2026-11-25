@@ -108,6 +108,28 @@ test('allows cross-staff and hit-only objects without demanding their source in 
   assert.deepEqual(auditSelection(bundle).issues, []);
 });
 
+test('requires the rendered staff to resolve a cross-staff span in an engraved measure grid', () => {
+  const bundle = fixture();
+  bundle.selection.engraved = true;
+  const [first] = bundle.layout.pages[0].objects;
+  const crossStaff = { byteStart: 32, byteEnd: 34, start: { line: 5 } };
+  bundle.layout.pages[0].objects.push({ ...first, span: crossStaff });
+  const [measure] = bundle.selection.pages[0];
+  assert.deepEqual(auditSelection(bundle).issues, [
+    {
+      kind: 'wrong-measure-source',
+      page: 1,
+      systemIndex: 0,
+      column: 0,
+      staffIndex: 0,
+      locator: measure.target.locator,
+      lines: [5],
+    },
+  ]);
+  measure.spans.push(crossStaff);
+  assert.deepEqual(auditSelection(bundle).issues, []);
+});
+
 test('refuses mismatched snapshots and explains absent geometry or barlines', () => {
   const bundle = fixture();
   assert.throws(
