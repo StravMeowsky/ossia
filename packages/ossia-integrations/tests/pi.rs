@@ -1,3 +1,4 @@
+#[cfg(unix)]
 use super::*;
 #[cfg(unix)]
 use std::collections::BTreeMap;
