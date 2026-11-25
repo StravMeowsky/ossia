@@ -48,6 +48,7 @@ async function showPage(page: Page, number: number) {
   const box = (await host.boundingBox())!;
   const viewport = (await page.locator('.score-scroll').boundingBox())!;
   await page.locator('.score-scroll').dispatchEvent('wheel', { deltaY: box.y - viewport.y - 32 });
+  await expect.poll(async () => (await host.boundingBox())!.y).toBeCloseTo(viewport.y + 32, 0);
   await expect(host.locator('.score-image')).toBeVisible();
 }
 
@@ -205,12 +206,12 @@ for (const fixture of fixtures) {
           await page
             .locator('.score-scroll')
             .dispatchEvent('wheel', { deltaY: targetY - viewport.y - viewport.height / 2 });
-          await page.evaluate(
-            () =>
-              new Promise<void>((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-              ),
-          );
+          await expect
+            .poll(async () => {
+              const current = (await overlay.boundingBox())!;
+              return current.y + ((point.y - view.y0) / (view.y1 - view.y0)) * current.height;
+            })
+            .toBeCloseTo(viewport.y + viewport.height / 2, 0);
         }
         // The browser can round a fractional click outside a stem's hit region.
         const pixels = await overlay.evaluate(
