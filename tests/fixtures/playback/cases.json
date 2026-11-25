@@ -218,6 +218,62 @@
         "pitch": 56,
         "needle": "{ a gis }",
         "offset": 4
+      },
+      {
+        "kind": "mapped",
+        "time": 0.75,
+        "pitch": 57,
+        "needle": "a8.^2 h16^0 c8.^1 d16^4",
+        "offset": 0
+      },
+      {
+        "kind": "mapped",
+        "time": 1.3125,
+        "pitch": 59,
+        "needle": "a8.^2 h16^0 c8.^1 d16^4",
+        "offset": 6
+      },
+      {
+        "kind": "mapped",
+        "time": 3,
+        "pitch": 65,
+        "needle": "e4^0 f^2^1",
+        "offset": 5
+      },
+      {
+        "kind": "mapped",
+        "time": 3,
+        "pitch": 50,
+        "needle": "a2 r4 <d a'>",
+        "offset": 7
+      },
+      {
+        "kind": "mapped",
+        "time": 3,
+        "pitch": 57,
+        "needle": "a2 r4 <d a'>",
+        "offset": 9
+      },
+      {
+        "kind": "mapped",
+        "time": 3.75,
+        "pitch": 52,
+        "needle": "<e_1_2 gis>2 e,4 gis'",
+        "offset": 1
+      },
+      {
+        "kind": "mapped",
+        "time": 3.75,
+        "pitch": 56,
+        "needle": "<e_1_2 gis>2 e,4 gis'",
+        "offset": 7
+      },
+      {
+        "kind": "mapped",
+        "time": 3.75,
+        "pitch": 59,
+        "needle": "h,^0 e2^0 d4^1^4",
+        "offset": 0
       }
     ]
   },
@@ -351,5 +407,71 @@
         "offset": 73
       }
     ]
+  },
+  {
+    "id": "piano-prelude",
+    "source": "piano-prelude.ly",
+    "origin": "Praeludium I, BWV 846, complete piano score",
+    "checks": []
+  },
+  {
+    "id": "xinhu-original",
+    "source": "xinhu-original.ly",
+    "origin": "Xinhu, complete guitar score",
+    "checks": []
+  },
+  {
+    "id": "majo-original",
+    "source": "majo-original.ly",
+    "origin": "Majo no Yakata, complete piano score",
+    "checks": []
+  },
+  {
+    "id": "bittersweet-original",
+    "source": "bittersweet-original.ly",
+    "origin": "Bittersweet, complete piano score",
+    "checks": []
+  },
+  {
+    "id": "sakura-tab",
+    "source": "sakura-tab.ly",
+    "origin": "Sakuragusa, complete guitar tablature",
+    "checks": []
+  },
+  {
+    "id": "doraemon-original",
+    "source": "doraemon-original.ly",
+    "origin": "Doraemon, complete guitar score",
+    "checks": []
+  },
+  {
+    "id": "ukulele-minuet",
+    "source": "ukulele-minuet.ly",
+    "origin": "Petzold Minuet, complete ukulele score",
+    "checks": []
+  },
+  {
+    "id": "violin-partita",
+    "source": "violin-partita.ly",
+    "origin": "Bach Partita No. 1, BWV 1002, complete violin score",
+    "checks": []
+  },
+  {
+    "id": "bach-sheep-four-hands",
+    "source": "bach-sheep-four-hands.ly",
+    "origin": "Bach BWV 208, complete piano four-hands arrangement",
+    "checks": []
+  },
+  {
+    "id": "evening-glow",
+    "source": "evening-glow.ly",
+    "origin": "Evening Glow, complete melody",
+    "checks": []
+  },
+  {
+    "id": "hollow-knight-guitar",
+    "source": "hollow-knight-guitar.ly",
+    "origin": "Hollow Knight, complete guitar tablature",
+    "checks": []
   }
 ]

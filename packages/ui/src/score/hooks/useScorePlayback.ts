@@ -12,13 +12,12 @@ import type { Api } from '../utils/api.ts';
 import { scheduleWindow } from '../utils/playbackSchedule.ts';
 import {
   auditionDuration,
+  adjacentAuditionGroup,
   auditionMembers,
+  auditionSounds,
   combinedAuditionGroup,
   groupAt,
   measureSpanAt,
-  sameNoteGroup,
-  sameOnset,
-  sameVoice,
 } from '../utils/playbackTimeline.ts';
 import { loadScorePlayback, peekScorePlayback } from '../utils/renderCache.ts';
 
@@ -298,9 +297,10 @@ export function useScorePlayback(
         resumeReadyRef.current = false;
         scoreAudio.stopAll();
       }
-      if (members.some((member) => member.pitches.length)) {
+      const sounds = auditionSounds(members);
+      if (sounds.length) {
         try {
-          const instruments = members.map((member) => {
+          const instruments = sounds.map((member) => {
             const note = timelineRef.current?.notes.find(
               (candidate) =>
                 candidate.partId === member.partId &&
@@ -318,7 +318,7 @@ export function useScorePlayback(
           await scoreAudio.resume();
           const now = scoreAudio.now();
           await Promise.all(
-            members.map((member, index) =>
+            sounds.map((member, index) =>
               scoreAudio.play(member.pitches, now, auditionDuration(member), instruments[index]!),
             ),
           );
@@ -335,28 +335,12 @@ export function useScorePlayback(
       const timeline = timelineRef.current;
       if (!enabled || !timeline || !timeline.groups.length) return false;
       const simultaneous = options?.simultaneous ?? false;
-      const anchor = auditionGroupRef.current;
-      if (!anchor) {
-        void audition(timeline.groups[0]!, { simultaneous });
-        return true;
-      }
-      const groups = timeline.groups.filter((group) => sameVoice(group, anchor));
-      const current = groups.findIndex((group) => sameNoteGroup(group, anchor));
-      if (current < 0) {
-        void audition(timeline.groups[0]!, { simultaneous });
-        return true;
-      }
-      const onsetGroups = simultaneous
-        ? groups.filter(
-            (group, index) =>
-              group.startSeconds !== null &&
-              !groups.slice(0, index).some((candidate) => sameOnset(candidate, group)),
-          )
-        : groups;
-      const onsetCurrent = simultaneous
-        ? onsetGroups.findIndex((group) => sameOnset(group, anchor))
-        : current;
-      const next = onsetGroups[onsetCurrent + (direction === 'next' ? 1 : -1)];
+      const next = adjacentAuditionGroup(
+        timeline,
+        auditionGroupRef.current,
+        direction,
+        simultaneous,
+      );
       if (next) void audition(next, { simultaneous });
       return true;
     },

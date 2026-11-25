@@ -1,6 +1,7 @@
 use crate::{MidiFile, ScoreIndex, ScoreLayout};
 use ossia_types::{AppError, ContentHash, ErrorCode, PlaybackNote, ScorePlayback};
 
+mod engraved;
 mod fallback;
 mod geometry;
 mod groups;

@@ -35,6 +35,28 @@ export function sameVoice(left: PlaybackNoteGroup, right: PlaybackNoteGroup) {
   return left.staffIndex === right.staffIndex && left.voice === right.voice;
 }
 
+/** Select the next audition group using the same voice and optional onset stepping. */
+export function adjacentAuditionGroup(
+  timeline: ScorePlayback,
+  anchor: PlaybackNoteGroup | null,
+  direction: 'previous' | 'next',
+  simultaneous: boolean,
+) {
+  if (!anchor) return timeline.groups[0];
+  const groups = timeline.groups.filter((group) => sameVoice(group, anchor));
+  const current = groups.findIndex((group) => sameNoteGroup(group, anchor));
+  if (current < 0) return timeline.groups[0];
+  const steps = simultaneous
+    ? groups.filter(
+        (group, index) =>
+          group.startSeconds !== null &&
+          !groups.slice(0, index).some((candidate) => sameOnset(candidate, group)),
+      )
+    : groups;
+  const position = simultaneous ? steps.findIndex((group) => sameOnset(group, anchor)) : current;
+  return steps[position + (direction === 'next' ? 1 : -1)];
+}
+
 export function sameOnset(left: PlaybackNoteGroup, right: PlaybackNoteGroup) {
   return (
     left.startSeconds !== null &&
@@ -71,4 +93,24 @@ export function combinedAuditionGroup(members: PlaybackNoteGroup[], primary: Pla
 
 export function auditionDuration(group: PlaybackNoteGroup) {
   return Math.min(0.9, Math.max(0.18, group.durationSeconds ?? 0.6));
+}
+
+/** Play one attack for duplicate notation of the same MIDI performer. */
+export function auditionSounds(members: PlaybackNoteGroup[]) {
+  const seen = new Set<string>();
+  return members.flatMap((member) => {
+    const pitches = member.pitches.filter((pitch) => {
+      if (!member.partId) return true;
+      const key = JSON.stringify([
+        member.partId,
+        pitch,
+        member.startSeconds,
+        member.durationSeconds,
+      ]);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return pitches.length ? [{ ...member, pitches }] : [];
+  });
 }

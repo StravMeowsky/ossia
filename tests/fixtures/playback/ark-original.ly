@@ -152,6 +152,9 @@ PartPOneVoiceOneChords = \chordmode {
   des16:maj7 s8. s16 s16 s16 s16 s16 s16 s16 s16 s4 \bar "|."
 }
 
+% Under the tempo map, s1*20 r8 places the first C at 87.459052 s.
+% Three sixteenths separate the next C attacks: 88.209052, 88.959052,
+% 89.709052 s. Stem-direction aliases consume no musical time.
 PartPOneVoiceTwo = \relative c' {
   \clef "treble" \numericTimeSignature \time 4/4 \key as \major s1*20 | % 20
   r8 \D c16 \D es16 \D g16 \D c,16 \D es16 \D g16 \D c,16

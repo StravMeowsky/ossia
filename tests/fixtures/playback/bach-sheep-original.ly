@@ -60,6 +60,8 @@ fluteOne = \relative c'' {
 	\mark \markup { \italic { Da Capo. } }
 }
 
+% Measure 11 starts at 40 s. Counting the written durations places
+% the second F, E-flat and C at 41.25, 41.5 and 41.75 s.
 fluteTwo = \relative c'' {
 	\clef "treble"
 	\time 4/4

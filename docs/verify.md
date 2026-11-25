@@ -11,6 +11,8 @@ To run only the playback cases, optionally selecting specific cases:
 ```sh
 pnpm verify:playback
 pnpm verify:playback xinhu-ledger bittersweet-ties
+pnpm verify:audition
+pnpm verify:audition sor-original-locations
 ```
 
 ## Playback fixtures
@@ -41,6 +43,43 @@ backwards within a time range. Use `playhead` only when the chosen notehead is
 expected to intersect the line at that time; simultaneous voices may choose
 another valid notehead. Keep browser tests for interactions, scheduling, and
 DOM rendering that the fixture runner does not exercise.
+
+## Individual audition
+
+`pnpm verify:audition` renders every case in `cases.json`.
+Explicit case IDs select a subset. Complete scores cover the local library's
+piano, guitar, ukulele, violin and ensemble examples; focused excerpts retain
+checks for individual musical constructs. It checks every visible notehead for a
+clickable hit region, one timed single-pitch group, a matching sounding attack
+and reachability through the page's ordinary arrow-key navigation. Tied
+continuations may share their attack's group. Timed groups with no pitches are
+intentionally silent notation, such as dead notes; they must remain clickable
+and keyboard-reachable, and are counted separately. Coincident unisons are counted
+separately when they occupy identical bounds and produce the same pitch and
+onset.
+
+The command also runs Chrome against the generated SVG, geometry and playback
+data. On the first system of the first page, it clicks each notehead, walks
+each voice forwards and backwards, and checks Alt/Option-click against the
+simultaneous MIDI attacks. It records calls to the real audio player while
+allowing playback to run, including duplicate-attack detection across notation
+and TAB. This checks scheduled pitches, not the sound heard through speakers.
+Install Chrome with `pnpm --filter @ossia/ui exec playwright install chrome`.
+
+To audit the current library without changing scores:
+
+```sh
+pnpm audit:audition
+pnpm audit:audition -- <document-id>
+pnpm audit:audition -- --base=http://127.0.0.1:3211/api/v1/
+pnpm audit:audition -- --input=path/to/playback-fixture.json
+```
+
+The JSON report includes every failed notehead's page, source location and
+reason. Any finding or failed request makes the command fail. This data audit
+uses the page's hit testing and navigation helpers; it does not run a browser.
+Rebuild and restart the backend after Rust changes. Engraved event metadata
+requires a render from the current engine.
 
 ## Playback audit
 

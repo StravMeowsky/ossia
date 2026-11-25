@@ -235,3 +235,14 @@ fn print_derivation_hides_only_the_default_tagline() {
     assert!(!midi.text.contains("tagline"));
     assert!(midi.text.contains("\\midi {}"));
 }
+
+#[test]
+fn interactive_note_metadata_preserves_pitch_and_musical_moments() {
+    let original = "\\score { { c'4 } }\n";
+    let derived = source::derive(original, RenderFormat::Svg, true).unwrap();
+    let svg = r#"<svg><a href="ossia:NoteHead:0:-1:-1:head::related:60.5,3,16,-1,8"><path d="M0 0h1v1h-1z"/></a></svg>"#;
+    let normalized = source::normalize_svg(svg, &derived, original).unwrap();
+    assert!(normalized.contains(r#"data-ossia-note="60.5,3,16,-1,8""#));
+    assert!(normalized.contains(r#"data-ossia-id="head""#));
+    assert!(normalized.contains(r#"data-ossia-related="related""#));
+}

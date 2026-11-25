@@ -144,6 +144,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install locked engine
         run: pnpm engine:install
+      - name: Install audition browser runtime
+        run: pnpm --filter @ossia/ui exec playwright install chrome
       - name: Verify fixtures
         run: pnpm verify
 

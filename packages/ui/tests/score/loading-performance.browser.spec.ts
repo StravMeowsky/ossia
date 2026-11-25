@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Request } from '@playwright/test';
 
+import type { GeometryElement } from '../../src/generated/protocol.ts';
 import { firstId, hash, mockScoreRuntime, olderVersionId, secondId } from './score-runtime.ts';
 
 test('score displays while status, history and another page remain pending', async ({
@@ -274,24 +275,50 @@ test('playback continues offscreen without repainting the adjacent drawing', asy
   context,
   page,
 }) => {
+  const elements: GeometryElement[] = [20, 60].map((x, index) => ({
+    systemIndex: 0,
+    bounds: { x0: x, x1: x + 3, y0: 24, y1: 26 },
+    priority: 0,
+    hitBounds: [],
+    graphicIds: [],
+    linkedTargets: [],
+    region: {
+      target: { kind: 'element', elementId: `note-${index}` },
+      label: 'NoteHead',
+      elementKind: 'NoteHead',
+      spans: [],
+      occurrences: [],
+      insertionAnchor: null,
+      staffIndex: 0,
+      voice: null,
+      reason: null,
+    },
+  }));
   await mockScoreRuntime(context, {
     pageCount: 30,
     eventsDelay: 60_000,
+    elementsByPage: { 1: elements },
     playback: {
       renderKey: hash,
       sourceHash: hash,
       durationSeconds: 20,
       parts: [{ id: 'part', name: 'Piano', instrument: 'piano' }],
-      notes: [
-        {
-          partId: 'part',
-          instrument: 'piano' as const,
-          pitch: 60,
-          startSeconds: 0,
-          durationSeconds: 20,
-        },
-      ],
-      groups: [],
+      notes: elements.map((_, index) => ({
+        partId: 'part',
+        instrument: 'piano' as const,
+        pitch: 60,
+        startSeconds: index,
+        durationSeconds: index === 0 ? 1 : 19,
+      })),
+      groups: elements.map((_, index) => ({
+        elementIds: [`note-${index}`],
+        pitches: [60],
+        staffIndex: 0,
+        voice: null,
+        startSeconds: index,
+        durationSeconds: index === 0 ? 1 : 19,
+        partId: 'part',
+      })),
       systems: [
         {
           page: 1,

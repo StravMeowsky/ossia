@@ -1,0 +1,46 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { auditAudition } from './audition-audit.mjs';
+import { fixtureRenderer, fixtures, root } from './render-fixture.mjs';
+
+const ids = process.argv.slice(2);
+const cases = JSON.parse(readFileSync(path.join(fixtures, 'cases.json'), 'utf8'));
+if (ids.some((id) => !cases.some((entry) => entry.id === id))) throw new Error('unknown case');
+const selected = cases.filter((entry) => !ids.length || ids.includes(entry.id));
+if (!selected.length) throw new Error('no audition cases selected');
+const render = fixtureRenderer();
+const directory = mkdtempSync(path.join(os.tmpdir(), 'ossia-audition-'));
+try {
+  const bundles = selected.map((entry) => {
+    const bundle = render(entry);
+    const report = auditAudition(bundle.playback, bundle.geometry);
+    console.log(JSON.stringify({ id: entry.id, ...report }));
+    if (report.issues.length) process.exitCode = 1;
+    return { id: entry.id, ...bundle };
+  });
+  const input = path.join(directory, 'fixtures.json');
+  writeFileSync(input, JSON.stringify(bundles));
+  execFileSync(
+    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+    [
+      '--filter',
+      '@ossia/ui',
+      'exec',
+      'playwright',
+      'test',
+      '--project=browser',
+      'tests/score/audition-fixture.browser.spec.ts',
+    ],
+    {
+      cwd: root,
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+      env: { ...process.env, OSSIA_AUDITION_FIXTURES: input },
+    },
+  );
+} finally {
+  rmSync(directory, { recursive: true });
+}

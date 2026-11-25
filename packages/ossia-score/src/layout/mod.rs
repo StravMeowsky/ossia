@@ -7,7 +7,7 @@ mod svg;
 mod systems;
 
 use svg::read_svg;
-pub use svg::{path_bbox, BBox, SourceAnchor, SvgElement, SvgObject};
+pub use svg::{path_bbox, BBox, EngravedNote, SourceAnchor, SvgElement, SvgObject};
 use systems::systems;
 pub use systems::{StaffGeometry, SystemGeometry};
 

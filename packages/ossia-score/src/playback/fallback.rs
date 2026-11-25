@@ -198,6 +198,41 @@ pub(super) fn visual_note_groups(
         return;
     }
     performance.sort_by(|a, b| a.start_seconds.total_cmp(&b.start_seconds));
+    let positions = pages
+        .iter()
+        .flat_map(|page| {
+            page.elements.iter().filter_map(move |element| {
+                let SelectionTarget::Element { element_id } = &element.region.target else {
+                    return None;
+                };
+                Some((
+                    element_id.as_str(),
+                    (
+                        page.page,
+                        element.system_index,
+                        (element.bounds.x0 + element.bounds.x1) / 2.,
+                    ),
+                ))
+            })
+        })
+        .collect::<HashMap<_, _>>();
+    // A tie continuation has no new MIDI attack, even beside another voice's notehead.
+    let continuations = super::groups::tied_note_chains(pages)
+        .into_iter()
+        .flat_map(|mut chain| {
+            chain.sort_by(|left, right| {
+                match (positions.get(left.as_str()), positions.get(right.as_str())) {
+                    (Some(left), Some(right)) => left
+                        .0
+                        .cmp(&right.0)
+                        .then_with(|| left.1.cmp(&right.1))
+                        .then_with(|| left.2.total_cmp(&right.2)),
+                    _ => left.cmp(right),
+                }
+            });
+            chain.into_iter().skip(1)
+        })
+        .collect::<HashSet<_>>();
     let mut buckets = BTreeMap::<(u32, usize, Option<usize>, i64), VisualOnset>::new();
     for page in pages {
         for element in &page.elements {
@@ -210,6 +245,9 @@ pub(super) fn visual_note_groups(
             let SelectionTarget::Element { element_id } = &element.region.target else {
                 continue;
             };
+            if continuations.contains(element_id) {
+                continue;
+            }
             let x = (element.bounds.x0 + element.bounds.x1) / 2.;
             let y = (element.bounds.y0 + element.bounds.y1) / 2.;
             let Some(system) = systems

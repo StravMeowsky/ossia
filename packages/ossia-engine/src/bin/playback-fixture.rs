@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let geometry = serde_json::json!({ "renderKey": key, "sourceHash": index.source_hash, "pages": ossia_score::selection_geometry(&index, &layout)? });
     println!(
         "{}",
-        serde_json::json!({"playback": playback, "geometry": geometry, "midiNoteCount": midi.tracks.iter().map(|track| track.notes.len()).sum::<usize>()})
+        serde_json::json!({"playback": playback, "geometry": geometry, "layout": layout, "pages": pages, "midiNoteCount": midi.tracks.iter().map(|track| track.notes.len()).sum::<usize>()})
     );
     Ok(())
 }

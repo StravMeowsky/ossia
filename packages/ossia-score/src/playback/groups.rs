@@ -209,7 +209,7 @@ fn playable_events(
     })
 }
 
-fn tied_note_chains(pages: &[GeometryPage]) -> Vec<Vec<String>> {
+pub(super) fn tied_note_chains(pages: &[GeometryPage]) -> Vec<Vec<String>> {
     let tie_ids = pages
         .iter()
         .flat_map(|page| &page.elements)
@@ -507,11 +507,21 @@ pub(super) fn note_groups(
             .min_by(|(_, left), (_, right)| {
                 let left_onset = seconds_at(left.start_tick, ppqn, midi);
                 let right_onset = seconds_at(right.start_tick, ppqn, midi);
-                expected_seconds
-                    .map_or(0., |expected| (left_onset - expected).abs())
-                    .total_cmp(
-                        &expected_seconds.map_or(0., |expected| (right_onset - expected).abs()),
-                    )
+                // Source order is authoritative within an indexed voice. Geometry
+                // estimates cannot skip a repeated pitch's earlier performance.
+                event
+                    .measure_start
+                    .map_or(std::cmp::Ordering::Equal, |_| {
+                        left.start_tick.cmp(&right.start_tick)
+                    })
+                    .then_with(|| {
+                        expected_seconds
+                            .map_or(0., |expected| (left_onset - expected).abs())
+                            .total_cmp(
+                                &expected_seconds
+                                    .map_or(0., |expected| (right_onset - expected).abs()),
+                            )
+                    })
                     .then_with(|| {
                         (left.pitches.len() - pitches.len())
                             .cmp(&(right.pitches.len() - pitches.len()))
@@ -830,6 +840,7 @@ pub(super) fn note_groups(
             groups = visual_groups;
         }
     }
+    super::engraved::note_groups(layout, &pages, midi, ppqn, &element_pitches, &mut groups);
     merge_tied_groups(&mut groups, &pages);
     groups.retain(|group| group.start_seconds.is_some());
     groups.sort_by(|a, b| {

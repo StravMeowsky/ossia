@@ -1,35 +1,16 @@
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { candidateRoots } from '../engine/engine.mjs';
 import { auditPlayback } from './playback-audit.mjs';
+import { fixtureRenderer, fixtures } from './render-fixture.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const fixtures = path.join(root, 'tests/fixtures/playback');
 const selected = process.argv.slice(2);
 const cases = JSON.parse(readFileSync(path.join(fixtures, 'cases.json'), 'utf8'));
 if (selected.some((id) => !cases.some((entry) => entry.id === id))) throw new Error('unknown case');
-execFileSync('cargo', ['build', '--quiet', '-p', 'ossia-engine', '--bin', 'playback-fixture'], {
-  cwd: root,
-  stdio: 'inherit',
-});
-const exe = path.join(
-  path.resolve(root, process.env.CARGO_TARGET_DIR ?? 'target'),
-  'debug',
-  process.platform === 'win32' ? 'playback-fixture.exe' : 'playback-fixture',
-);
-const engine = process.env.OSSIA_TEST_LILYPOND_ROOT ?? candidateRoots(root).roots[0].dir;
+const render = fixtureRenderer();
 let failed = false;
 for (const entry of cases.filter((item) => !selected.length || selected.includes(item.id))) {
-  const source = readFileSync(path.join(fixtures, entry.source), 'utf8');
-  const raw = execFileSync(exe, [engine, path.join(fixtures, entry.source)], {
-    cwd: root,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  const { playback, geometry, midiNoteCount } = JSON.parse(raw);
+  const { source, playback, geometry, midiNoteCount } = render(entry);
   const report = auditPlayback(playback, geometry);
   const elements = geometry.pages.flatMap((page) =>
     page.elements.map((element) => ({ page: page.page, ...element })),
