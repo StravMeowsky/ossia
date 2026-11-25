@@ -230,6 +230,8 @@ for (const fixture of fixtures) {
       const { scoreAudio } = await import(modulePath);
       Reflect.set(window, 'fixtureClock', 0);
       Reflect.set(window, 'fixtureLead', null);
+      Reflect.set(scoreAudio, 'load', async () => {});
+      Reflect.set(scoreAudio, 'resume', async () => {});
       scoreAudio.now = () => Reflect.get(window, 'fixtureClock');
       scoreAudio.play = async (_pitches: number[], start: number) => {
         if (Reflect.get(window, 'fixtureLead') === null) {
