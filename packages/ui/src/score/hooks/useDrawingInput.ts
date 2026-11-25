@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
 import type { DrawingColor, DrawingPoint, DrawingStroke } from '../../generated/protocol.ts';
-import { eraseStrokes } from '../utils/drawing.ts';
+import { eraseStrokes, eraseWholeStrokes } from '../utils/drawing.ts';
+import type { EraserScope } from '../utils/drawing.ts';
 import type { DrawingController } from './useDrawing.ts';
 
 export type DrawingMode = 'pen' | 'eraser' | null;
@@ -28,7 +29,9 @@ export function useDrawingInput(
   penSize: number,
   eraserSize: number,
   color: DrawingColor,
+  eraserScope: EraserScope = 'stroke',
 ) {
+  const eraser = eraserScope === 'stroke' ? eraseWholeStrokes : eraseStrokes;
   const active = useRef<Session | null>(null);
   const touches = useRef(new Set<number>());
   const [preview, setPreview] = useState<Session | null>(null);
@@ -56,13 +59,13 @@ export function useDrawingInput(
     const { page, width, points, aspect, erase, color } = session;
     if (erase) {
       controller.edit((strokes) =>
-        points.reduce((next, point) => eraseStrokes(next, page, point, width / 2, aspect), strokes),
+        points.reduce((next, point) => eraser(next, page, point, width / 2, aspect), strokes),
       );
     } else {
       const stroke = { page, width, points, color };
       controller.edit((strokes) => [...strokes, stroke]);
     }
-  }, [controller]);
+  }, [controller, eraser]);
   const down = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!mode || !controller?.ready || event.button !== 0) return 'normal';
     const session = active.current;
@@ -160,7 +163,7 @@ export function useDrawingInput(
   let displayed = strokes;
   if (preview?.erase) {
     displayed = preview.points.reduce(
-      (next, point) => eraseStrokes(next, preview.page, point, preview.width / 2, preview.aspect),
+      (next, point) => eraser(next, preview.page, point, preview.width / 2, preview.aspect),
       strokes,
     );
   } else if (preview) {

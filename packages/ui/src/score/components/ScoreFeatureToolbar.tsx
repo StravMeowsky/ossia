@@ -1,6 +1,5 @@
 import {
   LoaderCircle,
-  Eraser,
   Maximize2,
   Minimize2,
   Pause,
@@ -17,7 +16,13 @@ import type { MessageKey } from '../../i18n.tsx';
 import type { DrawingMode } from '../hooks/useDrawingInput.ts';
 import type { PlaybackPhase } from '../hooks/useScorePlayback.ts';
 import { resolveAnnotationModifier } from '../utils/annotationInput.ts';
-import { DRAWING_COLORS, DRAWING_PALETTE, ERASER_SIZES, PEN_SIZES } from '../utils/drawing.ts';
+import {
+  DRAWING_COLORS,
+  DRAWING_PALETTE,
+  ERASER_SIZES,
+  PEN_SIZES,
+} from '../utils/drawing.ts';
+import type { EraserScope } from '../utils/drawing.ts';
 
 const COLOR_LABELS: Record<DrawingColor, MessageKey> = {
   black: 'drawingColorBlack',
@@ -26,6 +31,35 @@ const COLOR_LABELS: Record<DrawingColor, MessageKey> = {
   yellow: 'drawingColorYellow',
   red: 'drawingColorRed',
 };
+
+const ERASER_BODY =
+  'M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21M5.082 11.09l8.828 8.828';
+
+/** Lucide-style eraser above a line: cut in the middle (partial) or a whole squiggle (stroke). */
+function EraserScopeIcon({ scope }: { scope: EraserScope }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <g transform="translate(4.5 0.5) scale(0.62)">
+        <path d={ERASER_BODY} vectorEffect="non-scaling-stroke" />
+      </g>
+      {scope === 'partial' ? (
+        <path d="M3 20h4M16 20h5" />
+      ) : (
+        <path d="M3 20c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0" />
+      )}
+    </svg>
+  );
+}
 
 export function ScoreFeatureToolbar({
   editing,
@@ -49,6 +83,8 @@ export function ScoreFeatureToolbar({
   eraserSize,
   onPenSize,
   onEraserSize,
+  eraserScope,
+  onEraserScope,
   penColor,
   onPenColor,
 }: {
@@ -73,6 +109,8 @@ export function ScoreFeatureToolbar({
   eraserSize: number;
   onPenSize: (size: number) => void;
   onEraserSize: (size: number) => void;
+  eraserScope: EraserScope;
+  onEraserScope: (scope: EraserScope) => void;
   penColor: DrawingColor;
   onPenColor: (color: DrawingColor) => void;
 }) {
@@ -105,6 +143,9 @@ export function ScoreFeatureToolbar({
           ? t('playbackPauseTooltip')
           : t('playbackPlayTooltip'));
   const playbackDisabled = editing || !playbackAvailable || loading;
+  // The whole-line eraser has no size choice, so it shows no options panel.
+  const drawingOptions =
+    sizingMode && drawingAvailable && !(sizingMode === 'eraser' && eraserScope === 'stroke');
   return (
     <div
       className={`score-feature-toolbar${floating ? ' is-floating' : ''}`}
@@ -146,7 +187,6 @@ export function ScoreFeatureToolbar({
       )}
       {(drawingAvailable || editing) &&
         (['pen', 'eraser'] as const).map((mode) => {
-          const Icon = mode === 'pen' ? Pencil : Eraser;
           const label = mode === 'pen' ? t('drawingPen') : t('drawingEraser');
           return (
             <button
@@ -160,11 +200,21 @@ export function ScoreFeatureToolbar({
                 lockedTooltip ??
                 (sizingMode ? undefined : `${label} (${mode === 'pen' ? 'D' : 'R'})`)
               }
+              data-eraser-scope={mode === 'eraser' ? eraserScope : undefined}
               onClick={() => {
-                if (!editing) onDrawingMode(drawingMode === mode ? null : mode);
+                if (editing) return;
+                // An active eraser switches between whole-line and partial erasing;
+                // Escape, R or the pen leaves it.
+                if (mode === 'eraser' && drawingMode === 'eraser') {
+                  onEraserScope(eraserScope === 'stroke' ? 'partial' : 'stroke');
+                } else onDrawingMode(drawingMode === mode ? null : mode);
               }}
             >
-              <Icon aria-hidden="true" size={17} />
+              {mode === 'pen' ? (
+                <Pencil aria-hidden="true" size={17} />
+              ) : (
+                <EraserScopeIcon scope={eraserScope} />
+              )}
             </button>
           );
         })}
@@ -194,7 +244,7 @@ export function ScoreFeatureToolbar({
           <RotateCcw aria-hidden="true" size={17} strokeWidth={2.1} />
         </button>
       )}
-      {sizingMode && drawingAvailable && (
+      {drawingOptions && (
         <div className="score-drawing-options">
           <div
             className="score-drawing-sizes"

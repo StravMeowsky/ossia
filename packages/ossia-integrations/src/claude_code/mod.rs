@@ -19,6 +19,21 @@ const PLUGIN_ID: &str = "ossia@ossia-claude";
 
 pub(crate) struct ClaudeCode;
 
+/// Where the score window's assistant finds `claude`, including the installer and npm locations.
+pub(crate) fn assistant_executable() -> Option<PathBuf> {
+    let explicit = std::env::var_os("OSSIA_CLAUDE_BIN").map(PathBuf::from);
+    let mut candidates = scan::common_bin("claude");
+    if let Some(home) = dirs::home_dir() {
+        candidates.extend([
+            home.join(".claude/local/claude"),
+            home.join(".npm-global/bin/claude"),
+            home.join(".bun/bin/claude"),
+            home.join(".volta/bin/claude"),
+        ]);
+    }
+    scan::find("claude", explicit.as_deref(), candidates)
+}
+
 impl AgentAdapter for ClaudeCode {
     fn id(&self) -> &str {
         "claude"

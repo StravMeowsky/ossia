@@ -58,6 +58,17 @@ pub(crate) fn outcome(home: &Path) -> Result<GuideOutcome> {
     document(home, None)
 }
 
+/// Text of an embedded guide document, by the path `ossia_guide` accepts.
+pub fn guide_document(name: &str) -> Option<&'static str> {
+    match name {
+        "guide.md" => Some(GUIDE),
+        name => DOCUMENTS
+            .iter()
+            .find(|(path, _)| *path == name)
+            .map(|(_, content)| *content),
+    }
+}
+
 pub(crate) fn document(home: &Path, document: Option<&str>) -> Result<GuideOutcome> {
     let (name, content) = match document {
         None | Some("guide.md") => ("guide.md", GUIDE),

@@ -14,6 +14,7 @@ import type {
 import { useI18n } from '../../i18n.tsx';
 import type { DrawingController } from '../hooks/useDrawing.ts';
 import type { DrawingMode } from '../hooks/useDrawingInput.ts';
+import type { EraserScope } from '../utils/drawing.ts';
 import type { useScorePlayback } from '../hooks/useScorePlayback.ts';
 import type { useScoreSettings } from '../hooks/useScoreSettings.ts';
 import type { ScoreViewPan } from '../hooks/useScoreViewMemory.ts';
@@ -49,6 +50,7 @@ interface ScorePageHeaderProps {
   documentHint: string;
   exportVersionId: string | null;
   onSelectDocument: (documentId: string) => void;
+  documentSwitching: boolean;
   onViewVersion: (versionId: string | null) => void;
   onCompare: (versionId: string | null) => void;
   onClearNotice: () => void;
@@ -58,6 +60,7 @@ interface ScorePageHeaderProps {
   scoreSettings: ReturnType<typeof useScoreSettings>;
   playbackParts: PlaybackPart[] | null;
   onError: (error: unknown) => void;
+  assistantToggle?: ReactNode;
 }
 
 export function ScorePageHeader({
@@ -72,6 +75,7 @@ export function ScorePageHeader({
   documentHint,
   exportVersionId,
   onSelectDocument,
+  documentSwitching,
   onViewVersion,
   onCompare,
   onClearNotice,
@@ -81,12 +85,14 @@ export function ScorePageHeader({
   scoreSettings,
   playbackParts,
   onError,
+  assistantToggle,
 }: ScorePageHeaderProps) {
   const { t } = useI18n();
   return (
     <header className="bar score-topbar">
       <div className="score-document-controls">
-        {doc && !notFound ? (
+        {/* In its own app window the window title already names the score. */}
+        {!documentSwitching ? null : doc && !notFound ? (
           <ScoreTitleMenu
             api={api}
             documentId={doc.documentId}
@@ -118,6 +124,7 @@ export function ScorePageHeader({
       </div>
       <div className="score-feature-slot">{featureToolbar}</div>
       <div className="topbar-right">
+        {assistantToggle}
         {doc && !notFound && (
           <ScoreToolbar
             api={api}
@@ -183,6 +190,7 @@ interface ScoreWorkspaceProps {
   drawingMode: DrawingMode;
   penSize: number;
   eraserSize: number;
+  eraserScope: EraserScope;
   penColor: DrawingColor;
 }
 
@@ -225,6 +233,7 @@ export function ScoreWorkspace({
   drawingMode,
   penSize,
   eraserSize,
+  eraserScope,
   penColor,
 }: ScoreWorkspaceProps) {
   const { t } = useI18n();
@@ -319,6 +328,7 @@ export function ScoreWorkspace({
               drawingMode={drawingMode}
               penSize={penSize}
               eraserSize={eraserSize}
+              eraserScope={eraserScope}
               penColor={penColor}
             />
           ) : (
@@ -352,6 +362,7 @@ export function ScoreWorkspace({
             drawingMode={drawingMode}
             penSize={penSize}
             eraserSize={eraserSize}
+            eraserScope={eraserScope}
             penColor={penColor}
           />
         ) : renderPending ? (

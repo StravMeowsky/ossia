@@ -27,6 +27,7 @@ import { isAnnotationModifierPressed } from '../utils/annotationInput.ts';
 import { selectionKey } from '../utils/api.ts';
 import type { Api } from '../utils/api.ts';
 import { DRAWING_COLORS } from '../utils/drawing.ts';
+import type { EraserScope } from '../utils/drawing.ts';
 import {
   BASE_PAGE_WIDTH,
   CANVAS_PADDING,
@@ -71,6 +72,7 @@ interface Props {
   drawingMode?: DrawingMode;
   penSize?: number;
   eraserSize?: number;
+  eraserScope?: EraserScope;
   penColor?: DrawingColor;
 }
 
@@ -109,6 +111,7 @@ export function ScoreView({
   drawingMode = null,
   penSize = 4,
   eraserSize = 20,
+  eraserScope = 'stroke',
   penColor = 'black',
 }: Props) {
   const { t } = useI18n();
@@ -122,7 +125,14 @@ export function ScoreView({
   );
   const pageHosts = useRef(new Map<number, HTMLDivElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
-  const drawingInput = useDrawingInput(drawing, drawingMode, penSize, eraserSize, penColor);
+  const drawingInput = useDrawingInput(
+    drawing,
+    drawingMode,
+    penSize,
+    eraserSize,
+    penColor,
+    eraserScope,
+  );
   const [drawingPointer, setDrawingPointer] = useState<{ x: number; y: number } | null>(null);
   const updateDrawingPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!drawingMode) return;

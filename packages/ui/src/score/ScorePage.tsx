@@ -1,6 +1,8 @@
+import { MessageSquare } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ToastRegion, useToasts } from '../components/Toast.tsx';
+import { Button } from '../components/ui/button.tsx';
 import { describe } from '../errors.ts';
 import type {
   DocumentState,
@@ -12,8 +14,10 @@ import type {
   Version,
 } from '../generated/protocol.ts';
 import { I18nProvider, useI18n } from '../i18n.tsx';
+import { AssistantPanel } from './components/AssistantPanel.tsx';
 import { ScoreFeatureToolbar } from './components/ScoreFeatureToolbar.tsx';
 import { RestoreDialog, ScorePageHeader, ScoreWorkspace } from './components/ScorePageSections.tsx';
+import { assistantAvailable, useAssistant } from './hooks/useAssistant.ts';
 import { useDrawing } from './hooks/useDrawing.ts';
 import type { DrawingMode } from './hooks/useDrawingInput.ts';
 import { useModalGestureLock } from './hooks/useModalGestureLock.ts';
@@ -27,11 +31,19 @@ import { useSelection } from './hooks/useSelection.ts';
 import { useVersionRender } from './hooks/useVersionRender.ts';
 import { isEditableKeyboardTarget } from './utils/annotationInput.ts';
 import { makeApi } from './utils/api.ts';
-import { DRAWING_PALETTE, ERASER_SIZES, PEN_SIZES } from './utils/drawing.ts';
+import {
+  DRAWING_PALETTE,
+  ERASER_SCOPES,
+  ERASER_SIZES,
+  PEN_SIZES,
+  STROKE_ERASER_SIZE,
+} from './utils/drawing.ts';
+import type { EraserScope } from './utils/drawing.ts';
 import {
   documentIdFromLocation,
   pushDocumentIdToLocation,
   scoreDebugFlagsFromLocation,
+  scoreWindowFromLocation,
 } from './utils/endpoint.ts';
 import { loadScorePlayback } from './utils/renderCache.ts';
 import { focusScorePage } from './utils/scoreFocus.ts';
@@ -98,6 +110,22 @@ function ScoreApp({
   const fullscreenButton = useRef<HTMLButtonElement>(null);
   const documentIdRef = useRef(documentIdFromLocation());
   const debugFlags = useMemo(scoreDebugFlagsFromLocation, []);
+  const scoreWindow = useMemo(scoreWindowFromLocation, []);
+  const assistantEnabled = useMemo(() => scoreWindow && assistantAvailable(), [scoreWindow]);
+  const [assistantOpen, setAssistantOpen] = useState(() => {
+    try {
+      return localStorage.getItem('ossia:assistant-open') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('ossia:assistant-open', String(assistantOpen));
+    } catch {
+      // Keep the panel state for this window when storage is unavailable.
+    }
+  }, [assistantOpen]);
   const showHitBoxes = debugFlags.has('hitboxes');
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState('');
@@ -112,6 +140,14 @@ function ScoreApp({
   const [eraserSize, setEraserSize] = useState(() =>
     savedDrawingSize('ossia:eraser-size', ERASER_SIZES, 20),
   );
+  const [eraserScope, setEraserScope] = useState<EraserScope>(() => {
+    try {
+      const value = localStorage.getItem('ossia:eraser-scope');
+      return ERASER_SCOPES.find((scope) => scope === value) ?? 'stroke';
+    } catch {
+      return 'stroke';
+    }
+  });
   const [penColor, setPenColor] = useState<DrawingColor>(() => {
     try {
       const value = localStorage.getItem('ossia:pen-color');
@@ -124,11 +160,12 @@ function ScoreApp({
     try {
       localStorage.setItem('ossia:pen-size', String(penSize));
       localStorage.setItem('ossia:eraser-size', String(eraserSize));
+      localStorage.setItem('ossia:eraser-scope', eraserScope);
       localStorage.setItem('ossia:pen-color', penColor);
     } catch {
       // Keep the selected settings for this session when storage is unavailable.
     }
-  }, [penSize, eraserSize, penColor]);
+  }, [penSize, eraserSize, eraserScope, penColor]);
   const [leftZoom, setLeftZoom] = useState(100);
   const [rightZoom, setRightZoom] = useState(100);
   const [confirm, setConfirm] = useState<RestoreConfirmation | null>(null);
@@ -193,6 +230,8 @@ function ScoreApp({
     return () => window.removeEventListener('popstate', onPopState);
   }, [onError, refresh, resetDocumentView, t]);
   const doc = state.context?.document;
+  const assistant = useAssistant(assistantEnabled ? doc?.documentId : undefined, doc?.title ?? '');
+  const showAssistant = assistantEnabled && assistantOpen && !!doc && !notFound;
   const documentId = doc?.documentId;
   const scoreSettings = useScoreSettings(api, documentId, onError);
   useEffect(() => {
@@ -501,10 +540,12 @@ function ScoreApp({
       drawingAvailable={drawingAvailable}
       penSize={penSize}
       eraserSize={eraserSize}
+      eraserScope={eraserScope}
       penColor={penColor}
       onPenColor={setPenColor}
       onPenSize={setPenSize}
       onEraserSize={setEraserSize}
+      onEraserScope={setEraserScope}
     />
   ) : null;
   return (
@@ -521,6 +562,7 @@ function ScoreApp({
         documentHint={documentHint}
         exportVersionId={exportVersionId}
         onSelectDocument={selectDocument}
+        documentSwitching={!scoreWindow}
         onViewVersion={selectVersion}
         onCompare={setCompareVersion}
         onClearNotice={() => setNotice('')}
@@ -530,48 +572,72 @@ function ScoreApp({
         scoreSettings={scoreSettings}
         playbackParts={settingsParts}
         onError={onError}
+        assistantToggle={
+          assistantEnabled && doc && !notFound ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="topbar-action score-assistant-toggle"
+              aria-label={assistantOpen ? t('assistantClose') : t('assistantOpen')}
+              aria-pressed={assistantOpen}
+              data-tooltip={assistantOpen ? t('assistantClose') : t('assistantOpen')}
+              onClick={() => setAssistantOpen(!assistantOpen)}
+            >
+              <MessageSquare aria-hidden="true" size={17} />
+            </Button>
+          ) : null
+        }
       />
-      <ScoreWorkspace
-        api={api}
-        doc={doc}
-        notFound={notFound}
-        connected={connected}
-        stale={stale}
-        working={working}
-        versions={state.versions}
-        historyVersion={historyVersion}
-        compareVersion={compareVersion}
-        onCompare={setCompareVersion}
-        render={render ?? null}
-        renderPending={renderPending}
-        agentEditing={agentEditing}
-        layout={layout}
-        onLayout={setLayout}
-        zoom={zoom}
-        onZoom={setZoom}
-        leftZoom={leftZoom}
-        onLeftZoom={setLeftZoom}
-        rightZoom={rightZoom}
-        onRightZoom={setRightZoom}
-        selection={selection}
-        playback={playback}
-        versionRender={versionRender}
-        annotationMode={annotationActive}
-        onAnnotationMode={setAnnotationMode}
-        viewKey={viewKey}
-        initialPan={initialPan}
-        onPan={savePan}
-        showHitBoxes={showHitBoxes}
-        debugAgentRing={debugFlags.has('ring')}
-        onActivateNote={activateNote}
-        onPoint={(page, x, y) => void choosePoint(page, x, y)}
-        featureToolbar={fullscreen.active ? featureToolbar : null}
-        drawing={drawing}
-        drawingMode={activeDrawingMode}
-        penSize={penSize}
-        eraserSize={eraserSize}
-        penColor={penColor}
-      />
+      <div className="score-body">
+        <div className="score-main">
+          <ScoreWorkspace
+            api={api}
+            doc={doc}
+            notFound={notFound}
+            connected={connected}
+            stale={stale}
+            working={working}
+            versions={state.versions}
+            historyVersion={historyVersion}
+            compareVersion={compareVersion}
+            onCompare={setCompareVersion}
+            render={render ?? null}
+            renderPending={renderPending}
+            agentEditing={agentEditing}
+            layout={layout}
+            onLayout={setLayout}
+            zoom={zoom}
+            onZoom={setZoom}
+            leftZoom={leftZoom}
+            onLeftZoom={setLeftZoom}
+            rightZoom={rightZoom}
+            onRightZoom={setRightZoom}
+            selection={selection}
+            playback={playback}
+            versionRender={versionRender}
+            annotationMode={annotationActive}
+            onAnnotationMode={setAnnotationMode}
+            viewKey={viewKey}
+            initialPan={initialPan}
+            onPan={savePan}
+            showHitBoxes={showHitBoxes}
+            debugAgentRing={debugFlags.has('ring')}
+            onActivateNote={activateNote}
+            onPoint={(page, x, y) => void choosePoint(page, x, y)}
+            featureToolbar={fullscreen.active ? featureToolbar : null}
+            drawing={drawing}
+            drawingMode={activeDrawingMode}
+            penSize={penSize}
+            eraserSize={eraserScope === 'stroke' ? STROKE_ERASER_SIZE : eraserSize}
+            eraserScope={eraserScope}
+            penColor={penColor}
+          />
+        </div>
+        {showAssistant && (
+          <AssistantPanel assistant={assistant} onClose={() => setAssistantOpen(false)} />
+        )}
+      </div>
       <RestoreDialog
         dialogRef={dialog}
         onCancel={() => setConfirm(null)}

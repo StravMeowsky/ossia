@@ -10,6 +10,41 @@ export const DRAWING_COLORS: Record<DrawingColor, string> = {
   red: '#ff3b30',
 };
 export const DRAWING_PALETTE: DrawingColor[] = ['black', 'blue', 'green', 'yellow', 'red'];
+/** `partial` cuts away only what the eraser covers; `stroke` removes every line it touches. */
+export type EraserScope = 'partial' | 'stroke';
+export const ERASER_SCOPES: EraserScope[] = ['partial', 'stroke'];
+/** The whole-line eraser has no size choice: it uses the smallest range for precise picking. */
+export const STROKE_ERASER_SIZE = ERASER_SIZES[0]!;
+
+/** Remove every stroke on the page that the circular eraser touches, in page-width units. */
+export function eraseWholeStrokes(
+  strokes: DrawingStroke[],
+  page: number,
+  center: DrawingPoint,
+  radius: number,
+  aspect: number,
+) {
+  return strokes.filter((stroke) => {
+    if (stroke.page !== page) return true;
+    const r = radius + stroke.width / 2;
+    const near = (a: DrawingPoint, b: DrawingPoint) => {
+      const dx = b.x - a.x;
+      const dy = (b.y - a.y) * aspect;
+      const ax = center.x - a.x;
+      const ay = (center.y - a.y) * aspect;
+      const length = dx * dx + dy * dy;
+      const t = length > 0 ? Math.max(0, Math.min(1, (ax * dx + ay * dy) / length)) : 0;
+      return Math.hypot(ax - dx * t, ay - dy * t) <= r;
+    };
+    const [first] = stroke.points;
+    if (!first) return true;
+    if (stroke.points.length === 1) return !near(first, first);
+    for (let i = 1; i < stroke.points.length; i++) {
+      if (near(stroke.points[i - 1]!, stroke.points[i]!)) return false;
+    }
+    return true;
+  });
+}
 
 /** Remove portions of a stroke within a circular eraser in page-width units. */
 export function eraseStrokes(

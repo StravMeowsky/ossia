@@ -3,6 +3,14 @@ export function documentIdFromLocation(): string | null {
   return documentId?.trim() || null;
 }
 
+/**
+ * The desktop app opens each score in its own window, titled with the score, so the page shows
+ * neither the title nor the score switcher.
+ */
+export function scoreWindowFromLocation(): boolean {
+  return new URLSearchParams(location.search).get('window') === '1';
+}
+
 export function scoreDebugFlagsFromLocation(): Set<string> {
   const value = new URLSearchParams(location.search).get('debug') ?? '';
   return new Set(

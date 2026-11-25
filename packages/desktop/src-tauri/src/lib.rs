@@ -1,4 +1,5 @@
 #![cfg(feature = "gui")]
+mod assistant;
 mod preferences;
 mod tray;
 mod update;
@@ -513,14 +514,14 @@ async fn management_delete_score(
 
 #[tauri::command]
 async fn management_open_score(
+    app: tauri::AppHandle,
     state: tauri::State<'_, Management>,
     args: DocumentIdArgs,
 ) -> Result<()> {
+    let document_id = args.document_id.to_string();
     let url: String =
         management_runtime_call(&config(&state)?, "management-score-url", json!(args)).await?;
-    tauri::async_runtime::spawn_blocking(move || open_external(&url))
-        .await
-        .map_err(storage)?
+    window::open_score(&app, &document_id, &url)
 }
 
 pub(crate) fn open_external(target: &str) -> Result<()> {
@@ -577,7 +578,8 @@ pub fn run(config: Result<server::Config>, show_main_window: bool) {
 
     let builder = tauri::Builder::default()
         .plugin(autostart)
-        .manage(management.clone());
+        .manage(management.clone())
+        .manage(assistant::Assistant::default());
     let app = builder
         .setup(move |app| {
             preferences::refresh_autostart(app.handle())?;
@@ -630,7 +632,9 @@ pub fn run(config: Result<server::Config>, show_main_window: bool) {
             update::runtime::release_notes,
             update::runtime::update_apply,
             update::runtime::update_token_set,
-            update::runtime::open_external_url
+            update::runtime::open_external_url,
+            assistant::assistant_send,
+            assistant::assistant_stop
         ])
         .build(tauri::generate_context!())
         .expect("error while building ossia desktop");

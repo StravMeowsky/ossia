@@ -4,6 +4,7 @@ mod browser;
 pub mod cli;
 mod core;
 mod guide;
+pub use guide::guide_document;
 pub mod http;
 pub mod ipc;
 pub mod mcp;

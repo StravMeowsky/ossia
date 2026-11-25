@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
-import { clampZoom } from '../utils/scoreLayout.ts';
+import { CANVAS_PADDING, CANVAS_TOP_PADDING, clampZoom } from '../utils/scoreLayout.ts';
 import type { ScoreLayout } from '../utils/scoreLayout.ts';
 import type { ScoreViewPan } from './useScoreViewMemory.ts';
 
@@ -95,10 +95,34 @@ export function useScoreViewport({
     startY: number;
   } | null>(null);
 
-  const applyPan = useCallback((next: ScoreViewPan) => {
-    panRef.current = next;
-    setPan((current) => (current.x === next.x && current.y === next.y ? current : next));
+  /**
+   * Keep the pages from scrolling past their first top or last bottom edge: the top stops at the
+   * canvas padding, the bottom at the viewport's bottom padding, and a score shorter than the
+   * viewport stays where the layout puts it.
+   */
+  const clampVertical = useCallback((next: ScoreViewPan): ScoreViewPan => {
+    const element = viewport.current;
+    const pages = element?.querySelector<HTMLElement>('.score-pages');
+    if (!element || !pages) return next;
+    const bounds = element.getBoundingClientRect();
+    const content = pages.getBoundingClientRect();
+    if (!bounds.height || !content.height) return next;
+    const top = content.top - panRef.current.y;
+    const bottom = content.bottom - panRef.current.y;
+    const highest = bounds.top + CANVAS_TOP_PADDING - top;
+    const lowest = bounds.bottom - CANVAS_PADDING - bottom;
+    const y = lowest >= highest ? 0 : Math.min(highest, Math.max(lowest, next.y));
+    return y === next.y ? next : { x: next.x, y };
   }, []);
+
+  const applyPan = useCallback(
+    (requested: ScoreViewPan) => {
+      const next = clampVertical(requested);
+      panRef.current = next;
+      setPan((current) => (current.x === next.x && current.y === next.y ? current : next));
+    },
+    [clampVertical],
+  );
 
   const panBy = useCallback(
     (deltaX: number, deltaY: number) => {
@@ -410,6 +434,39 @@ export function useScoreViewport({
       applyPan({ x: panRef.current.x - deltaX, y: panRef.current.y - deltaY });
     }
   }, [applyPan, zoom]);
+
+  // Keep the part of the score at the viewport's horizontal center there when a panel beside the
+  // score (the assistant) opens or closes. Window resizes keep the score where it is.
+  const centerAnchor = useRef<{ width: number; window: number; offset: number } | null>(null);
+  const measureCenter = useCallback(() => {
+    const element = viewport.current;
+    const page = pageHosts.current.values().next().value;
+    if (!element || !page?.isConnected) return null;
+    const bounds = element.getBoundingClientRect();
+    return {
+      width: bounds.width,
+      window: window.innerWidth,
+      offset: bounds.left + bounds.width / 2 - page.getBoundingClientRect().left,
+    };
+  }, [pageHosts]);
+  useLayoutEffect(() => {
+    centerAnchor.current = measureCenter();
+  }, [layout, measureCenter, pan, ready, zoom]);
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      const before = centerAnchor.current;
+      const after = measureCenter();
+      if (before && after && before.width !== after.width && before.window === after.window) {
+        const deltaX = after.offset - before.offset;
+        if (deltaX) applyPan({ x: panRef.current.x + deltaX, y: panRef.current.y });
+        else centerAnchor.current = after;
+      } else if (after) centerAnchor.current = after;
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [applyPan, measureCenter, ready]);
 
   const firstLayout = useRef(true);
   useLayoutEffect(() => {

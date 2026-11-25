@@ -68,6 +68,17 @@ impl HostPaths {
     }
 }
 
+/// What the score window's assistant needs to run Claude Code with this instance's Ossia tools.
+#[derive(Debug, Clone)]
+pub struct AssistantLaunch {
+    /// The detected `claude` executable.
+    pub claude: PathBuf,
+    /// `--mcp-config` document that starts this instance's Ossia MCP server.
+    pub mcp_config: serde_json::Value,
+    /// The Ossia skill, given to Claude Code as extra system instructions.
+    pub instructions: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct Integrator {
     home: PathBuf,
@@ -157,6 +168,31 @@ impl Integrator {
 
     pub fn executable(&self) -> &Path {
         &self.executable
+    }
+
+    /// Locate Claude Code and describe how to give it this instance's Ossia MCP server.
+    pub fn assistant_launch(&self) -> Result<AssistantLaunch, AppError> {
+        // Only locate the executable: the version and plugin probes used for integrations need
+        // `node` on PATH, which apps started from Finder or the Dock usually lack.
+        let claude = claude_code::assistant_executable().ok_or_else(|| {
+            AppError::new(
+                ErrorCode::NotFound,
+                "Claude Code was not found. Install it and sign in, then try again.",
+            )
+        })?;
+        Ok(AssistantLaunch {
+            claude,
+            mcp_config: serde_json::json!({
+                "mcpServers": {
+                    "ossia": {
+                        "command": path_text(&self.executable),
+                        "args": self.mcp_command(),
+                        "env": self.launch_env(),
+                    }
+                }
+            }),
+            instructions: self.skill()?,
+        })
     }
 
     pub fn paths(&self) -> &HostPaths {

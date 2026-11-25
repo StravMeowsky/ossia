@@ -3,6 +3,20 @@ import { expect, test } from '@playwright/test';
 import type { Drawing, DrawingStroke } from '../../src/generated/protocol.ts';
 import { firstId, hash, mockScoreRuntime } from './score-runtime.ts';
 
+// These tests exercise the partial eraser; eraser-scope.browser.spec.ts covers the whole-line
+// default and switching between the two.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => {
+    try {
+      if (localStorage.getItem('ossia:eraser-scope') === null) {
+        localStorage.setItem('ossia:eraser-scope', 'partial');
+      }
+    } catch {
+      // Pages without storage keep the default.
+    }
+  });
+});
+
 test('an existing drawing waits until its page score has painted', async ({ context, page }) => {
   const runtime = await mockScoreRuntime(context);
   const stroke: DrawingStroke = {
@@ -85,7 +99,7 @@ test('drawing suppresses stylus touch defaults without blocking finger gestures'
   expect(await dispatch('touchstart', false)).toBe(true);
   await page.getByRole('button', { name: '橡皮擦', exact: true }).click();
   expect(await dispatch('touchstart', true)).toBe(false);
-  await page.getByRole('button', { name: '橡皮擦', exact: true }).click();
+  await page.keyboard.press('Escape');
   expect(await dispatch('touchstart', true)).toBe(true);
 });
 

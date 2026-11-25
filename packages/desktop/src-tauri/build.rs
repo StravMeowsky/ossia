@@ -74,6 +74,8 @@ fn main() {
             "update_apply",
             "update_token_set",
             "open_external_url",
+            "assistant_send",
+            "assistant_stop",
         ]),
     ))
     .expect("build Tauri management permissions");
