@@ -22,7 +22,7 @@ Ossia 是一款体验极佳的 AI 原生乐谱制作软件，它为 AI Agent 提
 
 ## Ossia 的功能
 
-Ossia 可以一键接入 Codex、DeepSeek Harness、WorkBuddy 等 AI Agent，除此之外，它还提供如下功能：
+Ossia 可以一键接入常见 AI Agent（完整列表见[接入 Agent](#2-接入-agent)），除此之外，它还提供如下功能：
 
 - 支持但不限于制作钢琴、吉他、尤克里里、小提琴，以及它们的多重奏乐谱。
 - 支持导入 MusicXML/MIDI/PDF 以及图片乐谱（借助 Ossia OMR 服务）。
@@ -84,9 +84,18 @@ Ossia 当前提供 macOS（Apple Silicon）和 Windows x64 平台的安装包，
 ### 2. 接入 Agent
 
 1. 启动 Ossia，确认窗口右上角显示「服务运行中」，如果没有则先手动点击启动服务。
-2. 在「接入 → Agent」面板中，连接已经识别到的 Agent 程序，比如：**Codex**、**DeepSeek Harness** 等。
+2. 在「接入 → Agent」面板中，点击按钮为你的 Agent 接入 Ossia。
 
 <img src="docs/readme-assets/agent-zh.webp" alt="Agent 接入面板" width="720">
+
+当前 Ossia 支持的 Agent 有：
+
+- Codex
+- DeepSeek Harness
+- Claude Code
+- Claude Desktop
+- WorkBuddy
+- Pi
 
 ### 3. 创建、导入、编辑乐谱
 

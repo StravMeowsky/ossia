@@ -42,6 +42,8 @@ pub struct AgentConflict {
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum AgentNotice {
     RestartSession { agent: String },
+    PiReload,
+    PiMcpUnsupported,
     ClaudeDesktopRestart,
     CodexPluginDisabled,
     CodexPluginMissing,

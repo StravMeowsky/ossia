@@ -1172,6 +1172,16 @@ button.score-card-title:hover {
   object-fit: contain;
 }
 
+.agent-monochrome-icon {
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  forced-color-adjust: none;
+}
+
 .agent-chip-state {
   color: var(--muted);
   font-size: 10px;

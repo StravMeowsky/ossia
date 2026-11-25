@@ -350,6 +350,9 @@ export const enUS = {
   agentDetecting: 'Detecting available Agents…',
   agentClaudeDesktopRestart:
     'Quit Claude Desktop completely and restart it to load the integration.',
+  agentPiReload: 'Run /reload in an existing Pi session, or start a new session.',
+  agentPiMcpUnsupported:
+    'This Pi version does not support the required built-in MCP configuration.',
   agentRestartSession:
     'This integration does not apply to existing {agent} sessions. Start a new session or restart {agent}.',
   agentCodexDisabled: 'The Ossia plugin is disabled in Codex. Click to reinstall and enable it.',

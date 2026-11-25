@@ -28,8 +28,8 @@
     "zh": "接入你常用的 AI Agent"
   },
   "features.conversationDescription": {
-    "en": "Connect Codex, DeepSeek Harness, or WorkBuddy in a click. Create, arrange, transpose, and proofread scores in plain language—for piano, guitar, ukulele, violin, and ensembles.",
-    "zh": "一键接入 Codex、DeepSeek Harness 或 WorkBuddy，直接用对话创建、改编、移调与校对乐谱——涵盖钢琴、吉他、尤克里里、小提琴及室内乐重奏。"
+    "en": "Connect your AI agent in a click. Create, arrange, transpose, and proofread scores in plain language—for piano, guitar, ukulele, violin, and ensembles.",
+    "zh": "一键接入 AI Agent，直接用对话创建、改编、移调与校对乐谱——涵盖钢琴、吉他、尤克里里、小提琴及室内乐重奏。"
   },
   "features.refineTitle": {
     "en": "Play, annotate, and version",
@@ -148,8 +148,8 @@
     "zh": "Ossia 源（为中国大陆网络优化）"
   },
   "download.sourceHintGithub": {
-    "en": "GitHub source (global)",
-    "zh": "GitHub 源（适合全球访问）"
+    "en": "If the download fails or is too slow, choose the Ossia source.",
+    "zh": "如果无法下载或太慢请选择 Ossia 源"
   },
   "download.allReleases": {
     "en": "View all releases",
@@ -172,8 +172,8 @@
     "zh": "首次安装说明：安装包尚未签名"
   },
   "guide.unsignedDescription": {
-    "en": "The macOS app is not yet signed or notarized with an Apple Developer ID, and the Windows installer is unsigned, so your OS may block the first launch. Confirm you downloaded from official GitHub Releases and follow the one-time steps below.",
-    "zh": "当前 macOS 安装包尚未进行 Apple Developer ID 签名与公证，Windows 安装包也未进行代码签名，系统首次打开时可能出现安全拦截。请确认从官方 GitHub Releases 下载，并按下方步骤放行（仅首次安装时需要）。"
+    "en": "The macOS app is not yet signed or notarized with an Apple Developer ID, and the Windows installer is unsigned, so your OS may block the first launch. Confirm you downloaded from an official source and follow the one-time steps below.",
+    "zh": "当前 macOS 安装包尚未进行 Apple Developer ID 签名与公证，Windows 安装包也未进行代码签名，系统首次打开时可能出现安全拦截。请确认从官方渠道下载，并按下方步骤放行（仅首次安装时需要）。"
   },
   "guide.navigationLabel": {
     "en": "In this guide",
@@ -308,8 +308,8 @@
     "zh": "Windows 安装"
   },
   "windows.intro": {
-    "en": "Windows SmartScreen may warn about the unsigned installer. Confirm the download came from official Releases, then continue as follows.",
-    "zh": "未签名的安装包可能触发 Windows SmartScreen 拦截。确认来自官方 Releases 后，按以下步骤放行即可。"
+    "en": "Windows SmartScreen may warn about the unsigned installer. Confirm the download came from an official source, then continue as follows.",
+    "zh": "未签名的安装包可能触发 Windows SmartScreen 拦截。确认来自官方渠道后，按以下步骤放行即可。"
   },
   "windows.runInstallerStep": {
     "en": "Run the downloaded ossia-windows-amd64.exe installer.",
@@ -355,13 +355,17 @@
     "en": "Connect a supported agent to create, arrange, inspect, and export scores directly through conversation.",
     "zh": "接入支持的 AI Agent 后，你就能直接在对话中完成乐谱的创建、改编、分析与导出。"
   },
+  "agent.supportedTitle": {
+    "en": "Supported agents:",
+    "zh": "支持的 Agent："
+  },
   "agent.startServiceStep": {
     "en": "Launch Ossia and make sure the upper-right indicator reads “Service running.” Start the service manually if needed.",
     "zh": "启动 Ossia，确认右上角显示“服务运行中”；若未运行，请先手动启动服务。"
   },
   "agent.connectStep": {
-    "en": "Under Integrations → Agent, connect your installed Codex, DeepSeek Harness, or WorkBuddy. For WorkBuddy, also trust Ossia MCP inside its connector before first use.",
-    "zh": "前往“接入 → Agent”，连接已安装的 Codex、DeepSeek Harness 或 WorkBuddy。使用 WorkBuddy 时，首次使用前还需在其连接器中信任 Ossia MCP。"
+    "en": "Under Integrations → Agent, connect your installed agent. For WorkBuddy, also trust Ossia MCP inside its connector before first use.",
+    "zh": "前往“接入 → Agent”，连接已安装的 Agent。使用 WorkBuddy 时，首次使用前还需在其连接器中信任 Ossia MCP。"
   },
   "agent.newConversationStep": {
     "en": "Open a new agent conversation and start with /ossia or $ossia—for example: “/ossia create an eight-bar C major piano exercise for a beginner.” You can also ask the agent to run a self-check first.",
@@ -451,13 +455,37 @@
     "en": "Frequently asked questions",
     "zh": "常见问题"
   },
+  "faq.importQuestion": {
+    "en": "Can Ossia import scores from PDFs or images?",
+    "zh": "Ossia 支持导入 PDF、图片乐谱吗？"
+  },
+  "faq.importAnswer": {
+    "en": "Yes. You can configure an optical music recognition (OMR) service under Settings → General → Score recognition service (OMR) to help convert PDFs or images into scores. OMR is optional; a capable agent may also be able to recognize a score without it.",
+    "zh": "支持。你可以在“设置 → 常规 → 乐谱识别服务（OMR）”中配置光学乐谱识别服务，帮助将 PDF 或图片转换成乐谱。OMR 是可选的；即便没有它，配合能力较强的模型，Agent 仍可能识别出乐谱。"
+  },
+  "faq.audioQuestion": {
+    "en": "Can Ossia transcribe audio?",
+    "zh": "Ossia 支持音频扒谱吗？"
+  },
+  "faq.audioAnswer": {
+    "en": "Ossia does not have built-in audio transcription, but your agent may be able to help. Try asking it to import an audio file as a score.",
+    "zh": "Ossia 没有提供内置的音频转谱功能，但也许你的 Agent 可以做到，不妨让它试着将音频文件导入为乐谱。"
+  },
+  "faq.resultsQuestion": {
+    "en": "Why didn’t my agent produce the result I expected?",
+    "zh": "为什么 Agent 完成任务的结果不及预期？"
+  },
+  "faq.resultsAnswer": {
+    "en": "Ossia is optimized for common requests, but an agent may take a longer path or be unable to complete an untested task. Try a more capable model, or open an issue describing your use case so we can improve it.",
+    "zh": "Ossia 针对常见需求进行过优化，遇到未验证的场景时，Agent 可能绕远路或无法完成任务。你可以换用能力更强的模型，或提交 Issue 告知需求场景，帮助我们改进。"
+  },
   "faq.damagedAppQuestion": {
     "en": "macOS says the app is damaged—what should I do?",
     "zh": "macOS 提示“应用已损坏”怎么办？"
   },
   "faq.damagedAppAnswer": {
-    "en": "Verify that the installer came from official GitHub Releases and Ossia.app is in Applications, then run the quarantine-removal command in the macOS section above.",
-    "zh": "请先确认安装包来自官方 GitHub Releases，并已将 Ossia.app 放入“应用程序”，随后按上方 macOS 安装步骤移除隔离标记即可。"
+    "en": "Verify that the installer came from an official source and Ossia.app is in Applications, then run the quarantine-removal command in the macOS section above.",
+    "zh": "请先确认安装包来自官方渠道，并已将 Ossia.app 放入“应用程序”，随后按上方 macOS 安装步骤移除隔离标记即可。"
   },
   "faq.runAnywayQuestion": {
     "en": "Why doesn’t Windows show “Run anyway”?",

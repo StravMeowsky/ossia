@@ -107,8 +107,13 @@ export function AgentsPage({
                     <span className="agent-chip-icon" aria-hidden="true">
                       {pendingAgents.includes(agent.id) || agents?.syncing ? (
                         <LoaderCircle className="spinner" />
+                      ) : icon?.monochrome ? (
+                        <span
+                          className="agent-monochrome-icon"
+                          style={{ maskImage: `url(${icon.src})` }}
+                        />
                       ) : icon ? (
-                        <img src={icon} alt="" draggable={false} />
+                        <img src={icon.src} alt="" draggable={false} />
                       ) : (
                         agent.name.slice(0, 1)
                       )}

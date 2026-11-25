@@ -88,9 +88,8 @@
                 </h3>
                 <p>
                   <span data-i18n="features.conversationDescription">
-                    Connect Codex, DeepSeek Harness, or WorkBuddy in a click. Create, arrange,
-                    transpose, and proofread scores in plain language—for piano, guitar, ukulele,
-                    violin, and ensembles.
+                    Connect your AI agent in a click. Create, arrange, transpose, and proofread
+                    scores in plain language—for piano, guitar, ukulele, violin, and ensembles.
                   </span>
                 </p>
               </article>
@@ -217,6 +216,8 @@
                 </span>
               </p>
             </div>
+          </div>
+          <div class="download-source-row">
             <div
               class="source-switch"
               role="group"
@@ -240,6 +241,14 @@
                 <span data-i18n="download.sourceOssia">Ossia</span>
               </button>
             </div>
+            <p class="download-source-hint">
+              <span data-i18n="download.sourceHintOssia" data-source-hint="ossia" hidden>
+                Ossia source (optimized for mainland China)
+              </span>
+              <span data-i18n="download.sourceHintGithub" data-source-hint="github">
+                If the download fails or is too slow, choose the Ossia source.
+              </span>
+            </p>
           </div>
           <div class="download-cards">
             <a
@@ -284,14 +293,6 @@
             </a>
           </div>
           <div class="download-foot">
-            <p class="download-source-hint">
-              <span data-i18n="download.sourceHintOssia" data-source-hint="ossia" hidden>
-                Ossia source (optimized for mainland China)
-              </span>
-              <span data-i18n="download.sourceHintGithub" data-source-hint="github">
-                GitHub source (global)
-              </span>
-            </p>
             <a class="download-all" href="https://github.com/micooz/ossia/releases"
               ><span data-i18n="download.allReleases">View all releases</span
               ><span aria-hidden="true"> ↗</span></a
@@ -322,7 +323,7 @@
               <span data-i18n="guide.unsignedDescription">
                 The macOS app is not yet signed or notarized with an Apple Developer ID, and the
                 Windows installer is unsigned, so your OS may block the first launch. Confirm you
-                downloaded from official GitHub Releases and follow the one-time steps below.
+                downloaded from an official source and follow the one-time steps below.
               </span>
             </p>
           </aside>
@@ -509,7 +510,7 @@
               <p>
                 <span data-i18n="windows.intro">
                   Windows SmartScreen may warn about the unsigned installer. Confirm the download
-                  came from official Releases, then continue as follows.
+                  came from an official source, then continue as follows.
                 </span>
               </p>
               <ol class="steps">
@@ -574,6 +575,15 @@
                   through conversation.
                 </span>
               </p>
+              <p data-i18n="agent.supportedTitle">Supported agents:</p>
+              <ul class="agent-list">
+                <li>Codex</li>
+                <li>DeepSeek Harness</li>
+                <li>Claude Code</li>
+                <li>Claude Desktop</li>
+                <li>WorkBuddy</li>
+                <li>Pi</li>
+              </ul>
               <ol class="steps">
                 <li>
                   <span data-i18n="agent.startServiceStep">
@@ -583,9 +593,8 @@
                 </li>
                 <li>
                   <span data-i18n="agent.connectStep">
-                    Under Integrations → Agent, connect your installed Codex, DeepSeek Harness, or
-                    WorkBuddy. For WorkBuddy, also trust Ossia MCP inside its connector before first
-                    use.
+                    Under Integrations → Agent, connect your installed agent. For WorkBuddy, also
+                    trust Ossia MCP inside its connector before first use.
                   </span>
                 </li>
                 <li>
@@ -722,13 +731,53 @@
               <h3><span data-i18n="faq.title">Frequently asked questions</span></h3>
               <details>
                 <summary>
+                  <span data-i18n="faq.importQuestion"
+                    >Can Ossia import scores from PDFs or images?</span
+                  >
+                </summary>
+                <p>
+                  <span data-i18n="faq.importAnswer"
+                    >Yes. You can configure an optical music recognition (OMR) service under
+                    Settings → General → Score recognition service (OMR) to help convert PDFs or
+                    images into scores. OMR is optional; a capable agent may also be able to
+                    recognize a score without it.</span
+                  >
+                </p>
+              </details>
+              <details>
+                <summary>
+                  <span data-i18n="faq.audioQuestion">Can Ossia transcribe audio?</span>
+                </summary>
+                <p>
+                  <span data-i18n="faq.audioAnswer"
+                    >Ossia does not have built-in audio transcription, but your agent may be able to
+                    help. Try asking it to import an audio file as a score.</span
+                  >
+                </p>
+              </details>
+              <details>
+                <summary>
+                  <span data-i18n="faq.resultsQuestion"
+                    >Why didn’t my agent produce the result I expected?</span
+                  >
+                </summary>
+                <p>
+                  <span data-i18n="faq.resultsAnswer"
+                    >Ossia is optimized for common requests, but an agent may take a longer path or
+                    be unable to complete an untested task. Try a more capable model, or open an
+                    issue describing your use case so we can improve it.</span
+                  >
+                </p>
+              </details>
+              <details>
+                <summary>
                   <span data-i18n="faq.damagedAppQuestion">
                     macOS says the app is damaged—what should I do?
                   </span>
                 </summary>
                 <p>
                   <span data-i18n="faq.damagedAppAnswer">
-                    Verify that the installer came from official GitHub Releases and Ossia.app is in
+                    Verify that the installer came from an official source and Ossia.app is in
                     Applications, then run the quarantine-removal command in the macOS section
                     above.
                   </span>

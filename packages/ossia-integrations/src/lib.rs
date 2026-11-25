@@ -6,6 +6,7 @@ mod command;
 mod dsh;
 mod files;
 pub mod launcher;
+mod pi;
 mod record;
 mod registry;
 mod resources;
@@ -633,6 +634,10 @@ fn default_config_root(agent_id: &str, paths: &HostPaths) -> String {
     match agent_id {
         "codex" => path_text(&paths.codex_home),
         "dsh" => path_text(&paths.dsh_home),
+        "pi" => path_text(
+            absolute_env("PI_CODING_AGENT_DIR")
+                .unwrap_or_else(|| paths.workbuddy_home.join(".pi/agent")),
+        ),
         _ => String::new(),
     }
 }

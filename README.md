@@ -22,7 +22,7 @@ Ossia is AI-native music notation software that gives AI agents the tools and gu
 
 ## Features
 
-Ossia connects to AI agents such as Codex, DeepSeek Harness, and WorkBuddy. It also lets you:
+Ossia connects to popular AI agents (see [Connect an agent](#2-connect-an-agent) for the full list). It also lets you:
 
 - Create scores for piano, guitar, ukulele, violin, ensembles, and more.
 - Import MusicXML, MIDI, PDF, and images of scores, with help from an Ossia OMR service where appropriate.
@@ -84,8 +84,18 @@ Download an installer for macOS (Apple Silicon) or Windows x64 from [Releases](h
 ### 2. Connect an agent
 
 1. Open Ossia and check that the service is running in the upper-right corner. Start it if necessary.
-2. Under **Integrations → Agent**, connect a detected agent such as **Codex** or **DeepSeek Harness**.
+2. Under **Integrations → Agent**, click the button to connect Ossia to your agent.
+
 <img src="docs/readme-assets/agent-en.webp" alt="Agent integration panel" width="720">
+
+Ossia currently supports:
+
+- Codex
+- DeepSeek Harness
+- Claude Code
+- Claude Desktop
+- WorkBuddy
+- Pi
 
 ### 3. Create, import, or edit a score
 

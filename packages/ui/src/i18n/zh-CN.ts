@@ -339,6 +339,8 @@ export const zhCN: Record<MessageKey, string> = {
   agentSyncing: '正在后台同步已接入的 Agent…',
   agentDetecting: '正在检测可接入的 Agent…',
   agentClaudeDesktopRestart: '请完全退出并重新启动 Claude Desktop，以加载接入配置。',
+  agentPiReload: '请在已有 Pi 会话中执行 /reload，或新建会话。',
+  agentPiMcpUnsupported: '此 Pi 版本不支持所需的内置 MCP 配置。',
   agentRestartSession: '{agent} 已创建的会话不会生效，请新建会话或重启 {agent}。',
   agentCodexDisabled: '插件在 Codex 中已禁用；点击可覆盖并重新启用。',
   agentCodexMissing: 'Codex 中缺少 Ossia 插件、marketplace 或 MCP；点击可重新安装。',
