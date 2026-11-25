@@ -69,6 +69,22 @@ test('passes only selected fixture data and the flattened trace to Playwright', 
   assert.deepEqual(rmSync.mock.calls, [[directory, { recursive: true }]]);
 });
 
+test('exports validated fixtures for browser shards without starting Playwright', () => {
+  vi.stubEnv('OSSIA_AUDITION_OUTPUT', '/tmp/audition-fixtures.json');
+  try {
+    assert.equal(runAuditionCases(['one']), 0);
+    assert.equal(execFileSync.mock.calls.length, 0);
+    const exported = writeFileSync.mock.calls.find(
+      ([filename]) => filename === '/tmp/audition-fixtures.json',
+    );
+    assert.deepEqual(JSON.parse(exported[1]), [
+      { id: 'one', ...bundle, trace: [{ time: 0, x: 12, page: 1, system: 0 }, { time: 1 }] },
+    ]);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
 test.each([
   [
     'an audition issue',

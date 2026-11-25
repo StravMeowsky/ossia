@@ -131,7 +131,7 @@ jobs:
 
   verify:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.91.0
@@ -144,10 +144,52 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install locked engine
         run: pnpm engine:install
-      - name: Install audition browser runtime
-        run: pnpm --filter @ossia/ui exec playwright install chrome
       - name: Verify fixtures
         run: pnpm verify
+        env:
+          OSSIA_AUDITION_OUTPUT: ${{ runner.temp }}/audition-fixtures.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audition-fixtures
+          path: ${{ runner.temp }}/audition-fixtures.json
+          if-no-files-found: error
+          retention-days: 1
+
+  audition-browser:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dtolnay/rust-toolchain@1.91.0
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ossia/ui exec playwright install chrome
+      - uses: actions/download-artifact@v4
+        with:
+          name: audition-fixtures
+          path: ${{ runner.temp }}
+      - name: Verify audition fixtures
+        run: pnpm --filter @ossia/ui exec playwright test --project=browser --reporter=list tests/score/audition-fixture.browser.spec.ts --shard=${{ matrix.shard }}/4
+        env:
+          OSSIA_AUDITION_FIXTURES: ${{ runner.temp }}/audition-fixtures.json
+      - name: Upload audition failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audition-failures-${{ matrix.shard }}
+          path: packages/ui/test-results/browser/
+          if-no-files-found: ignore
+          retention-days: 7
 
   browser:
     strategy:

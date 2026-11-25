@@ -42,7 +42,9 @@ export function runAuditionCases(ids, renderFixture) {
     });
     const input = path.join(directory, 'fixtures.json');
     writeFileSync(input, JSON.stringify(bundles));
-    if (!failed)
+    if (!failed && process.env.OSSIA_AUDITION_OUTPUT) {
+      writeFileSync(process.env.OSSIA_AUDITION_OUTPUT, JSON.stringify(bundles));
+    } else if (!failed)
       execFileSync(
         process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
         [
