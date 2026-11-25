@@ -52,6 +52,7 @@ test('loading indicator appears only after 200 milliseconds', async ({ context, 
 
 test('fast initial loading does not insert a loading indicator', async ({ context, page }) => {
   await mockScoreRuntime(context);
+  await page.clock.pauseAt(new Date('2026-11-17T08:00:00Z'));
   await page.addInitScript(() => {
     Reflect.set(window, 'loadingShown', false);
     new MutationObserver((records) => {
