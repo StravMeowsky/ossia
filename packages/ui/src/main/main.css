@@ -840,6 +840,16 @@ button.score-preview:active {
   filter: drop-shadow(0 5px 8px rgb(20 20 30 / 13%));
 }
 
+:root[data-theme='dark'] .score-preview:has(.score-preview-image) {
+  background: #e5e4e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .score-preview:has(.score-preview-image) {
+    background: #e5e4e0;
+  }
+}
+
 .score-preview-message {
   display: grid;
   max-width: 180px;

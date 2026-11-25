@@ -241,6 +241,26 @@ test('visible score previews transition from pending to ready', async ({ page })
   );
 });
 
+test('score previews remain readable in dark mode in both layouts', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await mockManagement(page, { initialRuntime: true, scores: [scores[0]!] });
+  await openScores(page);
+  const preview = page
+    .locator('.score-preview')
+    .filter({ has: page.locator('.score-preview-image') });
+  await expect(preview).toBeVisible();
+
+  for (const layout of ['平铺', '列表']) {
+    await page.getByRole('button', { name: layout, exact: true }).click();
+    const background = await preview.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    const channels = background.match(/\d+/g)?.slice(0, 3).map(Number) ?? [];
+    expect(channels).toHaveLength(3);
+    expect(Math.min(...channels)).toBeGreaterThan(180);
+  }
+});
+
 test('failed previews expose a retry action', async ({ page }) => {
   await mockManagement(page, {
     initialRuntime: true,
