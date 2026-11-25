@@ -120,7 +120,7 @@ impl UpdateService {
                 state: UpdateState::Idle,
                 is_debug_build: debug_build,
                 current: build.to_string(),
-                source: UpdateSource::Ossia,
+                source: UpdateSource::Github,
                 channel,
                 latest: None,
                 error: None,

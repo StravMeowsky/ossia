@@ -29,8 +29,8 @@ impl UpdateState {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum UpdateSource {
-    #[default]
     Ossia,
+    #[default]
     Github,
 }
 

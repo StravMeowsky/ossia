@@ -21,7 +21,7 @@ concurrency:
 jobs:
   publish:
     if: >-
-      github.repository == 'micooz/ossia' &&
+      github.repository == 'StravMeowsky/ossia' &&
       (github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&

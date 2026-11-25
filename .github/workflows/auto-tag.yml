@@ -16,7 +16,7 @@ concurrency:
 jobs:
   tag:
     if: >-
-      github.repository == 'micooz/ossia' &&
+      github.repository == 'StravMeowsky/ossia' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'main' &&

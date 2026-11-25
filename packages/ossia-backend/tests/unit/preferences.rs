@@ -29,7 +29,7 @@ fn legacy_preferences_use_the_default_storage_limit() {
             storage_auto_cleanup: true,
             lan_access: false,
             auto_download: true,
-            update_source: UpdateSource::Ossia,
+            update_source: UpdateSource::Github,
             update_channel: UpdateChannelPreference::Auto,
             github_token: None,
             omr_service: OmrService::Ossia,

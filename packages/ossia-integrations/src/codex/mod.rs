@@ -117,7 +117,7 @@ pub(super) fn plugin_files(ctx: &AgentContext) -> Result<Vec<FilePlan>, AppError
         "shortDescription": "Create, edit, engrave, and export scores in your local Ossia library.",
         "longDescription": "Create, edit, engrave, and export scores in your local Ossia library. Browse scores, inspect and edit source, preview changes, and manage version history.",
         "developerName": "Ossia Contributors",
-        "websiteURL": "https://github.com/micooz/ossia",
+        "websiteURL": "https://github.com/StravMeowsky/ossia",
         "category": "Productivity",
         "capabilities": ["Read", "Write"],
         "composerIcon": "./assets/ossia.svg",

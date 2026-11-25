@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[tokio::test]
 async fn debug_build_cannot_install_a_staged_download() {
-    let service = UpdateService::for_debug_build("http://127.0.0.1:9", "micooz/ossia", "v0.1.0");
+    let service = UpdateService::for_debug_build("http://127.0.0.1:9", "StravMeowsky/ossia", "v0.1.0");
     let dir = tempfile::tempdir().unwrap();
     let staged = dir.path().join("update.zip");
     fs::write(&staged, b"download").unwrap();
@@ -25,7 +25,7 @@ async fn debug_build_cannot_install_a_staged_download() {
 
 #[test]
 fn finish_on_quit_discards_an_unused_download() {
-    let service = UpdateService::for_build("http://127.0.0.1:9", "micooz/ossia", "v0.1.0");
+    let service = UpdateService::for_build("http://127.0.0.1:9", "StravMeowsky/ossia", "v0.1.0");
     let dir = tempfile::tempdir().unwrap();
     let staged = dir.path().join("ossia-update.zip");
     fs::write(&staged, b"downloaded update").unwrap();
@@ -43,7 +43,7 @@ fn finish_on_quit_discards_an_unused_download() {
 #[tokio::test]
 async fn update_checks_publish_status_and_configuration_changes_clear_it() {
     let home = tempfile::tempdir().unwrap();
-    let mut service = UpdateService::for_build("http://127.0.0.1:9", "micooz/ossia", "v0.1.0");
+    let mut service = UpdateService::for_build("http://127.0.0.1:9", "StravMeowsky/ossia", "v0.1.0");
     service.status_home = Some(Arc::new(home.path().to_owned()));
     service
         .check(UpdateSource::Github, None, UpdateChannel::Stable, false)
@@ -58,7 +58,7 @@ async fn update_checks_publish_status_and_configuration_changes_clear_it() {
         .unwrap()
         .is_none());
 
-    let mut source = UpdateService::for_build("http://127.0.0.1:9", "micooz/ossia", "0.1.0-5-gabc");
+    let mut source = UpdateService::for_build("http://127.0.0.1:9", "StravMeowsky/ossia", "0.1.0-5-gabc");
     source.status_home = Some(Arc::new(home.path().to_owned()));
     source
         .check(UpdateSource::Ossia, None, UpdateChannel::Stable, false)
@@ -96,7 +96,7 @@ async fn successful_check_publishes_available_version() {
     });
     let home = tempfile::tempdir().unwrap();
     let mut service =
-        UpdateService::for_build(&format!("http://{address}"), "micooz/ossia", "v0.1.0");
+        UpdateService::for_build(&format!("http://{address}"), "StravMeowsky/ossia", "v0.1.0");
     service.status_home = Some(Arc::new(home.path().to_owned()));
     service
         .check(UpdateSource::Github, None, UpdateChannel::Stable, false)

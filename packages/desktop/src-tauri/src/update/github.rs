@@ -5,7 +5,7 @@ use ossia_types::UpdateChannel;
 use serde::Deserialize;
 use std::{io::Read, time::Duration};
 
-pub const REPOSITORY: &str = "micooz/ossia";
+pub const REPOSITORY: &str = "StravMeowsky/ossia";
 pub const API_BASE: &str = "https://api.github.com";
 const PAGE_SIZE: usize = 100;
 const MAX_PAGES: usize = 20;

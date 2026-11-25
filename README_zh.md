@@ -2,7 +2,7 @@
   <img src="website/assets/cover-zh.png" alt="Ossia：AI 原生乐谱制作软件">
   <p><strong>体验极佳的 AI 原生乐谱制作软件</strong></p>
   <p>
-    <a href="https://github.com/micooz/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/micooz/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
+    <a href="https://github.com/StravMeowsky/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/StravMeowsky/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
     <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.91%2B-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" alt="Rust 1.91 或更新版本"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-111111?style=flat-square" alt="许可证：GPL-3.0-or-later"></a>
   </p>
@@ -79,7 +79,7 @@ Ossia 可以帮你从现有乐谱或简单想法开始，一步步完成乐谱�
 
 > ⚠️ 当前安装包尚未签名或公证，macOS 和 Windows 可能阻止安装，确保从可信源下载安装包，按指引解锁安装限制（仅首次安装时需要）。
 
-Ossia 当前提供 macOS（Apple Silicon）和 Windows x64 平台的安装包，可前往 [Releases](https://github.com/micooz/ossia/releases) 页面下载。
+Ossia 当前提供 macOS（Apple Silicon）和 Windows x64 平台的安装包，可前往 [Releases](https://github.com/StravMeowsky/ossia/releases) 页面下载。
 
 ### 2. 接入 Agent
 

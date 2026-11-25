@@ -2,7 +2,7 @@
   <img src="website/assets/cover-en.png" alt="Ossia: AI-native music notation software">
   <p><strong>AI-native music notation software, built for a great experience.</strong></p>
   <p>
-    <a href="https://github.com/micooz/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/micooz/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
+    <a href="https://github.com/StravMeowsky/ossia/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/StravMeowsky/ossia/check.yml?branch=main&amp;label=CI&amp;style=flat-square" alt="CI"></a>
     <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.91%2B-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" alt="Rust 1.91 or later"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-111111?style=flat-square" alt="License: GPL-3.0-or-later"></a>
   </p>
@@ -79,7 +79,7 @@ Arrange <em>Hollow Knight</em> as a new guitar tablature score and add chord dia
 
 > ⚠️ Current installers are unsigned and the macOS app is not notarized. macOS and Windows may block installation. Download from a trusted source and follow the platform instructions to allow installation; this is only needed the first time.
 
-Download an installer for macOS (Apple Silicon) or Windows x64 from [Releases](https://github.com/micooz/ossia/releases).
+Download an installer for macOS (Apple Silicon) or Windows x64 from [Releases](https://github.com/StravMeowsky/ossia/releases).
 
 ### 2. Connect an agent
 

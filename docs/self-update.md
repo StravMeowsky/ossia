@@ -2,13 +2,13 @@
 
 The desktop management process checks the selected source, downloads the asset
 for the current platform, verifies it, and replaces the application. The default
-source is the built-in Ossia feed; GitHub Releases for `micooz/ossia` remain
+source is the built-in Ossia feed; GitHub Releases for `StravMeowsky/ossia` remain
 selectable. The score page and local backend do not contact either source.
 
 ## Access
 
 Ossia checks and downloads work anonymously. A fine-grained GitHub token with
-read-only **Contents** access to `micooz/ossia` is optional and is used only
+read-only **Contents** access to `StravMeowsky/ossia` is optional and is used only
 when the GitHub source is selected. The token is stored in
 `<data-directory>/preferences.json` and is never returned to the UI. The
 management window shows only a masked suffix.

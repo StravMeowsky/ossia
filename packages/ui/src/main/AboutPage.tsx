@@ -245,7 +245,7 @@ export function AboutPage({
               </div>
               <Segmented
                 ariaLabel={t('updateFeedSource')}
-                value={preferences?.updateSource ?? 'ossia'}
+                value={preferences?.updateSource ?? 'github'}
                 disabled={!native || !preferences || preferencesBusy || busy}
                 compact
                 options={[

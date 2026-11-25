@@ -5,7 +5,7 @@ import libraryZh from './library-zh.webp';
 import translations from './translations.json';
 
 const OSSIA_FEED_ORIGIN = 'https://ossia-releases.maisow.com';
-const GITHUB_RELEASES_PAGE = 'https://github.com/micooz/ossia/releases';
+const GITHUB_RELEASES_PAGE = 'https://github.com/StravMeowsky/ossia/releases';
 const INSTALLERS = {
   'darwin-arm64': 'ossia-darwin-arm64.dmg',
   'windows-amd64': 'ossia-windows-amd64.exe',

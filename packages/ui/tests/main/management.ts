@@ -78,7 +78,7 @@ export async function mockManagement(
     autoDownload: true,
     updateChannel: 'stable',
     updateChannelPreference: 'auto',
-    updateSource: 'ossia',
+    updateSource: 'github',
     githubTokenMasked,
     omrService,
     omrOssiaUrl: 'https://ossia.maisow.com/omr',

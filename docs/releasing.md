@@ -2,7 +2,7 @@
 
 ## GitHub setup
 
-The release workflows expect the repository `micooz/ossia`, with `main` as the release branch. Configure:
+The release workflows expect the repository `StravMeowsky/ossia`, with `main` as the release branch. Configure:
 
 - `DEEPSEEK_API_KEY` repository secret for bilingual release notes.
 - `OSSIA_BOT_CLIENT_ID` and `OSSIA_BOT_APP_ID` repository variables, plus
@@ -16,15 +16,15 @@ The release workflows expect the repository `micooz/ossia`, with `main` as the r
 Set the DeepSeek key without putting it in shell history:
 
 ```sh
-gh secret set DEEPSEEK_API_KEY --repo micooz/ossia
+gh secret set DEEPSEEK_API_KEY --repo StravMeowsky/ossia
 ```
 
 Set the GitHub App credentials after downloading its PEM private key:
 
 ```sh
-gh variable set OSSIA_BOT_CLIENT_ID --repo micooz/ossia --body '<client-id>'
-gh variable set OSSIA_BOT_APP_ID --repo micooz/ossia --body '<app-id>'
-gh secret set OSSIA_BOT_PRIVATE_KEY --repo micooz/ossia < /path/to/ossia-bot.pem
+gh variable set OSSIA_BOT_CLIENT_ID --repo StravMeowsky/ossia --body '<client-id>'
+gh variable set OSSIA_BOT_APP_ID --repo StravMeowsky/ossia --body '<app-id>'
+gh secret set OSSIA_BOT_PRIVATE_KEY --repo StravMeowsky/ossia < /path/to/ossia-bot.pem
 ```
 
 `Check` runs on pull requests and `main` pushes. After a successful `main`
@@ -123,7 +123,7 @@ are unsigned and not notarized.
 
 Desktop clients default to the built-in Ossia update feed and can switch to
 GitHub. Ossia checks and downloads are anonymous. A fine-grained GitHub token
-with read-only **Contents** access to `micooz/ossia` is used only when GitHub is
+with read-only **Contents** access to `StravMeowsky/ossia` is used only when GitHub is
 selected.
 Custom installations can host a compatible mirror as described in
 [`update-mirror.md`](update-mirror.md).

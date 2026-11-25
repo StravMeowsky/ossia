@@ -247,7 +247,7 @@ test('installed materials identify the matching source and build', () => {
       source: {
         tag: build.buildStamp,
         commit,
-        url: `https://github.com/micooz/ossia/archive/${commit}.tar.gz`,
+        url: `https://github.com/StravMeowsky/ossia/archive/${commit}.tar.gz`,
       },
     };
     fs.writeFileSync(path.join(licenses, 'BUILD-INFO.json'), JSON.stringify(build));

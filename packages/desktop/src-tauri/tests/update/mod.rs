@@ -259,7 +259,7 @@ fn release_feed_filters_by_channel_and_token() {
     let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
     let stable = github::releases(
         &mock.base,
-        "micooz/ossia",
+        "StravMeowsky/ossia",
         Some("secret"),
         Some("v0.1.0-beta.4"),
         UpdateChannel::Stable,
@@ -271,7 +271,7 @@ fn release_feed_filters_by_channel_and_token() {
 
     let beta = github::releases(
         &mock.base,
-        "micooz/ossia",
+        "StravMeowsky/ossia",
         Some("secret"),
         Some("v0.1.0-beta.4"),
         UpdateChannel::Beta,
@@ -286,7 +286,7 @@ fn asset_requests_accept_only_binary_data() {
     let client = super::fetch::no_redirect_client().unwrap();
     let request = super::fetch::asset_get(
         &client,
-        "https://api.github.com/repos/micooz/ossia/releases/assets/1",
+        "https://api.github.com/repos/StravMeowsky/ossia/releases/assets/1",
         Some("secret"),
     )
     .unwrap()
@@ -403,7 +403,7 @@ async fn debug_build_notes_include_all_channels_and_keep_the_newest_five() {
         }
     ]);
     let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
-    let service = UpdateService::for_debug_build(&mock.base, "micooz/ossia", "0.1.0");
+    let service = UpdateService::for_debug_build(&mock.base, "StravMeowsky/ossia", "0.1.0");
 
     let snapshot = service
         .check_notes(UpdateSource::Github, None, UpdateChannel::Stable)
@@ -437,7 +437,7 @@ async fn debug_build_downloads_and_verifies_latest_even_at_same_version() {
         "digest": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
     }] }]);
     let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
-    let service = UpdateService::for_debug_build(&mock.base, "micooz/ossia", "v0.2.0");
+    let service = UpdateService::for_debug_build(&mock.base, "StravMeowsky/ossia", "v0.2.0");
     let found = service
         .check(UpdateSource::Github, None, UpdateChannel::Stable, false)
         .await;
@@ -452,7 +452,7 @@ async fn debug_build_downloads_and_verifies_latest_even_at_same_version() {
 
 #[tokio::test]
 async fn source_builds_do_not_request_the_feed() {
-    let service = UpdateService::for_build("http://127.0.0.1:9", "micooz/ossia", "0.1.0-5-gabc");
+    let service = UpdateService::for_build("http://127.0.0.1:9", "StravMeowsky/ossia", "0.1.0-5-gabc");
     let snapshot = service
         .check(UpdateSource::Github, None, UpdateChannel::Stable, true)
         .await;
@@ -471,7 +471,7 @@ async fn release_builds_check_without_a_token() {
         }
     ]);
     let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
-    let service = UpdateService::for_build(&mock.base, "micooz/ossia", "v0.1.0");
+    let service = UpdateService::for_build(&mock.base, "StravMeowsky/ossia", "v0.1.0");
     let snapshot = service
         .check(UpdateSource::Github, None, UpdateChannel::Stable, false)
         .await;
@@ -508,7 +508,7 @@ fn ossia_feed_uses_the_target_manifest_and_resolves_relative_assets() {
     let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
     let endpoints = feed::Endpoints {
         github_base: Arc::from("http://127.0.0.1:9"),
-        github_repository: Arc::from("micooz/ossia"),
+        github_repository: Arc::from("StravMeowsky/ossia"),
         ossia_base: Arc::from(mock.base.as_str()),
     };
     let target = super::target::target_for("macos", "aarch64", PackageManagers::default()).unwrap();
@@ -590,7 +590,7 @@ fn invalid_release_tags_fail_the_check() {
     let mock = Mock::start(Arc::new(move |_, _| MockResponse::json(body.to_string())));
     let error = github::releases(
         &mock.base,
-        "micooz/ossia",
+        "StravMeowsky/ossia",
         Some("secret"),
         None,
         UpdateChannel::Stable,
