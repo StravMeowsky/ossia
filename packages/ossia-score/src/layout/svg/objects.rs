@@ -11,11 +11,22 @@ pub struct EngravedNote {
     pub grace_denominator: u64,
 }
 
+/// Musical start and duration supplied by a rhythmic engraving event.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngravedTiming {
+    pub numerator: i64,
+    pub denominator: u64,
+    pub duration_numerator: u64,
+    pub duration_denominator: u64,
+}
+
 /// Exact stencil bounds and source metadata emitted by the engine.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SvgObject {
     pub note: Option<EngravedNote>,
+    pub timing: Option<EngravedTiming>,
     pub kind: String,
     pub bbox: BBox,
     pub span: Option<ossia_types::SourceSpan>,
@@ -29,6 +40,7 @@ pub struct SvgObject {
 #[derive(Clone)]
 pub(super) struct ObjectOrigin {
     pub(super) note: Option<EngravedNote>,
+    pub(super) timing: Option<EngravedTiming>,
     pub(super) kind: String,
     pub(super) span: Option<ossia_types::SourceSpan>,
     pub(super) staff_index: Option<usize>,
@@ -61,7 +73,28 @@ pub(super) fn read(
             )
         })
         .transpose()?;
+    let timing = attrs
+        .get("data-ossia-timing")
+        .map(|raw| {
+            let fields = raw.split(',').collect::<Vec<_>>();
+            let invalid = || AppError::invalid("invalid engraved timing metadata");
+            if fields.len() != 4 {
+                return Err(invalid());
+            }
+            let timing = EngravedTiming {
+                numerator: fields[0].parse().map_err(|_| invalid())?,
+                denominator: fields[1].parse().map_err(|_| invalid())?,
+                duration_numerator: fields[2].parse().map_err(|_| invalid())?,
+                duration_denominator: fields[3].parse().map_err(|_| invalid())?,
+            };
+            if timing.denominator == 0 || timing.duration_denominator == 0 {
+                return Err(invalid());
+            }
+            Ok(timing)
+        })
+        .transpose()?;
     let origin = ObjectOrigin {
+        timing,
         note: attrs
             .get("data-ossia-note")
             .map(|raw| {
@@ -116,6 +149,7 @@ pub(super) fn read(
             }
             Ok(SvgObject {
                 note: origin.note,
+                timing: origin.timing,
                 kind: kind.clone(),
                 bbox: matrix.bbox(BBox::points(&[
                     (coords[0], coords[1]),

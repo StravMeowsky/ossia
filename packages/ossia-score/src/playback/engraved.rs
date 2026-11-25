@@ -11,16 +11,108 @@ struct Head<'a> {
 }
 
 fn tick(note: EngravedNote, ppqn: u64) -> Option<u64> {
-    if note.denominator == 0 {
+    moment_ticks(i128::from(note.numerator), note.denominator, ppqn)
+}
+
+fn moment_ticks(numerator: i128, denominator: u64, ppqn: u64) -> Option<u64> {
+    if denominator == 0 {
         return None;
     }
-    let numerator = u128::try_from(note.numerator)
+    let numerator = u128::try_from(numerator)
         .ok()?
         .checked_mul(4 * u128::from(ppqn))?;
-    let denominator = u128::from(note.denominator);
+    let denominator = u128::from(denominator);
     (numerator % denominator == 0)
         .then(|| (numerator / denominator).try_into().ok())
         .flatten()
+}
+
+fn rest_groups(
+    layout: &ScoreLayout,
+    pages: &[GeometryPage],
+    midi: &MidiFile,
+    ppqn: u64,
+    groups: &mut Vec<PlaybackNoteGroup>,
+) {
+    let timings = layout
+        .pages
+        .iter()
+        .flat_map(|page| &page.objects)
+        .filter(|object| !object.hit_only)
+        .filter_map(|object| Some((object.graphic_id.as_deref()?, object.timing?)))
+        .collect::<HashMap<_, _>>();
+    let mut replacements = HashMap::<String, PlaybackNoteGroup>::new();
+    for element in pages.iter().flat_map(|page| &page.elements) {
+        if !matches!(
+            element.region.element_kind.as_deref(),
+            Some("Rest" | "MultiMeasureRest")
+        ) {
+            continue;
+        }
+        let SelectionTarget::Element { element_id } = &element.region.target else {
+            continue;
+        };
+        let mut values = element
+            .graphic_ids
+            .iter()
+            .filter_map(|id| timings.get(id.as_str()));
+        let Some(timing) = values.next() else {
+            continue;
+        };
+        if values.any(|other| {
+            other.numerator != timing.numerator
+                || other.denominator != timing.denominator
+                || other.duration_numerator != timing.duration_numerator
+                || other.duration_denominator != timing.duration_denominator
+        }) {
+            continue;
+        }
+        let (Some(start), Some(length)) = (
+            moment_ticks(i128::from(timing.numerator), timing.denominator, ppqn),
+            moment_ticks(
+                i128::from(timing.duration_numerator),
+                timing.duration_denominator,
+                ppqn,
+            ),
+        ) else {
+            continue;
+        };
+        let Some(end) = start.checked_add(length).filter(|_| length > 0) else {
+            continue;
+        };
+        let start_seconds = seconds_at(start, ppqn, midi);
+        // A multi-measure rest can emit several grobs for one source event.
+        // Its duration belongs to the earliest occurrence, not to each copy.
+        if replacements.get(element_id).is_some_and(|group| {
+            group
+                .start_seconds
+                .is_some_and(|time| time <= start_seconds)
+        }) {
+            continue;
+        }
+        replacements.insert(
+            element_id.clone(),
+            PlaybackNoteGroup {
+                element_ids: vec![element_id.clone()],
+                pitches: Vec::new(),
+                staff_index: element.region.staff_index,
+                voice: element.region.voice.clone(),
+                start_seconds: Some(start_seconds),
+                duration_seconds: Some(seconds_at(end, ppqn, midi) - start_seconds),
+                part_id: None,
+            },
+        );
+    }
+    groups.retain_mut(|group| {
+        if group.element_ids.is_empty() {
+            return true;
+        }
+        group
+            .element_ids
+            .retain(|id| !replacements.contains_key(id));
+        !group.element_ids.is_empty()
+    });
+    groups.extend(replacements.into_values());
 }
 
 /// Replace positional guesses only when engraved moments prove one constant pitch offset per voice.
@@ -32,6 +124,7 @@ pub(super) fn note_groups(
     hints: &HashMap<String, u8>,
     groups: &mut Vec<PlaybackNoteGroup>,
 ) {
+    rest_groups(layout, pages, midi, ppqn, groups);
     let muted = groups
         .iter()
         .filter(|group| group.pitches.is_empty())

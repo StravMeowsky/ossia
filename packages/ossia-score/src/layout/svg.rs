@@ -52,7 +52,7 @@ pub struct SvgElement {
 
 mod objects;
 use objects::ObjectOrigin;
-pub use objects::{EngravedNote, SvgObject};
+pub use objects::{EngravedNote, EngravedTiming, SvgObject};
 
 #[derive(Clone)]
 struct Frame {
@@ -269,6 +269,7 @@ pub(crate) fn read_svg(
                                 }
                                 objects.push(SvgObject {
                                     note: object.note,
+                                    timing: object.timing,
                                     kind: object.kind.clone(),
                                     bbox,
                                     span: object.span,

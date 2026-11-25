@@ -145,11 +145,15 @@ pub fn build_playback(
             && (left.duration_seconds - right.duration_seconds).abs() <= ONSET_EPSILON_SECONDS
     });
     let notes = notes.into_iter().map(|(note, ..)| note).collect::<Vec<_>>();
-    let duration_seconds = notes
-        .iter()
-        .map(|note| note.start_seconds + note.duration_seconds)
-        .chain(systems.iter().map(|span| span.end_seconds))
-        .fold(0.0, f64::max);
+    let duration_seconds =
+        notes
+            .iter()
+            .map(|note| note.start_seconds + note.duration_seconds)
+            .chain(systems.iter().map(|span| span.end_seconds))
+            .chain(groups.iter().filter_map(|group| {
+                Some(group.start_seconds? + group.duration_seconds.unwrap_or(0.))
+            }))
+            .fold(0.0, f64::max);
     Ok(ScorePlayback {
         render_key,
         source_hash: index.source_hash.clone(),

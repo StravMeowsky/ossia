@@ -204,3 +204,57 @@ fn unison_attacks_keep_one_pitch_when_performer_release_is_ambiguous() {
         HashSet::from([60, 62])
     );
 }
+
+#[test]
+fn rests_use_engraved_moments_and_durations_across_tempo_changes() {
+    let source = "music = { r4 r2. R1*2 }\n\\score { \\new Staff \\music }";
+    let index = build_index(source);
+    let svg = format!(
+        r#"<svg viewBox="0 0 100 60">
+        <g data-ossia-kind="Rest" data-ossia-id="quarter" data-ossia-staff="0"
+           data-ossia-source="{}:{}" data-ossia-timing="0,1,1,4" data-ossia-bounds="10 10 12 12"/>
+        <g data-ossia-kind="Rest" data-ossia-id="dotted" data-ossia-staff="0"
+           data-ossia-source="{}:{}" data-ossia-timing="1,4,3,4" data-ossia-bounds="20 10 22 12"/>
+        <g data-ossia-kind="MultiMeasureRest" data-ossia-id="multi" data-ossia-staff="0"
+           data-ossia-source="{}:{}" data-ossia-timing="1,1,2,1" data-ossia-bounds="30 10 32 12"/>
+        <g data-ossia-kind="MultiMeasureRest" data-ossia-id="multi-copy" data-ossia-staff="0"
+           data-ossia-source="{}:{}" data-ossia-timing="2,1,2,1" data-ossia-bounds="40 10 42 12"/>
+        </svg>"#,
+        source.find("r4").unwrap(),
+        source.find("r4").unwrap() + 2,
+        source.find("r2.").unwrap(),
+        source.find("r2.").unwrap() + 3,
+        source.find("R1*2").unwrap(),
+        source.find("R1*2").unwrap() + 4,
+        source.find("R1*2").unwrap(),
+        source.find("R1*2").unwrap() + 4,
+    );
+    let layout = build_layout(&index, &[SvgPage { page: 1, svg: &svg }]).unwrap();
+    let pages = selection_geometry(&index, &layout).unwrap();
+    let (_, _, mut midi) = fixture(&[]);
+    midi.tempos = vec![crate::MidiTempo {
+        tick: 480,
+        microseconds_per_quarter: 1_000_000,
+    }];
+    let mut groups = Vec::new();
+    note_groups(&layout, &pages, &midi, 480, &HashMap::new(), &mut groups);
+    groups.sort_by(|a, b| a.start_seconds.partial_cmp(&b.start_seconds).unwrap());
+    assert_eq!(groups.len(), 3);
+    assert_eq!(groups[0].start_seconds, Some(0.));
+    assert_eq!(groups[0].duration_seconds, Some(0.5));
+    assert_eq!(groups[1].start_seconds, Some(0.5));
+    assert_eq!(groups[1].duration_seconds, Some(3.));
+    assert_eq!(groups[2].start_seconds, Some(3.5));
+    assert_eq!(groups[2].duration_seconds, Some(8.));
+    assert!(groups
+        .iter()
+        .all(|group| group.pitches.is_empty() && group.part_id.is_none()));
+    let playback = crate::build_playback(
+        &index,
+        &layout,
+        &midi,
+        ossia_types::ContentHash::of(b"rests"),
+    )
+    .unwrap();
+    assert_eq!(playback.duration_seconds, 11.5);
+}

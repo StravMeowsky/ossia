@@ -109,14 +109,27 @@ fn element_system(
         if let Some((staff_index, _)) = staves.next() {
             if staves.next().is_none() {
                 let (x, y) = object.bbox.center();
-                let mut systems = page.systems.iter().enumerate().filter(|(_, system)| {
-                    system.staves.get(staff_index).is_some_and(|staff| {
-                        x >= staff.x0 && x <= staff.x1 && y >= staff.top && y <= staff.bot
+                // Ledger-line notes can lie beyond the staff's ink bounds. Compare
+                // only the same source staff in each system, retaining ambiguous ties.
+                let mut systems = page
+                    .systems
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, system)| {
+                        let staff = system.staves.get(staff_index)?;
+                        if x < staff.x0 || x > staff.x1 {
+                            return None;
+                        }
+                        Some((i, (staff.top - y).max(y - staff.bot).max(0.)))
                     })
-                });
-                if let Some((system_index, _)) = systems.next() {
-                    if systems.next().is_none() {
-                        return Some(system_index);
+                    .collect::<Vec<_>>();
+                systems.sort_by(|left, right| left.1.total_cmp(&right.1));
+                if let Some((system_index, distance)) = systems.first() {
+                    if systems
+                        .get(1)
+                        .is_none_or(|(_, other)| *other > distance + 1e-6)
+                    {
+                        return Some(*system_index);
                     }
                     return None;
                 }

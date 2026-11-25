@@ -160,6 +160,18 @@
         "kind": "forward",
         "from": 41.5,
         "to": 42
+      },
+      {
+        "kind": "rest",
+        "time": 20,
+        "duration": 4,
+        "needle": "bes4 r r2\n\t|\tr1\n\t|\tr1\n\t|\tr1",
+        "offset": 13
+      },
+      {
+        "kind": "forward",
+        "from": 0,
+        "to": 160
       }
     ]
   },
@@ -460,7 +472,20 @@
     "id": "bach-sheep-four-hands",
     "source": "bach-sheep-four-hands.ly",
     "origin": "Bach BWV 208, complete piano four-hands arrangement",
-    "checks": []
+    "checks": [
+      {
+        "kind": "rest",
+        "time": 16.666666666666668,
+        "duration": 3.3333333333333335,
+        "needle": "bes4 r r2\n\t|\tr1\n\t|\tr1\n\t|\tr1",
+        "offset": 13
+      },
+      {
+        "kind": "forward",
+        "from": 0,
+        "to": 140
+      }
+    ]
   },
   {
     "id": "evening-glow",
@@ -473,5 +498,73 @@
     "source": "hollow-knight-guitar.ly",
     "origin": "Hollow Knight, complete guitar tablature",
     "checks": []
+  },
+  {
+    "id": "rests-and-tempo",
+    "source": "rests-and-tempo.ly",
+    "origin": "Unequal rests, compressed multimeasure rests, tuplets and a tempo change",
+    "checks": [
+      {
+        "kind": "rest",
+        "time": 0,
+        "duration": 8,
+        "needle": "R1*2",
+        "offset": 0
+      },
+      {
+        "kind": "rest",
+        "time": 8,
+        "duration": 1.5,
+        "needle": "r4. r8 r2",
+        "offset": 0
+      },
+      {
+        "kind": "rest",
+        "time": 9.5,
+        "duration": 0.5,
+        "needle": "r4. r8 r2",
+        "offset": 4
+      },
+      {
+        "kind": "rest",
+        "time": 10,
+        "duration": 2,
+        "needle": "r4. r8 r2",
+        "offset": 7
+      },
+      {
+        "kind": "rest",
+        "time": 12,
+        "duration": 0.3333333333333333,
+        "needle": "r8 d''8",
+        "offset": 0
+      },
+      {
+        "kind": "rest",
+        "time": 13,
+        "duration": 3,
+        "needle": "r2.",
+        "offset": 0
+      },
+      {
+        "kind": "rest",
+        "time": 16,
+        "duration": 2,
+        "needle": "120 r1",
+        "offset": 4
+      },
+      {
+        "kind": "rest",
+        "time": 20,
+        "duration": 0.5,
+        "needle": "c''1 |\n  r4",
+        "offset": 9
+      },
+      {
+        "kind": "forward",
+        "from": 0,
+        "to": 21
+      }
+    ]
   }
 ]

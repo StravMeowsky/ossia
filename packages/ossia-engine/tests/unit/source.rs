@@ -246,3 +246,14 @@ fn interactive_note_metadata_preserves_pitch_and_musical_moments() {
     assert!(normalized.contains(r#"data-ossia-id="head""#));
     assert!(normalized.contains(r#"data-ossia-related="related""#));
 }
+
+#[test]
+fn interactive_rest_metadata_preserves_start_and_duration() {
+    let original = "\\score { { r1 } }\n";
+    let derived = source::derive(original, RenderFormat::Svg, true).unwrap();
+    let svg =
+        r#"<svg><a href="ossia:Rest:0:-1:-1:rest::::5,1,1,1"><path d="M0 0h1v1h-1z"/></a></svg>"#;
+    let normalized = source::normalize_svg(svg, &derived, original).unwrap();
+    assert!(normalized.contains(r#"data-ossia-timing="5,1,1,1""#));
+    assert!(!normalized.contains("data-ossia-note="));
+}

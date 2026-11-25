@@ -6,7 +6,7 @@ Run all verification suites without a library or server:
 pnpm verify
 ```
 
-To run only the playback cases, optionally selecting specific cases:
+Run a suite on all cases or select case IDs:
 
 ```sh
 pnpm verify:playback
@@ -21,13 +21,13 @@ Each case in `tests/fixtures/playback/cases.json` references a LilyPond source
 derived from a reported issue. Prefer a complete score with personal metadata
 removed, and verify that redaction preserves the relevant behavior. Use small
 independent excerpts for distinct musical rules or isolated diagnosis. A passing
-case verifies its declared checkpoints, not every note in the score.
-The command builds the current engine,
-renders each source with the installed LilyPond, and checks sounding notes,
-their source-note associations and selected playhead positions. It exits with a
-failure if any expected behavior is missing. Some cases intentionally expose
-unfixed bugs; they must not be changed to expect the incorrect result. The
-checks describe the intended result and are not copied from current output.
+case requires the full-score structural audit and its declared checkpoints to
+pass. The command builds the current engine, renders each source with the
+installed LilyPond, and audits sounding-note coverage, notehead associations,
+timed groups and playhead movement across every page. Any finding fails the
+suite, including cases with an empty `checks` array. Manual checkpoints add
+independent pitch, timing and source-position expectations; they must not be
+copied from current output.
 CI installs the locked LilyPond engine on macOS and runs `pnpm verify`. Known
 failures cause the job to fail until fixed.
 
@@ -38,7 +38,8 @@ For `mapped` or `playhead` checks, specify `time` in seconds, MIDI `pitch`, and
 a source `needle` that occurs exactly once. `offset` is the character offset
 within that needle. Optional `continuation` and `continuationOffset` require
 both ends of a tie to be in the same group; `duration` checks the sounding
-duration. A `forward` check verifies that positions exist and do not move
+duration. A `rest` check specifies `time`, `duration`, `needle` and `offset` for
+a silent rest. A `forward` check verifies that positions exist and do not move
 backwards within a time range. Use `playhead` only when the chosen notehead is
 expected to intersect the line at that time; simultaneous voices may choose
 another valid notehead. Keep browser tests for interactions, scheduling, and
@@ -56,14 +57,20 @@ continuations may share their attack's group. Timed groups with no pitches are
 intentionally silent notation, such as dead notes; they must remain clickable
 and keyboard-reachable, and are counted separately. Coincident unisons are counted
 separately when they occupy identical bounds and produce the same pitch and
-onset.
+onset. Every sounding onset also compares the combined audition's pitches and
+counts with the MIDI attacks, including independent unison performers.
 
 The command also runs Chrome against the generated SVG, geometry and playback
-data. On the first system of the first page, it clicks each notehead, walks
-each voice forwards and backwards, and checks Alt/Option-click against the
-simultaneous MIDI attacks. It records calls to the real audio player while
-allowing playback to run, including duplicate-attack detection across notation
+data. It clicks every notehead on every page, walks each voice forwards and
+backwards through notes and rests, checks selection highlighting, and compares
+Alt/Option-click against simultaneous MIDI attacks. It records calls to the
+real audio player while allowing playback to run, including duplicate-attack detection across notation
 and TAB. This checks scheduled pitches, not the sound heard through speakers.
+A separate browser test advances a controlled audio clock through every group
+onset and checks the displayed playhead against the audited trace across every
+page and system. Sound output is stubbed for this positioning test. Independent
+fixture checkpoints and the structural audit validate the trace itself.
+Browser cases run in parallel after all data audits pass.
 Install Chrome with `pnpm --filter @ossia/ui exec playwright install chrome`.
 
 To audit the current library without changing scores:
@@ -88,15 +95,15 @@ Start the development backend from the current checkout, then run:
 ```sh
 pnpm audit:playback > .ossia/playback-audit-report.json
 pnpm audit:playback -- <document-id>
-pnpm audit:playback -- --base=http://127.0.0.1:3211/api/v1/ --strict
-pnpm audit:playback -- --expect=path/to/checked-onsets.json --strict
+pnpm audit:playback -- --base=http://127.0.0.1:3211/api/v1/
+pnpm audit:playback -- --expect=path/to/checked-onsets.json
 ```
 
 The command reads the current render of each score through the local HTTP API;
 it does not modify scores. The backend must be rebuilt and restarted after Rust
 changes. The JSON report records the title, onset coverage, source locations,
-coordinates and times. `--strict` exits unsuccessfully for any issue or untimed
-group; without it only failed requests or incompatible snapshots fail the run.
+coordinates and times. Any finding, untimed group, failed request or
+incompatible snapshot makes the command fail.
 `trace` records the selected position at each group onset and the held position
 when locating fails. Compare it with independently checked score examples when
 validating a mapping change.
@@ -117,6 +124,8 @@ must be established from independent evidence, not copied from the audit trace.
 - `unmapped-note`: a sounding note has no group with the same pitch and onset.
 - `unmapped-head`: a visible notehead belongs to no playback group. Silent
   notation, ornaments and unsupported notation need individual review.
+- `out-of-range-group`: a timed group starts at the playback endpoint or extends
+  beyond it, including a trailing rest omitted from the total duration.
 - `multiple-positions`: one group contains noteheads at different positions.
   Ties and displaced chord noteheads commonly do this correctly; inspect the
   source and the note-to-time correspondence before treating it as an error.

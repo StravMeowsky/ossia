@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { createServer } from 'node:http';
+import { promisify } from 'node:util';
 
 import { test } from 'vite-plus/test';
 
@@ -169,4 +172,51 @@ test('warns when the same source note is engraved twice at different positions',
     auditPlayback(playback, geometry).issues.some((issue) => issue.kind === 'multiple-positions'),
     true,
   );
+});
+
+test('CLI fails on audit findings and untimed groups without an opt-in flag', async () => {
+  const { geometry, playback } = fixture();
+  const server = createServer((request, response) => {
+    response.setHeader('Content-Type', 'application/json');
+    response.end(
+      JSON.stringify(
+        request.url.endsWith('/context')
+          ? { document: { title: 'Fixture' }, render: { renderKey: 'r' } }
+          : request.url.endsWith('/geometry')
+            ? geometry
+            : playback,
+      ),
+    );
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const base = `http://127.0.0.1:${server.address().port}/`;
+    const run = () =>
+      promisify(execFile)(process.execPath, [
+        'scripts/verify/playback-audit.mjs',
+        'fixture',
+        `--base=${base}`,
+      ]);
+    await run();
+    playback.groups[1].elementIds = ['c'];
+    playback.groups[2].elementIds = ['b'];
+    await assert.rejects(run(), (error) => error.code === 1 && error.stdout.includes('backward'));
+    playback.groups = [];
+    playback.groups.push({ startSeconds: null, pitches: [], elementIds: [] });
+    await assert.rejects(
+      run(),
+      (error) => error.code === 1 && error.stdout.includes('"untimedGroups": 1'),
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('rejects timed groups extending past the playback duration', () => {
+  const { geometry, playback } = fixture();
+  playback.durationSeconds = 2.5;
+  playback.groups[2].durationSeconds = 1;
+  const report = auditPlayback(playback, geometry);
+  assert.equal(report.issues[0].kind, 'out-of-range-group');
+  assert.equal(report.issues[0].end, 3);
 });

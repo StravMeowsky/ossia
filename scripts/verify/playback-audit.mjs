@@ -35,6 +35,20 @@ export function auditPlayback(playback, geometry) {
   const groups = playback.groups.filter((group) => group.startSeconds !== null);
   const onsets = [...new Set(groups.map((group) => group.startSeconds))].sort((a, b) => a - b);
   const issues = [];
+  for (const group of groups) {
+    const end = group.startSeconds + (group.durationSeconds ?? 0);
+    if (
+      Number.isFinite(playback.durationSeconds) &&
+      (group.startSeconds >= playback.durationSeconds || end > playback.durationSeconds + EPSILON)
+    )
+      issues.push({
+        kind: 'out-of-range-group',
+        time: group.startSeconds,
+        end,
+        duration: playback.durationSeconds,
+        elementIds: group.elementIds,
+      });
+  }
   const trace = [];
   const elements = new Map();
   const links = new Map();
@@ -291,13 +305,7 @@ async function main() {
     }
   }
   console.log(JSON.stringify(reports, null, 2));
-  if (
-    reports.some(
-      (report) =>
-        report.error ||
-        (args.includes('--strict') && (report.issues.length || report.untimedGroups)),
-    )
-  )
+  if (reports.some((report) => report.error || report.issues.length || report.untimedGroups))
     process.exitCode = 1;
 }
 

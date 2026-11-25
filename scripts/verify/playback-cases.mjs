@@ -30,6 +30,35 @@ for (const entry of cases.filter((item) => !selected.length || selected.includes
       if (!steps.length || steps.some((item) => !item.position) || backwards) failures.push(check);
       continue;
     }
+    if (check.kind === 'rest') {
+      const offset = source.indexOf(check.needle);
+      if (offset < 0 || source.indexOf(check.needle, offset + 1) !== -1)
+        throw new Error(`${entry.id}: needle must be unique`);
+      const sourceByte = Buffer.byteLength(source.slice(0, offset + (check.offset ?? 0)));
+      const ids = new Set(
+        elements
+          .filter(
+            (element) =>
+              ['Rest', 'MultiMeasureRest'].includes(element.region.elementKind) &&
+              element.region.spans.some(
+                (span) => span.byteStart <= sourceByte && sourceByte < span.byteEnd,
+              ),
+          )
+          .map((element) => element.region.target.elementId),
+      );
+      if (
+        !playback.groups.some(
+          (group) =>
+            group.elementIds.some((id) => ids.has(id)) &&
+            !group.pitches.length &&
+            group.startSeconds !== null &&
+            Math.abs(group.startSeconds - check.time) < 0.001 &&
+            Math.abs(group.durationSeconds - check.duration) < 0.001,
+        )
+      )
+        failures.push(check);
+      continue;
+    }
     if (!['mapped', 'playhead'].includes(check.kind))
       throw new Error(`${entry.id}: unsupported check ${check.kind}`);
     const start = source.indexOf(check.needle);
@@ -105,8 +134,10 @@ for (const entry of cases.filter((item) => !selected.length || selected.includes
       soundingNotes: playback.notes.length,
       checks: entry.checks.length,
       failures,
+      untimedGroups: report.untimedGroups,
+      issues: report.issues,
     }),
   );
-  failed ||= failures.length > 0;
+  failed ||= failures.length > 0 || report.issues.length > 0 || report.untimedGroups > 0;
 }
 if (failed) process.exitCode = 1;

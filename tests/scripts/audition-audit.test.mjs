@@ -43,7 +43,7 @@ test('audits every head, including missing click groups and multi-pitch audition
   assert.equal(report.independent, 1);
   assert.deepEqual(
     report.issues.map((i) => i.kind),
-    ['unauditionable-head', 'non-single-note-audition'],
+    ['unauditionable-head', 'non-single-note-audition', 'simultaneous-audition-mismatch'],
   );
 });
 
@@ -61,6 +61,7 @@ test('coincident unisons have equivalent audio, but different pitches cannot mas
   assert(auditAudition(playback, geometry).issues.some((i) => i.kind === 'unhittable-head'));
   playback.groups[1].pitches = [60];
   playback.groups[1].startSeconds = 0;
+  playback.notes[1] = { pitch: 60, startSeconds: 0 };
   const report = auditAudition(playback, geometry);
   assert.equal(report.coincidentUnisons, 1);
   assert.equal(report.clickable, 3);
@@ -107,4 +108,19 @@ test('intentional silent notation remains clickable and keyboard reachable witho
   assert.equal(report.independent, 2);
   assert.equal(report.clickable, 3);
   assert.equal(report.issues.length, 0);
+});
+
+test('compares simultaneous audition with the MIDI attack multiset', () => {
+  const { geometry, playback } = fixture();
+  playback.notes.push({ pitch: 60, startSeconds: 0 });
+  const report = auditAudition(playback, geometry);
+  assert.equal(report.simultaneousOnsets, 3);
+  assert.deepEqual(report.issues, [
+    {
+      kind: 'simultaneous-audition-mismatch',
+      time: 0,
+      expected: [60, 60],
+      actual: [60],
+    },
+  ]);
 });

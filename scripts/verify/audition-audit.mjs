@@ -5,6 +5,7 @@ import { hitElement } from '../../packages/ui/src/score/utils/hitElement.ts';
 import {
   adjacentAuditionGroup,
   auditionMembers,
+  auditionSounds,
   sameVoice,
 } from '../../packages/ui/src/score/utils/playbackTimeline.ts';
 
@@ -127,7 +128,35 @@ export function auditAudition(playback, geometry) {
         issues.push({ kind: 'invalid-audition-modifier', ...detail });
     }
   }
-  return { noteheads, independent, silent, clickable, coincidentUnisons, issues };
+  const onsets = new Set();
+  for (const group of playback.groups) {
+    if (group.startSeconds === null || !group.pitches.length || onsets.has(group.startSeconds))
+      continue;
+    onsets.add(group.startSeconds);
+    const expected = playback.notes
+      .filter((note) => Math.abs(note.startSeconds - group.startSeconds) <= 0.001)
+      .map((note) => note.pitch)
+      .sort((a, b) => a - b);
+    const actual = auditionSounds(auditionMembers(playback, group, true))
+      .flatMap((member) => member.pitches)
+      .sort((a, b) => a - b);
+    if (actual.join(',') !== expected.join(','))
+      issues.push({
+        kind: 'simultaneous-audition-mismatch',
+        time: group.startSeconds,
+        expected,
+        actual,
+      });
+  }
+  return {
+    noteheads,
+    independent,
+    silent,
+    clickable,
+    coincidentUnisons,
+    simultaneousOnsets: onsets.size,
+    issues,
+  };
 }
 
 async function main() {

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { auditAudition } from './audition-audit.mjs';
+import { auditPlayback } from './playback-audit.mjs';
 import { fixtureRenderer, fixtures, root } from './render-fixture.mjs';
 
 const ids = process.argv.slice(2);
@@ -19,28 +20,44 @@ try {
     const report = auditAudition(bundle.playback, bundle.geometry);
     console.log(JSON.stringify({ id: entry.id, ...report }));
     if (report.issues.length) process.exitCode = 1;
-    return { id: entry.id, ...bundle };
+    const playback = auditPlayback(bundle.playback, bundle.geometry);
+    if (playback.issues.length || playback.untimedGroups) {
+      console.error(
+        JSON.stringify({
+          id: entry.id,
+          issues: playback.issues,
+          untimedGroups: playback.untimedGroups,
+        }),
+      );
+      process.exitCode = 1;
+    }
+    return {
+      id: entry.id,
+      ...bundle,
+      trace: playback.trace.map((frame) => ({ time: frame.time, ...frame.position })),
+    };
   });
   const input = path.join(directory, 'fixtures.json');
   writeFileSync(input, JSON.stringify(bundles));
-  execFileSync(
-    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-    [
-      '--filter',
-      '@ossia/ui',
-      'exec',
-      'playwright',
-      'test',
-      '--project=browser',
-      'tests/score/audition-fixture.browser.spec.ts',
-    ],
-    {
-      cwd: root,
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
-      env: { ...process.env, OSSIA_AUDITION_FIXTURES: input },
-    },
-  );
+  if (!process.exitCode)
+    execFileSync(
+      process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+      [
+        '--filter',
+        '@ossia/ui',
+        'exec',
+        'playwright',
+        'test',
+        '--project=browser',
+        'tests/score/audition-fixture.browser.spec.ts',
+      ],
+      {
+        cwd: root,
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+        env: { ...process.env, OSSIA_AUDITION_FIXTURES: input },
+      },
+    );
 } finally {
   rmSync(directory, { recursive: true });
 }

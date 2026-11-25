@@ -36,6 +36,36 @@ fn noteheads_outside_system_bounds_keep_their_source_measure_system() {
     assert_eq!(note("c'1").system_index, Some(0));
     assert_eq!(note("d'1").system_index, Some(1));
 
+    let mut ledger_notes = layout.clone();
+    ledger_notes.columns.clear();
+    let geometry = selection_geometry(&index, &ledger_notes).unwrap();
+    for element in &geometry[0].elements {
+        if element.region.element_kind.as_deref() == Some("NoteHead") {
+            assert_eq!(
+                element.system_index,
+                Some(if element.bounds.y0 < 20. { 0 } else { 1 })
+            );
+        }
+    }
+
+    let mut midway = ledger_notes.clone();
+    let high = midway.pages[0]
+        .objects
+        .iter_mut()
+        .find(|object| {
+            object.kind == "NoteHead" && object.span.is_some_and(|span| span.byte_start == first)
+        })
+        .unwrap();
+    high.bbox.y0 = 41.;
+    high.bbox.y1 = 43.;
+    let geometry = selection_geometry(&index, &midway).unwrap();
+    let high = geometry[0]
+        .elements
+        .iter()
+        .find(|element| element.region.label.contains("c'1"))
+        .unwrap();
+    assert_eq!(high.system_index, None);
+
     let inside_svg = svg.replace("20 10 22 12", "20 21 22 23");
     let mut no_measures = build_layout(
         &index,
