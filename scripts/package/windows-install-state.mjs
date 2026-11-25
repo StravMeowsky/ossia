@@ -56,7 +56,7 @@ function exportRegistryKey(key, backup) {
 
 function deleteRegistryKey(key) {
   const result = runRegistry(['delete', key, '/f']);
-  if (result.status !== 0) {
+  if (result.status !== 0 && registryKeyExists(key)) {
     throw new Error(`cannot delete registry key ${key}: ${result.stderr.trim()}`);
   }
 }

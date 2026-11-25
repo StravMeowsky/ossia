@@ -377,6 +377,72 @@ test('windows smoke installs do not create user shortcuts', () => {
   assert.deepEqual(windowsInstallerArgs('C:\\Temp\\Ossia'), ['/S', '/NS', '/D=C:\\Temp\\Ossia']);
 });
 
+test(
+  'windows registry cleanup tolerates a key removed during deletion',
+  { skip: process.platform === 'win32' },
+  () => {
+    const root = temporaryRoot();
+    try {
+      const count = path.join(root, 'count');
+      fs.writeFileSync(count, '0');
+      fs.writeFileSync(
+        path.join(root, 'powershell'),
+        `#!/bin/sh
+n=$(cat "$OSSIA_TEST_COUNT")
+n=$((n + 1))
+printf %s "$n" > "$OSSIA_TEST_COUNT"
+if [ "$n" = 3 ] || { [ "$n" = 4 ] && [ "$OSSIA_TEST_REMAINS" = 1 ]; }; then exit 0; fi
+exit 1
+`,
+        { mode: 0o755 },
+      );
+      fs.writeFileSync(path.join(root, 'reg'), '#!/bin/sh\necho deletion-failed >&2\nexit 1\n', {
+        mode: 0o755,
+      });
+      const moduleUrl = new URL('../../scripts/package/windows-install-state.mjs', import.meta.url)
+        .href;
+      const result = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `import { withWindowsInstallState } from ${JSON.stringify(moduleUrl)};
+       await withWindowsInstallState({ productName: 'Ossia', manufacturer: 'Ossia' }, async () => {});`,
+        ],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, PATH: `${root}:${process.env.PATH}`, OSSIA_TEST_COUNT: count },
+        },
+      );
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(fs.readFileSync(count, 'utf8'), '5');
+      fs.writeFileSync(count, '0');
+      const stillExists = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `import { withWindowsInstallState } from ${JSON.stringify(moduleUrl)};
+       await withWindowsInstallState({ productName: 'Ossia', manufacturer: 'Ossia' }, async () => {});`,
+        ],
+        {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${root}:${process.env.PATH}`,
+            OSSIA_TEST_COUNT: count,
+            OSSIA_TEST_REMAINS: '1',
+          },
+        },
+      );
+      assert.notEqual(stillExists.status, 0);
+      assert.match(stillExists.stderr, /cannot delete registry key.*deletion-failed/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  },
+);
+
 function registry(args) {
   const result = spawnSync('reg', args, {
     encoding: 'utf8',
