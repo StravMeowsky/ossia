@@ -9,12 +9,12 @@ import { auditPlayback } from './playback-audit.mjs';
 import { fixtureRenderer, fixtures, root } from './render-fixture.mjs';
 
 /** Audit the selected scores and run the browser checks if all data checks pass. */
-export function runAuditionCases(ids) {
+export function runAuditionCases(ids, renderFixture) {
   const cases = JSON.parse(readFileSync(path.join(fixtures, 'cases.json'), 'utf8'));
   if (ids.some((id) => !cases.some((entry) => entry.id === id))) throw new Error('unknown case');
   const selected = cases.filter((entry) => !ids.length || ids.includes(entry.id));
   if (!selected.length) throw new Error('no audition cases selected');
-  const render = fixtureRenderer();
+  const render = renderFixture ?? fixtureRenderer();
   const directory = mkdtempSync(path.join(os.tmpdir(), 'ossia-audition-'));
   let failed = false;
   try {
@@ -52,6 +52,7 @@ export function runAuditionCases(ids) {
           'playwright',
           'test',
           '--project=browser',
+          '--reporter=list',
           'tests/score/audition-fixture.browser.spec.ts',
         ],
         {

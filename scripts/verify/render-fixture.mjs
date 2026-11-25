@@ -8,8 +8,8 @@ import { candidateRoots } from '../engine/engine.mjs';
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const fixtures = path.join(root, 'tests/fixtures/playback');
 
-/** Build the fixture executable once, then render each requested score in isolation. */
-export function fixtureRenderer({ selection = false } = {}) {
+/** Build the fixture executable and prepare a renderer for playback, selection, or both. */
+export function fixtureRenderer(mode = 'playback') {
   execFileSync('cargo', ['build', '--quiet', '-p', 'ossia-engine', '--bin', 'playback-fixture'], {
     cwd: root,
     stdio: 'inherit',
@@ -20,10 +20,11 @@ export function fixtureRenderer({ selection = false } = {}) {
     process.platform === 'win32' ? 'playback-fixture.exe' : 'playback-fixture',
   );
   const engine = process.env.OSSIA_TEST_LILYPOND_ROOT ?? candidateRoots(root).roots[0].dir;
+  const modeArgs = mode === 'playback' ? [] : [`--${mode}`];
   return (entry) => {
     const filename = path.resolve(fixtures, entry.source);
     const source = readFileSync(filename, 'utf8');
-    const raw = execFileSync(exe, [engine, filename, ...(selection ? ['--selection'] : [])], {
+    const raw = execFileSync(exe, [engine, filename, ...modeArgs], {
       cwd: root,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,

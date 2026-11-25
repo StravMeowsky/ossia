@@ -60,6 +60,7 @@ test('passes only selected fixture data and the flattened trace to Playwright', 
     'playwright',
     'test',
     '--project=browser',
+    '--reporter=list',
     'tests/score/audition-fixture.browser.spec.ts',
   ]);
   assert.equal(options.cwd, root);

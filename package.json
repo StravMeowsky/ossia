@@ -20,7 +20,7 @@
     "test:scripts": "vp test tests/scripts",
     "test:ui": "pnpm --filter @ossia/ui test",
     "test:ui:native": "pnpm --filter @ossia/ui test:native",
-    "verify": "pnpm verify:playback && pnpm verify:audition && pnpm verify:selection",
+    "verify": "node scripts/verify/verify.mjs",
     "verify:audition": "node scripts/verify/audition-cases.mjs",
     "verify:playback": "node scripts/verify/playback-cases.mjs",
     "verify:selection": "node scripts/verify/selection-cases.mjs",

@@ -5,7 +5,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = env::args_os().skip(1);
     let root = PathBuf::from(args.next().ok_or("missing LilyPond root")?);
     let path = PathBuf::from(args.next().ok_or("missing score fixture")?);
-    let check_selection = args.next().is_some_and(|arg| arg == "--selection");
+    let (check_playback, check_selection) = match args.next() {
+        None => (true, false),
+        Some(flag) if flag == "--selection" => (false, true),
+        Some(flag) if flag == "--all" => (true, true),
+        Some(flag) => {
+            return Err(format!("unknown fixture mode: {}", flag.to_string_lossy()).into())
+        }
+    };
     let source = fs::read_to_string(path)?;
     let work_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/playback-verify");
     fs::create_dir_all(&work_root)?;
@@ -15,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let snapshot = SourceSnapshot::new(DocumentId::new(), source.as_bytes().to_vec())?;
     let assets = work.path().join("assets");
     let mut formats = vec![RenderFormat::Svg];
-    if !check_selection {
+    if check_playback {
         formats.push(RenderFormat::Midi);
     }
     let render = engine.compile(
@@ -49,9 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect::<Vec<_>>(),
     )?;
     let key = ContentHash::of(source.as_bytes());
-    let (playback, midi_note_count) = if check_selection {
-        (None, None)
-    } else {
+    let (playback, midi_note_count) = if check_playback {
         let midi = ossia_score::parse_midi(&fs::read(
             assets.join(render.midi.ok_or("missing MIDI")?.path),
         )?)?;
@@ -69,6 +74,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .sum::<usize>(),
             ),
         )
+    } else {
+        (None, None)
     };
     let selection_geometry = ossia_score::selection_geometry(&index, &layout)?;
     let selection = check_selection

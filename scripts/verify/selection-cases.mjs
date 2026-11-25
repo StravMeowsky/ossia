@@ -6,7 +6,7 @@ import { fixtureRenderer, fixtures, root } from './render-fixture.mjs';
 import { auditSelection } from './selection-audit.mjs';
 
 /** Verify committed cases or audit the selected library scores. */
-export async function runSelectionCases(args) {
+export async function runSelectionCases(args, renderFixture) {
   const libraryMode = args.includes('--library');
   const baseArg = args.find((arg) => arg.startsWith('--base='));
   const ids = args.filter((arg) => arg !== '--library' && arg !== baseArg);
@@ -27,7 +27,7 @@ export async function runSelectionCases(args) {
   if (!selected.length)
     throw new Error(libraryMode ? 'the project library is empty' : 'select known fixture IDs');
 
-  const render = fixtureRenderer({ selection: true });
+  const render = renderFixture ?? fixtureRenderer('selection');
   let failed = false;
   for (const entry of selected) {
     try {

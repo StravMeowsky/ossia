@@ -6,12 +6,12 @@ import { auditPlayback } from './playback-audit.mjs';
 import { fixtureRenderer, fixtures } from './render-fixture.mjs';
 
 /** Run the selected playback cases and return their command exit status. */
-export function runPlaybackCases(ids) {
+export function runPlaybackCases(ids, renderFixture) {
   const cases = JSON.parse(readFileSync(path.join(fixtures, 'cases.json'), 'utf8'));
   if (ids.some((id) => !cases.some((entry) => entry.id === id))) throw new Error('unknown case');
   const selected = cases.filter((entry) => !ids.length || ids.includes(entry.id));
   if (!selected.length) throw new Error('no playback cases selected');
-  const render = fixtureRenderer();
+  const render = renderFixture ?? fixtureRenderer();
   let failed = false;
   for (const entry of selected) {
     const { source, playback, geometry, midiNoteCount } = render(entry);

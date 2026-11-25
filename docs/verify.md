@@ -6,6 +6,9 @@ Run all verification suites without a library or server:
 pnpm verify
 ```
 
+The combined command generates one render bundle per score source. Playback,
+audition and selection checks share its SVG, MIDI and geometry data.
+
 Run a suite on all cases or select case IDs:
 
 ```sh

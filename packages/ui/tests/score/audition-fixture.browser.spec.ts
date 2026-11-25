@@ -254,6 +254,7 @@ for (const fixture of fixtures) {
       await expect
         .poll(async () => Number(await line.getAttribute('x1')), {
           message: `playhead at ${frame.time}`,
+          intervals: [16],
         })
         .toBeCloseTo(frame.x, 4);
     }

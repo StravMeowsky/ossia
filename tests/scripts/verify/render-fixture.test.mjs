@@ -50,12 +50,21 @@ test('honors engine and target overrides and passes selection mode for absolute 
   const source = path.join(root, '.ossia', 'documents', 'example', 'score.ly');
   vi.stubEnv('OSSIA_TEST_LILYPOND_ROOT', engine);
   vi.stubEnv('CARGO_TARGET_DIR', 'custom-target');
-  fixtureRenderer({ selection: true })({ source });
+  fixtureRenderer('selection')({ source });
   assert.equal(candidateRoots.mock.calls.length, 0);
   assert.deepEqual(readFileSync.mock.calls[0], [source, 'utf8']);
   assert.deepEqual(execFileSync.mock.calls[1].slice(0, 2), [
     path.join(root, 'custom-target', 'debug', name),
     [engine, source, '--selection'],
+  ]);
+});
+
+test('requests playback and selection data in the same fixture invocation', () => {
+  fixtureRenderer('all')({ source: 'score.ly' });
+  assert.deepEqual(execFileSync.mock.calls[1][1], [
+    path.join(root, 'bundled-engine'),
+    path.join(fixtures, 'score.ly'),
+    '--all',
   ]);
 });
 

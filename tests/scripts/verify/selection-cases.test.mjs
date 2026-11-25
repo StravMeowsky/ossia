@@ -51,7 +51,7 @@ afterEach(() => {
 
 test('verifies only the selected fixture and checks all staff positions independently', async () => {
   assert.equal(await runSelectionCases(['one']), 0);
-  assert.deepEqual(fixtureRenderer.mock.calls, [[{ selection: true }]]);
+  assert.deepEqual(fixtureRenderer.mock.calls, [['selection']]);
   assert.deepEqual(
     render.mock.calls.map(([entry]) => entry.id),
     ['one'],
