@@ -4,10 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { candidateRoots } from './engine.mjs';
-import { detachedChild, stopProcessTree, windows } from './process-tree.mjs';
+import { candidateRoots } from '../engine/engine.mjs';
+import { detachedChild, stopProcessTree, windows } from '../shared/process-tree.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const executable = path.join(root, 'target/debug', windows ? 'ossia-desktop.exe' : 'ossia-desktop');
 const tempRoot = windows ? fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-backend-dev-')) : null;
 const backendArgs = [

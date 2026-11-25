@@ -42,6 +42,8 @@ pub struct SelectionOccurrence {
 pub struct GeometryElement {
     pub region: SelectionRegion,
     pub bounds: GeometryBounds,
+    /// System containing this occurrence, when its association is unambiguous.
+    pub system_index: Option<usize>,
     /// Local symbols precede spanning symbols during hit testing.
     pub priority: u8,
     /// Ink hit regions for curves; empty means the element's full bounds.

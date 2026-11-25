@@ -18,11 +18,11 @@ import {
   rustDependencies,
   specFor,
   verifyMaterials,
-} from '../../scripts/package.mjs';
+} from '../../scripts/package/package.mjs';
 import {
   windowsInstallerArgs,
   withWindowsInstallState,
-} from '../../scripts/windows-install-state.mjs';
+} from '../../scripts/package/windows-install-state.mjs';
 
 function temporaryRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-package-test-'));

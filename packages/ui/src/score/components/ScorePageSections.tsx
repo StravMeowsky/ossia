@@ -310,6 +310,7 @@ export function ScoreWorkspace({
               activeElementIds={playback.activeElementIds}
               playheadElementIds={playback.playheadElementIds}
               playhead={playback.playhead}
+              playbackSystems={playback.timeline?.systems}
               onAuditionNote={onActivateNote}
               viewKey={viewKey}
               initialPan={initialPan}
@@ -342,6 +343,7 @@ export function ScoreWorkspace({
             activeElementIds={playback.activeElementIds}
             playheadElementIds={playback.playheadElementIds}
             playhead={playback.playhead}
+            playbackSystems={playback.timeline?.systems}
             onAuditionNote={render && !stale ? onActivateNote : undefined}
             viewKey={viewKey}
             initialPan={initialPan}

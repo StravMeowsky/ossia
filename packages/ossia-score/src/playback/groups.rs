@@ -31,7 +31,6 @@ pub(super) struct MutedNote {
 pub(super) struct NoteGroupBuild {
     pub(super) groups: Vec<PlaybackNoteGroup>,
     pub(super) muted_notes: Vec<MutedNote>,
-    pub(super) complete_notehead_coverage: bool,
     pub(super) element_positions: HashMap<String, ElementPosition>,
 }
 
@@ -220,7 +219,8 @@ fn tied_note_chains(pages: &[GeometryPage]) -> Vec<Vec<String>> {
             SelectionTarget::Measure { .. } => None,
         })
         .collect::<HashSet<_>>();
-    let mut by_tie = BTreeMap::<&str, Vec<String>>::new();
+    let mut note_links = HashMap::<String, HashSet<String>>::new();
+    let mut note_ties = HashMap::<String, HashSet<String>>::new();
     for element in pages.iter().flat_map(|page| &page.elements) {
         if !matches!(
             element.region.element_kind.as_deref(),
@@ -232,31 +232,39 @@ fn tied_note_chains(pages: &[GeometryPage]) -> Vec<Vec<String>> {
             continue;
         };
         for target in &element.linked_targets {
-            let SelectionTarget::Element { element_id: tie_id } = target else {
+            let SelectionTarget::Element {
+                element_id: linked_id,
+            } = target
+            else {
                 continue;
             };
-            if tie_ids.contains(tie_id.as_str()) {
-                by_tie
-                    .entry(tie_id.as_str())
+            if tie_ids.contains(linked_id.as_str()) {
+                note_ties
+                    .entry(element_id.clone())
                     .or_default()
-                    .push(element_id.clone());
+                    .insert(linked_id.clone());
+            } else if linked_id != element_id {
+                note_links
+                    .entry(element_id.clone())
+                    .or_default()
+                    .insert(linked_id.clone());
             }
         }
     }
     let mut edges = HashMap::<String, HashSet<String>>::new();
-    for notes in by_tie.values() {
-        let Some((first, rest)) = notes.split_first() else {
-            continue;
-        };
-        for other in rest {
-            edges
-                .entry(first.clone())
-                .or_default()
-                .insert(other.clone());
-            edges
-                .entry(other.clone())
-                .or_default()
-                .insert(first.clone());
+    for (note, linked) in &note_links {
+        for other in linked {
+            let reciprocal = note_links
+                .get(other)
+                .is_some_and(|links| links.contains(note));
+            let shared_tie = note_ties
+                .get(note)
+                .zip(note_ties.get(other))
+                .is_some_and(|(left, right)| !left.is_disjoint(right));
+            if reciprocal && shared_tie {
+                edges.entry(note.clone()).or_default().insert(other.clone());
+                edges.entry(other.clone()).or_default().insert(note.clone());
+            }
         }
     }
     let mut seen = HashSet::new();
@@ -353,21 +361,8 @@ pub(super) fn note_groups(
 ) -> Result<NoteGroupBuild, AppError> {
     let events = source_events(index);
     let PlayableEvents { pages, elements } = playable_events(index, layout, &events)?;
-    let notehead_ids = pages
-        .iter()
-        .flat_map(|page| &page.elements)
-        .filter(|element| {
-            matches!(
-                element.region.element_kind.as_deref(),
-                Some("NoteHead" | "TabNoteHead")
-            )
-        })
-        .filter_map(|element| match &element.region.target {
-            SelectionTarget::Element { element_id } => Some(element_id.clone()),
-            SelectionTarget::Measure { .. } => None,
-        })
-        .collect::<std::collections::HashSet<_>>();
-    let clusters = midi_clusters(midi, ppqn)?;
+    let pickup = super::timing::pickup_ticks(index.source(), ppqn);
+    let clusters = midi_clusters(midi, ppqn, pickup)?;
     let measured_layout = !layout.columns.is_empty()
         && layout
             .columns
@@ -380,12 +375,12 @@ pub(super) fn note_groups(
         .map(|note| note.time + note.duration.unwrap_or(0))
         .max()
         .unwrap_or(0);
-    let measure_onsets = measure_times(midi, ppqn, last_tick)
+    let measure_onsets = measure_times(midi, ppqn, last_tick, pickup)
         .unwrap_or_default()
         .into_iter()
         .map(|time| (time.measure, (time.start_seconds, time.end_seconds)))
         .collect::<HashMap<_, _>>();
-    let mut used = vec![false; clusters.len()];
+    let mut used = vec![HashSet::<u8>::new(); clusters.len()];
     let mut last_tick = HashMap::<String, u64>::new();
     let mut groups = Vec::new();
     let mut muted_notes = Vec::new();
@@ -494,8 +489,9 @@ pub(super) fn note_groups(
             .iter()
             .enumerate()
             .filter(|(index, cluster)| {
-                !used[*index]
-                    && cluster.pitches == pitches
+                pitches
+                    .iter()
+                    .all(|pitch| cluster.pitches.contains(pitch) && !used[*index].contains(pitch))
                     && match measure {
                         Some(measure) => {
                             cluster.measure.is_none() || cluster.measure == Some(measure)
@@ -516,6 +512,10 @@ pub(super) fn note_groups(
                     .total_cmp(
                         &expected_seconds.map_or(0., |expected| (right_onset - expected).abs()),
                     )
+                    .then_with(|| {
+                        (left.pitches.len() - pitches.len())
+                            .cmp(&(right.pitches.len() - pitches.len()))
+                    })
                     .then_with(|| left.start_tick.cmp(&right.start_tick))
                     .then_with(|| affinity(left).cmp(&affinity(right)))
                     .then_with(|| left.track.cmp(&right.track))
@@ -567,12 +567,12 @@ pub(super) fn note_groups(
                         .is_some_and(|staff| staff.kind == crate::StaffKind::Tablature))
         });
         if let (Some((first, previous_event, _)), Some((copy, cluster))) = (previous, duplicate) {
-            used[copy] = true;
+            used[copy].extend(pitches.iter().copied());
             let original = &clusters[first];
             ambiguous_performers.remove(&(original.track, original.channel));
             ambiguous_performers.remove(&(cluster.track, cluster.channel));
             let silent = if prefer_duplicate { original } else { cluster };
-            muted_notes.extend(silent.pitches.iter().map(|pitch| MutedNote {
+            muted_notes.extend(pitches.iter().map(|pitch| MutedNote {
                 pitch: *pitch,
                 tick: silent.start_tick,
                 track: silent.track,
@@ -613,7 +613,7 @@ pub(super) fn note_groups(
                 .enumerate()
                 .filter(|(position, other)| {
                     *position != selected
-                        && !used[*position]
+                        && pitches.iter().all(|pitch| !used[*position].contains(pitch))
                         && other.start_tick == cluster.start_tick
                         && other.pitches == cluster.pitches
                         && affinity(other) == affinity(cluster)
@@ -629,7 +629,7 @@ pub(super) fn note_groups(
             .as_ref()
             .map(|(_, cluster)| (cluster.start_tick, cluster.track, cluster.channel));
         let (start_seconds, duration_seconds) = if let Some((index, cluster)) = candidate {
-            used[index] = true;
+            used[index].extend(pitches.iter().copied());
             if reused.is_none() {
                 matched_sources.entry(source_key).or_default().push((
                     index,
@@ -711,7 +711,7 @@ pub(super) fn note_groups(
             });
         }
     }
-    super::fallback::fill_rest_groups(&events, &event_groups, &mut groups, midi, ppqn);
+    super::fallback::fill_rest_groups(&events, &event_groups, &mut groups, midi, ppqn, pickup);
     let mut groups_by_element = HashMap::<String, Vec<usize>>::new();
     for (position, group) in groups.iter().enumerate() {
         for id in &group.element_ids {
@@ -808,7 +808,7 @@ pub(super) fn note_groups(
             layout,
             &pages,
             midi,
-            ppqn,
+            (ppqn, pickup),
             &mut groups,
             &covered,
             &hints,
@@ -838,15 +838,6 @@ pub(super) fn note_groups(
             .total_cmp(&b.start_seconds.unwrap_or(f64::INFINITY))
             .then_with(|| a.element_ids.cmp(&b.element_ids))
     });
-    let grouped_element_ids = groups
-        .iter()
-        .flat_map(|group| group.element_ids.iter())
-        .collect::<std::collections::HashSet<_>>();
-    let complete_notehead_coverage = measured_layout
-        && !notehead_ids.is_empty()
-        && notehead_ids
-            .iter()
-            .all(|element_id| grouped_element_ids.contains(element_id));
     let element_positions = pages
         .iter()
         .flat_map(|page| {
@@ -887,7 +878,6 @@ pub(super) fn note_groups(
     Ok(NoteGroupBuild {
         groups,
         muted_notes,
-        complete_notehead_coverage,
         element_positions,
     })
 }

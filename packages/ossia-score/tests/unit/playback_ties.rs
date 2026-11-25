@@ -26,6 +26,7 @@ fn region(id: &str, kind: &str) -> SelectionRegion {
 fn element(id: &str, kind: &str, linked: &[&str]) -> GeometryElement {
     GeometryElement {
         region: region(id, kind),
+        system_index: Some(0),
         bounds: GeometryBounds {
             x0: 0.,
             y0: 0.,
@@ -49,6 +50,30 @@ fn group(start: f64, element_ids: &[&str]) -> PlaybackNoteGroup {
         duration_seconds: Some(0.5),
         part_id: None,
     }
+}
+
+#[test]
+fn chord_ties_with_shared_source_target_keep_independent_pitch_chains() {
+    let pages = vec![GeometryPage {
+        page: 1,
+        view_box: None,
+        capability: LocationCapability::Measure,
+        reason: None,
+        regions: Vec::new(),
+        elements: vec![
+            element("a1", "NoteHead", &["a1", "a2", "tie"]),
+            element("c1", "NoteHead", &["c1", "c2", "tie"]),
+            element("a2", "NoteHead", &["a2", "a1", "tie"]),
+            element("c2", "NoteHead", &["c2", "c1", "tie"]),
+            element("tie", "Tie", &["tie"]),
+        ],
+    }];
+    let mut groups = vec![group(1., &["a1"]), group(1., &["c1"])];
+    groups[1].pitches = vec![85];
+    merge_tied_groups(&mut groups, &pages);
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[0].element_ids, ["a1", "a2"]);
+    assert_eq!(groups[1].element_ids, ["c1", "c2"]);
 }
 
 #[test]

@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { candidateRoots } from '../../../scripts/engine.mjs';
-import { detachedChild, stopProcessTree, windows } from '../../../scripts/process-tree.mjs';
+import { candidateRoots } from '../../../scripts/engine/engine.mjs';
+import { detachedChild, stopProcessTree, windows } from '../../../scripts/shared/process-tree.mjs';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = path.resolve(desktop, '../..');

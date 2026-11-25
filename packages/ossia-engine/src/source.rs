@@ -307,11 +307,26 @@ fn chord_name_edits(tokens: &[Lexeme]) -> Vec<Edit> {
             };
             open = close + 1;
         }
-        if tokens.get(open).map(|token| token.raw.as_str()) != Some("{") {
-            i += 1;
-            continue;
-        }
-        let Some(close) = matching_brace(tokens, open) else {
+        let close = if tokens.get(open).map(|token| token.raw.as_str()) == Some("{") {
+            let Some(close) = matching_brace(tokens, open) else {
+                i += 1;
+                continue;
+            };
+            close
+        } else if let Some(name) = tokens
+            .get(open)
+            .and_then(|token| token.raw.strip_prefix('\\'))
+        {
+            if !tokens.windows(3).any(|assignment| {
+                assignment[0].raw == name
+                    && assignment[1].raw == "="
+                    && matches!(assignment[2].raw.as_str(), "{" | "<<" | "\\chordmode")
+            }) {
+                i += 1;
+                continue;
+            }
+            open
+        } else {
             i += 1;
             continue;
         };

@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const sha256 = (file) =>
   crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 export function hostTarget(platform = process.platform, arch = process.arch) {

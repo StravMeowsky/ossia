@@ -15,11 +15,12 @@ pub(super) fn fallback_note_groups(
     layout: &ScoreLayout,
     pages: &[ossia_types::GeometryPage],
     midi: &crate::MidiFile,
-    ppqn: u64,
+    timing: (u64, Option<u64>),
     groups: &mut Vec<PlaybackNoteGroup>,
     covered: &HashSet<String>,
     element_hints: &ElementHints<'_>,
 ) {
+    let (ppqn, pickup) = timing;
     let last_tick = midi
         .tracks
         .iter()
@@ -27,14 +28,14 @@ pub(super) fn fallback_note_groups(
         .map(|note| note.time + note.duration.unwrap_or(0))
         .max()
         .unwrap_or(0);
-    let Some(measure_times) = measure_times(midi, ppqn, last_tick) else {
+    let Some(measure_times) = measure_times(midi, ppqn, last_tick, pickup) else {
         return;
     };
     let measures: HashMap<_, _> = measure_times
         .iter()
         .map(|time| (time.measure, *time))
         .collect();
-    let clusters = midi_clusters(midi, ppqn).ok();
+    let clusters = midi_clusters(midi, ppqn, pickup).ok();
     let Some(clusters) = clusters else {
         return;
     };
@@ -283,7 +284,7 @@ pub(super) fn visual_note_groups(
                     .or_default()
                     .push(onset);
             }
-            let mut mapped = BTreeMap::<usize, (Vec<String>, Option<usize>, Option<String>)>::new();
+            let mut mapped = BTreeMap::<usize, Option<&VisualOnset>>::new();
             for (key, onsets) in by_system {
                 let Some(reference) = anchors.get(&key) else {
                     continue;
@@ -304,21 +305,20 @@ pub(super) fn visual_note_groups(
                     }) else {
                         continue;
                     };
-                    let entry = mapped
-                        .entry(*performance_index)
-                        .or_insert_with(|| (Vec::new(), onset.staff_index, onset.voice.clone()));
-                    entry.0.extend(onset.element_ids.iter().cloned());
+                    add_unique_onset(&mut mapped, *performance_index, onset);
                 }
             }
-            for (performance_index, (mut element_ids, staff_index, voice)) in mapped {
+            for (performance_index, onset) in mapped {
+                let Some(onset) = onset else { continue };
+                let mut element_ids = onset.element_ids.clone();
                 element_ids.sort();
                 element_ids.dedup();
                 let performed = &performance[performance_index];
                 groups.push(PlaybackNoteGroup {
                     element_ids,
                     pitches: performed.pitches.clone(),
-                    staff_index,
-                    voice,
+                    staff_index: onset.staff_index,
+                    voice: onset.voice.clone(),
                     start_seconds: Some(performed.start_seconds),
                     duration_seconds: Some(performed.end_seconds - performed.start_seconds),
                     part_id: None,
@@ -355,6 +355,22 @@ pub(super) fn visual_note_groups(
     }
 }
 
+fn add_unique_onset<'a>(
+    mapped: &mut BTreeMap<usize, Option<&'a VisualOnset>>,
+    performance_index: usize,
+    onset: &'a VisualOnset,
+) {
+    use std::collections::btree_map::Entry;
+    match mapped.entry(performance_index) {
+        Entry::Vacant(entry) => {
+            entry.insert(Some(onset));
+        }
+        Entry::Occupied(mut entry) => {
+            entry.insert(None);
+        }
+    }
+}
+
 fn interval_distance(value: f64, start: f64, end: f64) -> f64 {
     if value < start {
         start - value
@@ -379,11 +395,9 @@ fn push_visual_groups(
     performance: &[PerformanceOnset],
     mapping: &[Option<usize>],
 ) {
-    let mut visual_groups = Vec::<Option<usize>>::with_capacity(visual.len());
     for (index, onset) in visual.iter().enumerate() {
         if let Some(performance_index) = mapping[index] {
             let performed = &performance[performance_index];
-            let group_index = groups.len();
             let mut element_ids = onset.element_ids.clone();
             element_ids.sort();
             element_ids.dedup();
@@ -396,33 +410,7 @@ fn push_visual_groups(
                 duration_seconds: Some(performed.end_seconds - performed.start_seconds),
                 part_id: None,
             });
-            visual_groups.push(Some(group_index));
-        } else {
-            visual_groups.push(None);
         }
-    }
-    for (index, performance_index) in mapping.iter().enumerate() {
-        if performance_index.is_some() {
-            continue;
-        }
-        let target = visual_groups[..index]
-            .iter()
-            .rposition(Option::is_some)
-            .and_then(|local| visual_groups[local])
-            .or_else(|| {
-                visual_groups[index + 1..]
-                    .iter()
-                    .position(Option::is_some)
-                    .and_then(|offset| visual_groups[index + 1 + offset])
-            });
-        let Some(group_index) = target else {
-            continue;
-        };
-        groups[group_index]
-            .element_ids
-            .extend(visual[index].element_ids.iter().cloned());
-        groups[group_index].element_ids.sort();
-        groups[group_index].element_ids.dedup();
     }
 }
 
@@ -436,6 +424,10 @@ struct VisualOnset {
     staff_index: Option<usize>,
     voice: Option<String>,
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/playback_fallback.rs"]
+mod tests;
 
 struct PerformanceOnset {
     start_seconds: f64,
@@ -572,6 +564,7 @@ pub(super) fn fill_rest_groups(
     groups: &mut [PlaybackNoteGroup],
     midi: &crate::MidiFile,
     ppqn: u64,
+    pickup: Option<u64>,
 ) {
     let last_tick = midi
         .tracks
@@ -580,7 +573,7 @@ pub(super) fn fill_rest_groups(
         .map(|note| note.time + note.duration.unwrap_or(0))
         .max()
         .unwrap_or(0);
-    let Some(measure_times) = measure_times(midi, ppqn, last_tick) else {
+    let Some(measure_times) = measure_times(midi, ppqn, last_tick, pickup) else {
         return;
     };
     let by_measure: HashMap<_, _> = measure_times

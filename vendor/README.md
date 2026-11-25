@@ -7,9 +7,9 @@
 | Target | Preparation | Validation |
 |---|---|---|
 | darwin-arm64 | Official tar.gz; `pnpm engine:install` on Apple Silicon | Integrity, converters, SVG/PDF/MIDI, Chinese/space relocation, cache and diagnostics |
-| mingw-x86_64 | Official ZIP; `node scripts/engine.mjs install --target=mingw-x86_64 --download` | Archive download/hash, extraction and inventory; Rust Windows target static check |
+| mingw-x86_64 | Official ZIP; `node scripts/engine/engine.mjs install --target=mingw-x86_64 --download` | Archive download/hash, extraction and inventory; Rust Windows target static check |
 
-Run each preparation command from the repository, or call the script by absolute path from another cwd. The target flag selects a resource bundle, not emulation. Foreign target preparation never executes its tools. `node scripts/engine.mjs verify --target=<target>` checks the selected tree; only the current host target runs the smoke test.
+Run each preparation command from the repository, or call the script by absolute path from another cwd. The target flag selects a resource bundle, not emulation. Foreign target preparation never executes its tools. `node scripts/engine/engine.mjs verify --target=<target>` checks the selected tree; only the current host target runs the smoke test.
 
 The installer verifies the archive before extraction, prepares in a sibling staging directory, inventories and verifies the result, then replaces an existing development tree. A failed download/preparation preserves the previous tree. An explicit `OSSIA_LILYPOND_ROOT` is authoritative for `verify`/`path`, with no fallback. Rust receives its root explicitly.
 

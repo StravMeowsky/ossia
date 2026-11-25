@@ -13,6 +13,7 @@ const target = (elementId: string): SelectionTarget => ({ kind: 'element', eleme
 
 function scoreElement(id: string, x: number, kind: string, pitch = 0): GeometryElement {
   return {
+    systemIndex: 0,
     bounds: {
       x0: x,
       x1: x + 3,
@@ -629,6 +630,217 @@ test('starting playback places the first playhead frame on the auditioned note',
     () => (window as unknown as { playheadSamples: string[] }).playheadSamples,
   );
   expect(Number(samples[0])).toBeCloseTo(61.5, 1);
+});
+
+for (const [side, y] of [
+  ['above', 12],
+  ['below', 42],
+] as const) {
+  test(`playhead follows a note ${side} its staff system`, async ({ context }) => {
+    const timeline = playback([system(1, 0, 3)]);
+    timeline.durationSeconds = 3;
+    await mockScoreRuntime(context, {
+      elementsByPage: { 1: [note('first', 30, 60), positionedNote('second', 60, y, 86)], 2: [] },
+      playback: timeline,
+      svg,
+    });
+    const page = await context.newPage();
+    await page.goto(`/scores?documentId=${firstId}`);
+    await expect(page.locator('.score-image')).toHaveCount(2);
+    await page.getByRole('button', { name: '播放', exact: true }).click();
+    const line = page.locator('.score-playhead');
+    await expect(line).toHaveAttribute('x1', '31.5', { timeout: 20_000 });
+    await expect(line).toHaveAttribute('x1', '61.5', { timeout: 3_000 });
+  });
+}
+
+test('playhead chooses the earlier page for a tie spanning pages', async ({ context }) => {
+  const timeline = playback([system(1, 0, 1), system(2, 1, 3)]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [{ ...timeline.groups[0]!, elementIds: ['second', 'first'], startSeconds: 0 }];
+  await mockScoreRuntime(context, {
+    elementsByPage: { 1: [note('first', 30, 60)], 2: [note('second', 10, 60)] },
+    playback: timeline,
+    svg,
+  });
+  const page = await context.newPage();
+  await page.goto(`/scores?documentId=${firstId}`);
+  await expect(page.locator('.score-image')).toHaveCount(2);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  await expect(page.locator('.page-host').nth(0).locator('.score-playhead')).toHaveAttribute(
+    'x1',
+    '31.5',
+    { timeout: 20_000 },
+  );
+  await expect(page.locator('.page-host').nth(1).locator('.score-playhead')).toHaveCount(0);
+});
+
+test('playhead holds position when a tie member has no known position', async ({ context }) => {
+  const timeline = playback([system(1, 0, 3)]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [
+    { ...timeline.groups[0]!, startSeconds: 0 },
+    { ...timeline.groups[1]!, elementIds: ['second', 'missing'], startSeconds: 0.5 },
+  ];
+  const { page } = await pageWithPlayback(context, timeline);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  const line = page.locator('.score-playhead');
+  await expect(line).toHaveAttribute('x1', '31.5', { timeout: 20_000 });
+  await page.waitForTimeout(900);
+  await expect(line).toHaveAttribute('x1', '31.5');
+});
+
+test('playhead holds its last position when an upcoming note has no geometry', async ({
+  context,
+}) => {
+  const timeline = playback([system(1, 0, 3)]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [
+    { ...timeline.groups[0]!, startSeconds: 0 },
+    { ...timeline.groups[1]!, elementIds: ['missing'], startSeconds: 0.5 },
+    { ...timeline.groups[1]!, startSeconds: 1.8 },
+  ];
+  const { page } = await pageWithPlayback(context, timeline);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  const line = page.locator('.score-playhead').first();
+  await expect(line).toHaveAttribute('x1', '31.5', { timeout: 20_000 });
+  await page.waitForTimeout(900);
+  await expect(line).toHaveAttribute('x1', '31.5');
+  await expect(line).toHaveAttribute('x1', '61.5', { timeout: 3_000 });
+});
+
+test('playhead holds its last position when a note has no known system', async ({ context }) => {
+  const timeline = playback([system(1, 0, 3)]);
+  timeline.durationSeconds = 3;
+  await mockScoreRuntime(context, {
+    elementsByPage: {
+      1: [note('first', 30, 60), { ...positionedNote('second', 60, 80, 67), systemIndex: null }],
+      2: [],
+    },
+    playback: timeline,
+    svg,
+  });
+  const page = await context.newPage();
+  await page.goto(`/scores?documentId=${firstId}`);
+  await expect(page.locator('.score-image')).toHaveCount(2);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  const line = page.locator('.score-playhead');
+  await expect(line).toHaveAttribute('x1', '31.5', { timeout: 20_000 });
+  await page.waitForTimeout(1400);
+  await expect(line).toHaveAttribute('x1', '31.5');
+});
+
+test('playhead stays hidden until a note has a known position', async ({ context }) => {
+  const timeline = playback([system(1, 0, 3)]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [
+    { ...timeline.groups[0]!, elementIds: ['missing'], startSeconds: 0 },
+    { ...timeline.groups[1]!, startSeconds: 1.5 },
+  ];
+  const { page } = await pageWithPlayback(context, timeline);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  await expect(page.getByRole('button', { name: '暂停', exact: true })).toBeVisible();
+  await page.waitForTimeout(600);
+  await expect(page.locator('.score-playhead')).toHaveCount(0);
+  await expect(page.locator('.score-playhead')).toHaveAttribute('x1', '61.5', {
+    timeout: 3_000,
+  });
+});
+
+test('playhead holds its page until a note on the next page has a known position', async ({
+  context,
+}) => {
+  const timeline = playback([system(1, 0, 0.5), system(2, 0.5, 3)]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [
+    { ...timeline.groups[0]!, startSeconds: 0 },
+    { ...timeline.groups[1]!, elementIds: ['missing'], startSeconds: 0.5 },
+    { ...timeline.groups[1]!, startSeconds: 1.8 },
+  ];
+  await mockScoreRuntime(context, {
+    elementsByPage: { 1: [note('first', 30, 60)], 2: [note('second', 60, 67)] },
+    playback: timeline,
+    svg,
+  });
+  const page = await context.newPage();
+  await page.goto(`/scores?documentId=${firstId}`);
+  await expect(page.locator('.score-image')).toHaveCount(2);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  const firstPage = page.locator('.page-host').nth(0);
+  const secondPage = page.locator('.page-host').nth(1);
+  await expect(firstPage.locator('.score-playhead')).toHaveAttribute('x1', '31.5', {
+    timeout: 20_000,
+  });
+  await page.waitForTimeout(900);
+  await expect(firstPage.locator('.score-playhead')).toHaveAttribute('x1', '31.5');
+  await expect(secondPage.locator('.score-playhead')).toHaveCount(0);
+  await expect(secondPage.locator('.score-playhead')).toHaveAttribute('x1', '61.5', {
+    timeout: 3_000,
+  });
+});
+
+test('playhead holds its system until the next system has a known note position', async ({
+  context,
+}) => {
+  const timeline = playback([
+    system(1, 0, 0.5),
+    { ...system(1, 0.5, 3), systemIndex: 1, y0: 55, y1: 70 },
+  ]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [
+    { ...timeline.groups[0]!, startSeconds: 0 },
+    { ...timeline.groups[1]!, elementIds: ['missing'], startSeconds: 0.5 },
+    { ...timeline.groups[1]!, startSeconds: 1.8 },
+  ];
+  await mockScoreRuntime(context, {
+    elementsByPage: {
+      1: [note('first', 30, 60), { ...positionedNote('second', 60, 60, 67), systemIndex: 1 }],
+      2: [],
+    },
+    playback: timeline,
+    svg,
+  });
+  const page = await context.newPage();
+  await page.goto(`/scores?documentId=${firstId}`);
+  await expect(page.locator('.score-image')).toHaveCount(2);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  const line = page.locator('.score-playhead');
+  await expect(line).toHaveAttribute('y1', '18', { timeout: 20_000 });
+  await page.waitForTimeout(900);
+  await expect(line).toHaveAttribute('x1', '31.5');
+  await expect(line).toHaveAttribute('y1', '18');
+  await expect(line).toHaveAttribute('y1', '55', { timeout: 3_000 });
+  await expect(line).toHaveAttribute('x1', '61.5');
+});
+
+test('playhead holds its position when the same element occurs on multiple pages', async ({
+  context,
+}) => {
+  const timeline = playback([system(1, 0, 0.5), system(2, 0.5, 3)]);
+  timeline.durationSeconds = 3;
+  timeline.groups = [
+    { ...timeline.groups[0]!, startSeconds: 0 },
+    { ...timeline.groups[1]!, elementIds: ['repeated'], startSeconds: 0.5 },
+  ];
+  await mockScoreRuntime(context, {
+    elementsByPage: {
+      1: [note('first', 30, 60), note('repeated', 45, 67)],
+      2: [note('repeated', 60, 67)],
+    },
+    playback: timeline,
+    svg,
+  });
+  const page = await context.newPage();
+  await page.goto(`/scores?documentId=${firstId}`);
+  await expect(page.locator('.score-image')).toHaveCount(2);
+  await page.getByRole('button', { name: '播放', exact: true }).click();
+  const firstPage = page.locator('.page-host').nth(0);
+  await expect(firstPage.locator('.score-playhead')).toHaveAttribute('x1', '31.5', {
+    timeout: 20_000,
+  });
+  await page.waitForTimeout(900);
+  await expect(firstPage.locator('.score-playhead')).toHaveAttribute('x1', '31.5');
+  await expect(page.locator('.page-host').nth(1).locator('.score-playhead')).toHaveCount(0);
 });
 
 test('playhead snaps to the active notehead instead of moving continuously', async ({
@@ -1563,7 +1775,14 @@ test('arrow keys seek by measure during playback without changing the audition a
 test('playback moves the playhead without panning the score canvas', async ({ context }) => {
   const timeline = playback([system(1, 0, 0.1), system(2, 0.1, 20)]);
   timeline.durationSeconds = 20;
-  const { page } = await pageWithPlayback(context, timeline);
+  await mockScoreRuntime(context, {
+    elementsByPage: { 1: [note('first', 30, 60)], 2: [note('second', 60, 67)] },
+    playback: timeline,
+    svg,
+  });
+  const page = await context.newPage();
+  await page.goto(`/scores?documentId=${firstId}`);
+  await expect(page.locator('.score-image')).toHaveCount(2);
   const firstPage = page.locator('.page-host').first();
   const initialTop = (await firstPage.boundingBox())!.y;
   await page.getByRole('button', { name: '播放', exact: true }).click();

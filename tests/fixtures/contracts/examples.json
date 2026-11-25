@@ -168,7 +168,7 @@
   },
   "runtimeInfo": {
     "runtimeVersion": "0.0.0",
-    "protocolVersion": 12,
+    "protocolVersion": 13,
     "schemaVersion": 3,
     "instanceId": "synthetic-instance",
     "home": "/synthetic/ossia",

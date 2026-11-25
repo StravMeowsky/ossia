@@ -11,8 +11,9 @@ pub(super) fn system_spans(
     midi: &crate::MidiFile,
     ppqn: u64,
     last_tick: u64,
+    pickup: Option<u64>,
 ) -> Vec<PlaybackSystemSpan> {
-    let Some(times) = measure_times(midi, ppqn, last_tick) else {
+    let Some(mut times) = measure_times(midi, ppqn, last_tick, pickup) else {
         return Vec::new();
     };
     if layout
@@ -20,6 +21,11 @@ pub(super) fn system_spans(
         .iter()
         .any(|column| column.measure_start.is_none() || column.measure_end.is_none())
     {
+        if let Some(last) = times.last_mut() {
+            last.end_seconds = last
+                .end_seconds
+                .min(super::timing::seconds_at(last_tick, ppqn, midi));
+        }
         return fallback_spans(layout, &times);
     }
     let by_measure: HashMap<_, _> = times.iter().map(|time| (time.measure, *time)).collect();

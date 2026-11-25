@@ -1,6 +1,106 @@
 use ossia_score::*;
 
 #[test]
+fn noteheads_outside_system_bounds_keep_their_source_measure_system() {
+    let source = "Music = { c'1 | d'1 | } \\score { \\new Staff \\Music }";
+    let first = source.find("c'1").unwrap();
+    let second = source.find("d'1").unwrap();
+    let svg = format!(
+        r#"<svg viewBox="0 0 100 100">
+      <g><line x1="5" x2="90" y1="20" y2="20"/><line x1="5" x2="90" y1="21" y2="21"/>
+      <line x1="5" x2="90" y1="22" y2="22"/><line x1="5" x2="90" y1="23" y2="23"/>
+      <line x1="5" x2="90" y1="24" y2="24"/></g>
+      <g><line x1="5" x2="90" y1="60" y2="60"/><line x1="5" x2="90" y1="61" y2="61"/>
+      <line x1="5" x2="90" y1="62" y2="62"/><line x1="5" x2="90" y1="63" y2="63"/>
+      <line x1="5" x2="90" y1="64" y2="64"/></g>
+      <g data-ossia-kind="NoteHead" data-ossia-staff="2" data-ossia-id="high" data-ossia-bounds="20 10 22 12" data-ossia-source="{first}:{}"/>
+      <g data-ossia-kind="NoteHead" data-ossia-staff="0" data-ossia-id="low" data-ossia-bounds="20 72 22 74" data-ossia-source="{second}:{}"/>
+      <g data-ossia-kind="BarLine" data-ossia-bounds="5 20 5.2 24"/>
+      <g data-ossia-kind="BarLine" data-ossia-bounds="89 20 90 24"/>
+      <g data-ossia-kind="BarLine" data-ossia-bounds="5 60 5.2 64"/>
+      <g data-ossia-kind="BarLine" data-ossia-bounds="89 60 90 64"/>
+    </svg>"#,
+        first + 3,
+        second + 3
+    );
+    let index = build_index(source);
+    let layout = build_layout(&index, &[SvgPage { page: 1, svg: &svg }]).unwrap();
+    let geometry = selection_geometry(&index, &layout).unwrap();
+    let note = |text: &str| {
+        geometry[0]
+            .elements
+            .iter()
+            .find(|e| e.region.label.contains(text))
+            .unwrap()
+    };
+    assert_eq!(note("c'1").system_index, Some(0));
+    assert_eq!(note("d'1").system_index, Some(1));
+
+    let inside_svg = svg.replace("20 10 22 12", "20 21 22 23");
+    let mut no_measures = build_layout(
+        &index,
+        &[SvgPage {
+            page: 1,
+            svg: &inside_svg,
+        }],
+    )
+    .unwrap();
+    no_measures.columns.clear();
+    let geometry = selection_geometry(&index, &no_measures).unwrap();
+    let high = geometry[0]
+        .elements
+        .iter()
+        .find(|e| e.region.label.contains("c'1"))
+        .unwrap();
+    assert_eq!(high.system_index, Some(0));
+
+    let mut mirrored = index.clone();
+    let mut tab_staff = mirrored.staves[0].clone();
+    tab_staff.kind = StaffKind::Tablature;
+    mirrored.staves.push(tab_staff);
+    let geometry = selection_geometry(&mirrored, &no_measures).unwrap();
+    let high = geometry[0]
+        .elements
+        .iter()
+        .find(|e| e.region.label.contains("c'1"))
+        .unwrap();
+    assert_eq!(high.system_index, Some(0));
+
+    no_measures.pages[0].systems[1].staves[0] = no_measures.pages[0].systems[0].staves[0].clone();
+    let geometry = selection_geometry(&index, &no_measures).unwrap();
+    let high = geometry[0]
+        .elements
+        .iter()
+        .find(|e| e.region.label.contains("c'1"))
+        .unwrap();
+    assert_eq!(high.system_index, None);
+
+    let mut single_system = layout.clone();
+    single_system.pages[0].systems.truncate(1);
+    single_system.columns.clear();
+    let geometry = selection_geometry(&index, &single_system).unwrap();
+    let high = geometry[0]
+        .elements
+        .iter()
+        .find(|e| e.region.label.contains("c'1"))
+        .unwrap();
+    assert_eq!(high.system_index, Some(0));
+
+    let mut ambiguous = layout.clone();
+    for column in &mut ambiguous.columns {
+        column.measure_start = Some(1);
+        column.measure_end = Some(1);
+    }
+    let geometry = selection_geometry(&index, &ambiguous).unwrap();
+    let high = geometry[0]
+        .elements
+        .iter()
+        .find(|e| e.region.label.contains("c'1"))
+        .unwrap();
+    assert_eq!(high.system_index, None);
+}
+
+#[test]
 fn unique_instrument_commands_fill_missing_lilypond_source_spans() {
     let source =
         "Music = { \\set Staff.instrumentName = \"Piano\" c'1 | } \\score { \\new Staff \\Music }";

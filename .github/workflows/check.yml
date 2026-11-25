@@ -129,6 +129,24 @@ jobs:
             target/debug
           key: ${{ steps.check-cache.outputs.cache-primary-key }}
 
+  verify:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dtolnay/rust-toolchain@1.91.0
+      - uses: pnpm/setup@v3.1.2
+        with:
+          version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Install locked engine
+        run: pnpm engine:install
+      - name: Verify fixtures
+        run: pnpm verify
+
   browser:
     strategy:
       fail-fast: false

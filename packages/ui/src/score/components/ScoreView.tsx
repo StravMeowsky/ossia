@@ -16,6 +16,7 @@ import { useAnnotationMarquee } from '../hooks/useAnnotationMarquee.ts';
 import type { DrawingController } from '../hooks/useDrawing.ts';
 import { useDrawingInput } from '../hooks/useDrawingInput.ts';
 import type { DrawingMode } from '../hooks/useDrawingInput.ts';
+import { usePlayheadPosition } from '../hooks/usePlayheadPosition.ts';
 import { useScoreAnnotations } from '../hooks/useScoreAnnotations.ts';
 import type { ScoreViewPan } from '../hooks/useScoreViewMemory.ts';
 import { useScoreViewport } from '../hooks/useScoreViewport.ts';
@@ -60,7 +61,8 @@ interface Props {
   showHitBoxes?: boolean;
   activeElementIds?: Set<string>;
   playheadElementIds?: Set<string>;
-  playhead?: { span: PlaybackSystemSpan; x: number } | null;
+  playhead?: boolean;
+  playbackSystems?: PlaybackSystemSpan[];
   onAuditionNote?: (element: GeometryElement, simultaneous: boolean) => void;
   viewKey?: string;
   initialPan?: ScoreViewPan;
@@ -73,6 +75,8 @@ interface Props {
 }
 
 const EMPTY_IDS = new Set<string>();
+const EMPTY_SYSTEMS: PlaybackSystemSpan[] = [];
+const EMPTY_PAGES: GeometryPage[] = [];
 const EMPTY_SELECTION: SelectionTarget[] = [];
 const EMPTY_ANNOTATIONS: SelectionAnnotation[] = [];
 
@@ -95,7 +99,8 @@ export function ScoreView({
   showHitBoxes = false,
   activeElementIds = EMPTY_IDS,
   playheadElementIds = EMPTY_IDS,
-  playhead = null,
+  playhead = false,
+  playbackSystems = EMPTY_SYSTEMS,
   onAuditionNote,
   viewKey,
   initialPan = { x: 0, y: 0 },
@@ -108,6 +113,13 @@ export function ScoreView({
 }: Props) {
   const { t } = useI18n();
   const { geometry, error, layouts, missingGeometry, ready } = useScoreViewResources(api, render);
+  const locatedPlayhead = usePlayheadPosition(
+    render.renderKey,
+    geometry?.renderKey === render.renderKey ? geometry.pages : EMPTY_PAGES,
+    playbackSystems,
+    playheadElementIds,
+    playhead,
+  );
   const pageHosts = useRef(new Map<number, HTMLDivElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
   const drawingInput = useDrawingInput(drawing, drawingMode, penSize, eraserSize, penColor);
@@ -479,10 +491,7 @@ export function ScoreView({
                         selectionKeys={selectionKeys}
                         graphicColors={graphicColors}
                         activeElementIds={activeElementIds}
-                        playheadElementIds={
-                          playhead?.span.page === page ? playheadElementIds : EMPTY_IDS
-                        }
-                        playhead={playhead?.span.page === page ? playhead : null}
+                        playhead={locatedPlayhead?.span.page === page ? locatedPlayhead : null}
                         annotations={annotations}
                         previewTargets={previewTargets}
                         previewBoxes={previewBoxes}

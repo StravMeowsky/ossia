@@ -1,7 +1,7 @@
 # Test fixtures
 
-Committed synthetic inputs and reference results shared by the Rust crates and
-browser tests. These files contain no user scores or library data.
+Committed inputs and reference results shared by the Rust crates and browser
+tests. Playback cases include anonymized complete scores and focused passages.
 
 | Directory | Purpose |
 | --- | --- |
@@ -10,6 +10,7 @@ browser tests. These files contain no user scores or library data.
 | `rendered/` | LilyPond 2.26.0 source/SVG pairs, a page manifest and the MIDI files used by pitch assertions. |
 | `analysis/` | Normalized token and two-staff geometry expectations captured from the independent TypeScript reference. |
 | `contracts/` | Shared DTO examples and generated MCP tool schemas. |
+| `playback/` | LilyPond regression cases and independently specified playback checks; see `docs/verify.md`. |
 
 Paths in the input and render manifests are relative to `tests/fixtures/`.
 

@@ -600,8 +600,10 @@ fn chord_names_do_not_contribute_to_midi() {
     let engine =
         Engine::verify(&root, &work.path().join("scratch"), &RunContext::default()).unwrap();
     let source = r#"\version "2.26.0"
+harmonies = \chordmode { d1 }
 \score { <<
   \new ChordNames { \chordmode { c1 } }
+  \new ChordNames \harmonies
   \new Staff { c'1 }
 >> \layout {} \midi {} }
 "#;

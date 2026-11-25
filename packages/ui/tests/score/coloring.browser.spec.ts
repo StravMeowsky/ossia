@@ -12,6 +12,7 @@ function note(
   linked = [target(id)],
 ): GeometryElement {
   return {
+    systemIndex: null,
     bounds: { x0: x, x1: x + 2, y0: y, y1: y + 2 },
     priority: 0,
     hitBounds: [],

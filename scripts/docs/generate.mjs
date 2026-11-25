@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parse as parseHtml } from 'parse5';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const HTML_ROOT = 'share/doc/lilypond/html';
 const SECTION_CLASSES = new Set([
   'section',

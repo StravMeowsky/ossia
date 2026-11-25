@@ -5,11 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { readLock, verifyTree, refreshGoMtimes, sha256 } from './engine.mjs';
-import { resolveBuildStamp, rpmBundleConfig, withReleaseVersion } from './release/version.mjs';
+import { readLock, verifyTree, refreshGoMtimes, sha256 } from '../engine/engine.mjs';
+import { resolveBuildStamp, rpmBundleConfig, withReleaseVersion } from '../release/version.mjs';
 import { windowsInstallerArgs, withWindowsInstallState } from './windows-install-state.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 let APP_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 let BUILD_STAMP = resolveBuildStamp(APP_VERSION, process.env.OSSIA_BUILD_STAMP);
 const APP_BUNDLE = 'Ossia.app';

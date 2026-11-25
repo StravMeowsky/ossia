@@ -12,7 +12,7 @@ import sys
 import tarfile
 import urllib.request
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def digest(file):

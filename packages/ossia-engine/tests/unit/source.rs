@@ -99,15 +99,17 @@ fn converter_markup_does_not_block_anchors_or_midi() {
 
 #[test]
 fn midi_derivation_removes_chord_name_contexts() {
-    let text = r#"\score { <<
+    let text = r#"harmonies = \chordmode { e1 }
+\score { <<
   \context ChordNames = "chords" { \chordmode { c1 } }
   \new ChordNames \with { \override ChordName.font-size = #-2 } { \chordmode { d1 } }
+  \new ChordNames \harmonies
   \new Staff { c'1 }
 >> \layout {} }
 "#;
     let derived = source::derive(text, RenderFormat::Midi, true).unwrap();
     assert!(!derived.text.contains("ChordNames"));
-    assert!(!derived.text.contains("\\chordmode"));
+    assert!(!derived.text.contains("\\harmonies"));
     assert!(derived.text.contains("\\new Staff"));
     assert!(derived.text.contains("\\midi {}"));
 }

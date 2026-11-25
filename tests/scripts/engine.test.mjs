@@ -13,7 +13,7 @@ import {
   readLock,
   verifyTree,
   writeInventory,
-} from '../../scripts/engine.mjs';
+} from '../../scripts/engine/engine.mjs';
 
 test('five-target lock declares actual launchers and refuses unbuilt ARM64 packages', async () => {
   const lock = parseLock(

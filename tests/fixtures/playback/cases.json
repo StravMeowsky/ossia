@@ -1,0 +1,355 @@
+[
+  {
+    "id": "xinhu-ledger",
+    "source": "xinhu-ledger.ly",
+    "origin": "Xinhu, high D in measure 1",
+    "checks": [
+      {
+        "kind": "playhead",
+        "time": 2.1875,
+        "pitch": 86,
+        "needle": "d8"
+      }
+    ]
+  },
+  {
+    "id": "majo-chord-names",
+    "source": "majo-chord-names.ly",
+    "origin": "Majo no Yakata, opening grand staff with chord names and bass notes",
+    "checks": [
+      {
+        "kind": "playhead",
+        "time": 0,
+        "pitch": 47,
+        "needle": "b4 <fis'"
+      }
+    ]
+  },
+  {
+    "id": "bittersweet-ties",
+    "source": "bittersweet-ties.ly",
+    "origin": "Bittersweet, tied dyads in measures 9–10 and 13–14",
+    "checks": [
+      {
+        "kind": "mapped",
+        "time": 0,
+        "pitch": 69,
+        "needle": "<a cis>1 ~",
+        "offset": 1,
+        "continuation": "<a cis>1 |",
+        "continuationOffset": 1,
+        "duration": 5.92592
+      },
+      {
+        "kind": "mapped",
+        "time": 0,
+        "pitch": 73,
+        "needle": "<a cis>1 ~",
+        "offset": 3,
+        "continuation": "<a cis>1 |",
+        "continuationOffset": 3,
+        "duration": 5.92592
+      },
+      {
+        "kind": "mapped",
+        "time": 5.92592,
+        "pitch": 68,
+        "needle": "<gis _~ cis ^~>1",
+        "offset": 1,
+        "tied": true
+      },
+      {
+        "kind": "mapped",
+        "time": 5.92592,
+        "pitch": 73,
+        "needle": "<gis _~ cis ^~>1",
+        "offset": 8,
+        "tied": true
+      },
+      {
+        "kind": "playhead",
+        "time": 5.92592,
+        "pitch": 73,
+        "needle": "<gis _~ cis ^~>1",
+        "offset": 8,
+        "tied": true
+      }
+    ]
+  },
+  {
+    "id": "tie-across-bar",
+    "source": "tie-across-bar.ly",
+    "origin": "Single note starting at the end of a measure and tied into the next",
+    "checks": [
+      {
+        "kind": "mapped",
+        "time": 1.5,
+        "pitch": 65,
+        "needle": "f'4 ~",
+        "continuation": "| f'4",
+        "continuationOffset": 2,
+        "duration": 1
+      },
+      {
+        "kind": "mapped",
+        "time": 2.5,
+        "pitch": 67,
+        "needle": "g'4"
+      }
+    ]
+  },
+  {
+    "id": "bach-sheep-voices",
+    "source": "bach-sheep-voices.ly",
+    "origin": "Sheep May Safely Graze, successive 32nd notes in two voices (the simplified excerpt does not yet reproduce the original backward jump)",
+    "checks": [
+      {
+        "kind": "mapped",
+        "time": 0.25,
+        "pitch": 74,
+        "needle": "d,32( es f16)"
+      },
+      {
+        "kind": "mapped",
+        "time": 0.3125,
+        "pitch": 75,
+        "needle": "d,32( es f16)",
+        "offset": 6
+      },
+      {
+        "kind": "mapped",
+        "time": 0.375,
+        "pitch": 77,
+        "needle": "d,32( es f16)",
+        "offset": 9
+      },
+      {
+        "kind": "forward",
+        "from": 0.25,
+        "to": 1
+      }
+    ]
+  },
+  {
+    "id": "bach-sheep-original-order",
+    "source": "bach-sheep-original.ly",
+    "origin": "Sheep May Safely Graze, backward playhead movement around the flute parts in the complete score",
+    "checks": [
+      {
+        "kind": "mapped",
+        "time": 41.25,
+        "pitch": 77,
+        "needle": "r8 d,32( es f16) d( f) es( c) d8 r8 r4",
+        "offset": 20
+      },
+      {
+        "kind": "mapped",
+        "time": 41.5,
+        "pitch": 75,
+        "needle": "r8 d,32( es f16) d( f) es( c) d8 r8 r4",
+        "offset": 23
+      },
+      {
+        "kind": "mapped",
+        "time": 41.75,
+        "pitch": 72,
+        "needle": "r8 d,32( es f16) d( f) es( c) d8 r8 r4",
+        "offset": 27
+      },
+      {
+        "kind": "forward",
+        "from": 41.5,
+        "to": 42
+      }
+    ]
+  },
+  {
+    "id": "sor-original-locations",
+    "source": "sor-original.ly",
+    "origin": "Sor study, pickup, simultaneous voices and notehead positions",
+    "checks": [
+      {
+        "kind": "playhead",
+        "time": 0,
+        "pitch": 60,
+        "needle": "c8.^1 h16^0"
+      },
+      {
+        "kind": "mapped",
+        "time": 0.5625,
+        "pitch": 59,
+        "needle": "c8.^1 h16^0",
+        "offset": 6
+      },
+      {
+        "kind": "mapped",
+        "time": 0.75,
+        "pitch": 57,
+        "needle": "a8.^2 h16^0 c8.^1 d16^4"
+      },
+      {
+        "kind": "playhead",
+        "time": 15.75,
+        "pitch": 67,
+        "needle": "g4.^4 f!8^1"
+      },
+      {
+        "kind": "playhead",
+        "time": 27.75,
+        "pitch": 69,
+        "needle": "a'4..^4 g16^4"
+      },
+      {
+        "kind": "playhead",
+        "time": 33.75,
+        "pitch": 67,
+        "needle": "g'4..^4 f16^1"
+      },
+      {
+        "kind": "playhead",
+        "time": 51,
+        "pitch": 65,
+        "needle": "a8. h16 c8. d16 e4 f |",
+        "offset": 19
+      },
+      {
+        "kind": "playhead",
+        "time": 53.25,
+        "pitch": 56,
+        "needle": "{ a gis }",
+        "offset": 4
+      }
+    ]
+  },
+  {
+    "id": "violin-pickup",
+    "source": "violin-pickup.ly",
+    "origin": "Bach Allemanda, pickup and two voices",
+    "checks": [
+      {
+        "kind": "playhead",
+        "time": 0,
+        "pitch": 78,
+        "needle": "fis''16 |"
+      },
+      {
+        "kind": "mapped",
+        "time": 0.46875,
+        "pitch": 78,
+        "needle": "fis''8. b''16"
+      },
+      {
+        "kind": "mapped",
+        "time": 0.46875,
+        "pitch": 74,
+        "needle": "<d'' fis' b>8.",
+        "offset": 1
+      },
+      {
+        "kind": "mapped",
+        "time": 1.875,
+        "pitch": 83,
+        "needle": "fis''8. b''16",
+        "offset": 8
+      }
+    ]
+  },
+  {
+    "id": "hollow-knight-original",
+    "source": "hollow-knight-original.ly",
+    "origin": "Hollow Knight, accompaniment and transposition in measures 1, 2, 6 and 11",
+    "checks": [
+      {
+        "kind": "mapped",
+        "time": 0.3,
+        "pitch": 64,
+        "needle": "c'8-5 g'8-2 as'2-1",
+        "offset": 6
+      },
+      {
+        "kind": "mapped",
+        "time": 0.6,
+        "pitch": 65,
+        "needle": "c'8-5 g'8-2 as'2-1",
+        "offset": 12
+      },
+      {
+        "kind": "mapped",
+        "time": 2.1,
+        "pitch": 62,
+        "needle": "c'8-5 f'8-2 g'2-1",
+        "offset": 6
+      },
+      {
+        "kind": "mapped",
+        "time": 2.4,
+        "pitch": 64,
+        "needle": "c'8-5 f'8-2 g'2-1",
+        "offset": 12
+      },
+      {
+        "kind": "mapped",
+        "time": 9.3,
+        "pitch": 64,
+        "needle": "bes8-5 g' f'2",
+        "offset": 7
+      },
+      {
+        "kind": "mapped",
+        "time": 9.6,
+        "pitch": 62,
+        "needle": "bes8-5 g' f'2",
+        "offset": 10
+      },
+      {
+        "kind": "mapped",
+        "time": 18.3,
+        "pitch": 50,
+        "needle": "c8-5 f g2",
+        "offset": 5
+      },
+      {
+        "kind": "mapped",
+        "time": 18.6,
+        "pitch": 52,
+        "needle": "c8-5 f g2",
+        "offset": 7
+      }
+    ]
+  },
+  {
+    "id": "ark-original",
+    "source": "ark-original.ly",
+    "origin": "Uchuu no Hakobune, measure 21 after an extended silent voice",
+    "checks": [
+      {
+        "kind": "playhead",
+        "time": 87.459052,
+        "pitch": 60,
+        "needle": "r8 \\D c16 \\D es16 \\D g16 \\D c,16 \\D es16 \\D g16 \\D c,16\n  \\D es16 \\D g16 \\D c,16",
+        "offset": 3
+      },
+      {
+        "kind": "playhead",
+        "time": 88.209052,
+        "pitch": 60,
+        "needle": "r8 \\D c16 \\D es16 \\D g16 \\D c,16 \\D es16 \\D g16 \\D c,16\n  \\D es16 \\D g16 \\D c,16",
+        "offset": 25
+      },
+      {
+        "kind": "playhead",
+        "time": 88.959052,
+        "pitch": 60,
+        "needle": "r8 \\D c16 \\D es16 \\D g16 \\D c,16 \\D es16 \\D g16 \\D c,16\n  \\D es16 \\D g16 \\D c,16",
+        "offset": 48
+      },
+      {
+        "kind": "playhead",
+        "time": 89.709052,
+        "pitch": 60,
+        "needle": "r8 \\D c16 \\D es16 \\D g16 \\D c,16 \\D es16 \\D g16 \\D c,16\n  \\D es16 \\D g16 \\D c,16",
+        "offset": 73
+      }
+    ]
+  }
+]

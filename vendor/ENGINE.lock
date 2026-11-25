@@ -230,7 +230,7 @@
         "url": "https://gitlab.com/api/v4/projects/lilypond%2Flilypond/packages/generic/lilypond/2.26.0/lilypond-2.26.0.tar.gz",
         "sha256": "bbe82dbeba7f7f99ddcd8d1fa134a0d89cafa6e8f815fde5bb01f4208b06fe05"
       },
-      "recipe": "scripts/engine-linux-arm64.py",
+      "recipe": "scripts/engine/engine-linux-arm64.py",
       "dependencyLock": "vendor/ENGINE.dependencies.json",
       "tools": {
         "lilypond": {

@@ -319,7 +319,7 @@ two = { s1*1 r4 c'4 | }
 }
 
 #[test]
-fn hidden_chord_name_notes_do_not_reach_automatic_playback() {
+fn unmapped_midi_notes_are_not_discarded_when_noteheads_are_covered() {
     let source = r#"
 upper = { c'1 | }
 lower = { c1 | }
@@ -374,7 +374,7 @@ chords = \chordmode { c1 | }
             .iter()
             .map(|note| note.pitch)
             .collect::<Vec<_>>(),
-        vec![48, 60]
+        vec![48, 60, 62, 66, 69]
     );
 }
 
@@ -762,81 +762,6 @@ fn tied_noteheads_share_the_first_midi_cluster() {
     assert_eq!(playback.groups.len(), 1);
     assert_eq!(playback.groups[0].element_ids.len(), 2);
     assert_eq!(playback.groups[0].start_seconds, Some(0.0));
-}
-
-#[test]
-fn tied_chain_uses_its_first_note_across_a_measure_boundary() {
-    let source =
-        "Music = { c'4 d'4 e'4 f'4 ~ | f'4 g'4 a'4 b'4 | } \\score { \\new Staff \\Music \\layout {} \\midi {} }";
-    let head = |id: &str, start: usize, end: usize, x: f64| {
-        format!(
-            r#"<g data-ossia-kind="NoteHead" data-ossia-id="{id}" data-ossia-staff="0"
-                 data-ossia-bounds="{x} 21 {} 23" data-ossia-source="{start}:{end}">
-                 <rect x="{x}" y="21" width="2" height="2"/>
-               </g>"#,
-            x + 2.
-        )
-    };
-    let token = |text: &str| {
-        let start = source.find(text).unwrap();
-        (start, start + text.len())
-    };
-    let first_f = token("f'4 ~");
-    let second_f_start = source[first_f.1..].find("f'4").unwrap() + first_f.1;
-    let svg = format!(
-        r#"<svg viewBox="0 0 100 60">
-          <g><line x1="10" x2="90" y1="20" y2="20"/><line x1="10" x2="90" y1="21" y2="21"/>
-          <line x1="10" x2="90" y1="22" y2="22"/><line x1="10" x2="90" y1="23" y2="23"/>
-          <line x1="10" x2="90" y1="24" y2="24"/></g>
-          {}
-          <g data-ossia-kind="Tie" data-ossia-id="tie" data-ossia-owners="f1,f2"
-             data-ossia-bounds="44 22 56 24" data-ossia-source="{}:{}"/>
-          <g data-ossia-kind="BarLine" data-ossia-bounds="9.8 20 10 24"/>
-          <g data-ossia-kind="BarLine" data-ossia-bounds="49.8 20 50 24"/>
-          <g data-ossia-kind="BarLine" data-ossia-bounds="89.8 20 90 24"/>
-        </svg>"#,
-        [
-            head("c", token("c'4").0, token("c'4").1, 20.),
-            head("d", token("d'4").0, token("d'4").1, 28.),
-            head("e", token("e'4").0, token("e'4").1, 36.),
-            head("f1", first_f.0, first_f.0 + 3, 44.),
-            head("f2", second_f_start, second_f_start + 3, 56.),
-            head("g", token("g'4").0, token("g'4").1, 64.),
-            head("a", token("a'4").0, token("a'4").1, 72.),
-            head("b", token("b'4").0, token("b'4").1, 80.),
-        ]
-        .concat(),
-        first_f.1,
-        first_f.1 + 1
-    );
-    let track = [
-        0x00, 0xff, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08, 0x00, 0xff, 0x51, 0x03, 0x07, 0xa1, 0x20,
-        0x00, 0x90, 0x3c, 0x40, 0x83, 0x60, 0x80, 0x3c, 0x00, 0x00, 0x90, 0x3e, 0x40, 0x83, 0x60,
-        0x80, 0x3e, 0x00, 0x00, 0x90, 0x40, 0x40, 0x83, 0x60, 0x80, 0x40, 0x00, 0x00, 0x90, 0x41,
-        0x40, 0x87, 0x40, 0x80, 0x41, 0x00, 0x00, 0x90, 0x43, 0x40, 0x83, 0x60, 0x80, 0x43, 0x00,
-        0x00, 0x90, 0x45, 0x40, 0x83, 0x60, 0x80, 0x45, 0x00, 0x00, 0x90, 0x47, 0x40, 0x83, 0x60,
-        0x80, 0x47, 0x00, 0x00, 0xff, 0x2f, 0x00,
-    ];
-    let midi = parse_midi(&smf(480, &track)).unwrap();
-    let index = build_index(source);
-    let layout = build_layout(&index, &[SvgPage { page: 1, svg: &svg }]).unwrap();
-    let playback = build_playback(
-        &index,
-        &layout,
-        &midi,
-        ContentHash::of(b"cross-measure-tie"),
-    )
-    .unwrap();
-    let tied = playback
-        .groups
-        .iter()
-        .find(|group| group.pitches == vec![65] && group.start_seconds == Some(1.5))
-        .unwrap();
-    assert_eq!(tied.element_ids.len(), 2);
-    assert!(playback
-        .notes
-        .iter()
-        .any(|note| note.pitch == 65 && note.start_seconds == 1.5));
 }
 
 #[test]

@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { test } from 'vite-plus/test';
 
-import { prepare, sha256 } from '../../scripts/docs.mjs';
+import { prepare, sha256 } from '../../scripts/docs/generate.mjs';
 
 test('offline pack preserves code and indexes sections without navigation', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ossia-docs-test-'));

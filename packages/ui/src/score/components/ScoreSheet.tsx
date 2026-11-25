@@ -40,7 +40,6 @@ interface Props {
   selectionKeys: Set<string>;
   graphicColors: ReadonlyMap<string, string>;
   activeElementIds: Set<string>;
-  playheadElementIds: Set<string>;
   playhead: { span: PlaybackSystemSpan; x: number } | null;
   annotations: SelectionAnnotation[];
   previewTargets: SelectionTarget[] | undefined;
@@ -72,7 +71,6 @@ export const ScoreSheet = memo(function ScoreSheet({
   selectionKeys,
   graphicColors,
   activeElementIds,
-  playheadElementIds,
   playhead,
   annotations,
   previewTargets,
@@ -135,20 +133,6 @@ export const ScoreSheet = memo(function ScoreSheet({
       ),
     [displayLayout, activeElementIds],
   );
-  const activeX = useMemo(() => {
-    let x: number | undefined;
-    if (!playhead) return x;
-    for (const element of displayLayout.elements) {
-      if (
-        element.region.target.kind !== 'element' ||
-        !playheadElementIds.has(element.region.target.elementId)
-      )
-        continue;
-      const next = (element.bounds.x0 + element.bounds.x1) / 2;
-      x = x === undefined ? next : Math.min(x, next);
-    }
-    return x;
-  }, [displayLayout, playheadElementIds, !!playhead]);
   const measureBoxes = useMemo(() => {
     const measureBoxes = annotationOccurrences(displayLayout, annotations)
       .filter(({ target }) => target?.kind === 'measure')
@@ -254,8 +238,8 @@ export const ScoreSheet = memo(function ScoreSheet({
         {playhead?.span.page === page && (
           <line
             className="score-playhead"
-            x1={activeX ?? playhead.x}
-            x2={activeX ?? playhead.x}
+            x1={playhead.x}
+            x2={playhead.x}
             y1={playhead.span.y0}
             y2={playhead.span.y1}
           />

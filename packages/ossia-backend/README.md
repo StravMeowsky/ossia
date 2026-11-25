@@ -39,4 +39,4 @@ pnpm check:types
 cargo test -p ossia-backend
 ```
 
-`pnpm dev:backend` runs the development backend and Vite; its configuration is in [`scripts/backend-dev.mjs`](../../scripts/backend-dev.mjs).
+`pnpm dev:backend` runs the development backend and Vite; its configuration is in [`scripts/dev/backend.mjs`](../../scripts/dev/backend.mjs).

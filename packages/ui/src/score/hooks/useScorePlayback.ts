@@ -16,16 +16,11 @@ import {
   combinedAuditionGroup,
   groupAt,
   measureSpanAt,
-  playheadAt,
-  playheadKey,
   sameNoteGroup,
   sameOnset,
   sameVoice,
 } from '../utils/playbackTimeline.ts';
-import type { PlaybackPlayhead } from '../utils/playbackTimeline.ts';
 import { loadScorePlayback, peekScorePlayback } from '../utils/renderCache.ts';
-
-export type { PlaybackPlayhead } from '../utils/playbackTimeline.ts';
 
 export type PlaybackPhase = 'idle' | 'loading' | 'playing' | 'paused' | 'unavailable';
 
@@ -36,7 +31,7 @@ interface PlaybackState {
   position: number;
   activeGroup: PlaybackNoteGroup | null;
   playheadGroup: PlaybackNoteGroup | null;
-  playhead: PlaybackPlayhead | null;
+  playhead: boolean;
 }
 
 const EMPTY_STATE: PlaybackState = {
@@ -46,7 +41,7 @@ const EMPTY_STATE: PlaybackState = {
   position: 0,
   activeGroup: null,
   playheadGroup: null,
-  playhead: null,
+  playhead: false,
 };
 
 const LOOKAHEAD_SECONDS = 0.18;
@@ -90,7 +85,7 @@ export function useScorePlayback(
     positionRef.current = position;
     const timeline = timelineRef.current;
     if (!timeline) {
-      setState((current) => ({ ...current, position, playhead: null }));
+      setState((current) => ({ ...current, position, playhead: false }));
       return;
     }
     const playheadGroup = groupAt(timeline, position) ?? playheadGroupRef.current;
@@ -99,7 +94,7 @@ export function useScorePlayback(
       ...current,
       position,
       playheadGroup,
-      playhead: playheadAt(timeline, position),
+      playhead: true,
     }));
   }, []);
 
@@ -129,7 +124,7 @@ export function useScorePlayback(
       phase: 'idle',
       position: 0,
       playheadGroup: null,
-      playhead: null,
+      playhead: false,
     }));
     phaseRef.current = 'idle';
   }, [clearScheduler]);
@@ -436,7 +431,7 @@ export function useScorePlayback(
         position: 0,
         activeGroup: null,
         playheadGroup: null,
-        playhead: null,
+        playhead: false,
       });
       return;
     }
@@ -452,7 +447,7 @@ export function useScorePlayback(
           position: 0,
           activeGroup: null,
           playheadGroup: null,
-          playhead: null,
+          playhead: false,
         });
       })
       .catch((error) => {
@@ -492,6 +487,5 @@ export function useScorePlayback(
     canToggle: state.available && enabled,
     activeElementIds,
     playheadElementIds,
-    playheadKey: playheadKey(state.playhead),
   };
 }

@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { test } from 'vite-plus/test';
 
-import { detachedChild, stopProcessTree, windows } from '../../scripts/process-tree.mjs';
+import { detachedChild, stopProcessTree, windows } from '../../scripts/shared/process-tree.mjs';
 
 function isRunning(pid) {
   try {

@@ -108,11 +108,16 @@ pub fn build_playback(
         .map(|note| note.time + note.duration.unwrap_or(0))
         .max()
         .unwrap_or(0);
-    let systems = system_spans(layout, midi, ppqn, last_tick);
+    let systems = system_spans(
+        layout,
+        midi,
+        ppqn,
+        last_tick,
+        timing::pickup_ticks(index.source(), ppqn),
+    );
     let NoteGroupBuild {
         mut groups,
         muted_notes,
-        complete_notehead_coverage,
         element_positions,
     } = note_groups(index, layout, midi, ppqn, &systems)?;
     let systems =
@@ -125,17 +130,6 @@ pub fn build_playback(
                 && channel == &muted.channel
         })
     });
-    // Fully covered noteheads make any remaining MIDI note a non-rendered performer.
-    if complete_notehead_coverage {
-        notes.retain(|(note, ..)| {
-            groups.iter().any(|group| {
-                group.pitches.contains(&note.pitch)
-                    && group.start_seconds.is_some_and(|start| {
-                        (start - note.start_seconds).abs() <= ONSET_EPSILON_SECONDS
-                    })
-            })
-        });
-    }
     let parts = parts::assign_parts(index, midi, &programs, &mut notes, &mut groups);
     notes.sort_by(|a, b| {
         a.0.start_seconds

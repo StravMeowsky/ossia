@@ -60,6 +60,12 @@ struct Pitch {
     alter: i32,
     marks: i32,
 }
+
+pub(crate) fn transpose_interval(from: &str, to: &str, german: bool) -> Option<i32> {
+    let from = parse_pitch(from, german)?;
+    let to = parse_pitch(to, german)?;
+    Some(midi(di(to), to.alter) - midi(di(from), from.alter))
+}
 fn parse_pitch(s: &str, german: bool) -> Option<Pitch> {
     let step_byte = *s.as_bytes().first()?;
     let step = match step_byte {

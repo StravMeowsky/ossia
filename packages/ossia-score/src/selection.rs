@@ -14,6 +14,121 @@ fn bounds(b: BBox) -> GeometryBounds {
     }
 }
 
+fn element_system(
+    index: &ScoreIndex,
+    layout: &ScoreLayout,
+    page: &PageLayout,
+    object: &SvgObject,
+    region: &SelectionRegion,
+) -> Option<usize> {
+    let (x, _) = object.bbox.center();
+    let source_measure = object
+        .span
+        .and_then(|span| index.measure_at(span.byte_start));
+    if let Some(measure) = source_measure {
+        let measures = if index.rendered_measure_sequence().is_empty() {
+            vec![measure.measure_start]
+        } else {
+            index
+                .rendered_measure_sequence()
+                .iter()
+                .enumerate()
+                .filter_map(|(i, rendered)| {
+                    rendered
+                        .measures
+                        .iter()
+                        .any(|item| {
+                            Some(item.voice.as_str()) == region.voice.as_deref()
+                                && item.measure == measure.measure_start
+                        })
+                        .then(|| u32::try_from(i + 1).ok())
+                        .flatten()
+                })
+                .collect::<Vec<_>>()
+        };
+        // Source staff indices can include contexts absent from the visual staves.
+        let mut systems = layout
+            .columns
+            .iter()
+            .filter(|column| {
+                column.page == page.page
+                    && x >= column.x0
+                    && x <= column.x1
+                    && column
+                        .measure_start
+                        .zip(column.measure_end)
+                        .is_some_and(|(a, b)| {
+                            measures
+                                .iter()
+                                .any(|measure| *measure >= a && *measure <= b)
+                        })
+            })
+            .map(|column| column.system_index);
+        if let Some(first) = systems.next() {
+            return systems.all(|system| system == first).then_some(first);
+        }
+    }
+    let (x, y) = object.bbox.center();
+    if page
+        .systems
+        .iter()
+        .filter(|system| {
+            system
+                .staves
+                .iter()
+                .any(|staff| x >= staff.x0 && x <= staff.x1 && y >= staff.top && y <= staff.bot)
+        })
+        .count()
+        > 1
+    {
+        return None;
+    }
+    let mut containing = page.systems.iter().enumerate().filter(|(_, system)| {
+        system
+            .staves
+            .iter()
+            .any(|staff| x >= staff.x0 && x <= staff.x1)
+            && y >= system.top
+            && y <= system.bot
+    });
+    if let Some((system_index, _)) = containing.next() {
+        if containing.next().is_none() {
+            return Some(system_index);
+        }
+    }
+    // A note inside its uniquely identified source staff needs no measure estimate.
+    if let Some(voice) = region.voice.as_deref() {
+        let mut staves = index.staves.iter().enumerate().filter(|(_, staff)| {
+            staff.voices.iter().any(|name| name == voice)
+                && match object.kind.as_str() {
+                    "NoteHead" => staff.kind == crate::StaffKind::Notation,
+                    "TabNoteHead" => staff.kind == crate::StaffKind::Tablature,
+                    _ => true,
+                }
+        });
+        if let Some((staff_index, _)) = staves.next() {
+            if staves.next().is_none() {
+                let (x, y) = object.bbox.center();
+                let mut systems = page.systems.iter().enumerate().filter(|(_, system)| {
+                    system.staves.get(staff_index).is_some_and(|staff| {
+                        x >= staff.x0 && x <= staff.x1 && y >= staff.top && y <= staff.bot
+                    })
+                });
+                if let Some((system_index, _)) = systems.next() {
+                    if systems.next().is_none() {
+                        return Some(system_index);
+                    }
+                    return None;
+                }
+            }
+        }
+    }
+    let [_system] = page.systems.as_slice() else {
+        return None;
+    };
+    Some(0)
+}
+
 fn barline_extent(
     page: &PageLayout,
     staff: &StaffGeometry,
@@ -238,6 +353,7 @@ pub fn selection_geometry(
                 );
                 Some(GeometryElement {
                     bounds: bounds(object.bbox),
+                    system_index: element_system(index, layout, page, object, &region),
                     graphic_ids: object.graphic_id.iter().cloned().collect(),
                     linked_targets: vec![region.target.clone()],
                     priority: u8::from(matches!(

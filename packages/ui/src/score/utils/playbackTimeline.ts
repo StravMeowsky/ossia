@@ -1,13 +1,4 @@
-import type {
-  PlaybackNoteGroup,
-  PlaybackSystemSpan,
-  ScorePlayback,
-} from '../../generated/protocol.ts';
-
-export interface PlaybackPlayhead {
-  span: PlaybackSystemSpan;
-  x: number;
-}
+import type { PlaybackNoteGroup, ScorePlayback } from '../../generated/protocol.ts';
 
 const SIMULTANEOUS_ONSET_SECONDS = 0.001;
 
@@ -23,14 +14,6 @@ export function measureSpanAt(timeline: ScorePlayback, position: number) {
   );
 }
 
-export function playheadAt(timeline: ScorePlayback, position: number): PlaybackPlayhead | null {
-  const span = measureSpanAt(timeline, position);
-  if (!span) return null;
-  const duration = Math.max(0.001, span.endSeconds - span.startSeconds);
-  const progress = Math.min(1, Math.max(0, (position - span.startSeconds) / duration));
-  return { span, x: span.x0 + (span.x1 - span.x0) * progress };
-}
-
 export function groupAt(timeline: ScorePlayback, position: number) {
   const previous = timeline.groups.filter(
     (group) => group.startSeconds !== null && group.startSeconds <= position + 0.001,
@@ -39,10 +22,6 @@ export function groupAt(timeline: ScorePlayback, position: number) {
   const latest = Math.max(...previous.map((group) => group.startSeconds ?? 0));
   const current = previous.filter((group) => Math.abs((group.startSeconds ?? 0) - latest) <= 0.001);
   return current.find((group) => group.pitches.length > 0) ?? current[0] ?? null;
-}
-
-export function playheadKey(playhead: PlaybackPlayhead | null) {
-  return playhead ? `${playhead.span.page}:${playhead.span.systemIndex}` : '';
 }
 
 export function sameNoteGroup(left: PlaybackNoteGroup, right: PlaybackNoteGroup) {
