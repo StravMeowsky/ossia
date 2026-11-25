@@ -94,8 +94,7 @@ export function AssistantPanel({
       </header>
       <div className="score-assistant-messages" ref={list} aria-live="polite">
         {messages.map((message, index) => {
-          const working =
-            running && message.role === 'assistant' && index === messages.length - 1;
+          const working = running && message.role === 'assistant' && index === messages.length - 1;
           return (
             <div key={message.id} className={`score-assistant-message is-${message.role}`}>
               {message.text && <p className="score-assistant-text">{message.text}</p>}

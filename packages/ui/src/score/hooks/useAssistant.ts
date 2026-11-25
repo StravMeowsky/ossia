@@ -29,7 +29,9 @@ const storageKey = (documentId: string) => `ossia:assistant:${documentId}`;
 
 function load(documentId: string): Saved {
   try {
-    const value = JSON.parse(localStorage.getItem(storageKey(documentId)) ?? 'null') as Saved | null;
+    const value = JSON.parse(
+      localStorage.getItem(storageKey(documentId)) ?? 'null',
+    ) as Saved | null;
     if (value && Array.isArray(value.messages)) return value;
   } catch {
     // A missing or unreadable conversation starts fresh.

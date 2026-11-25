@@ -1,13 +1,9 @@
 {
   "identifier": "score-window",
   "description": "Score windows load the local score page; it may only run the score assistant for its own window.",
-  "windows": [
-    "score-*"
-  ],
+  "windows": ["score-*"],
   "remote": {
-    "urls": [
-      "http://127.0.0.1:*/*"
-    ]
+    "urls": ["http://127.0.0.1:*/*"]
   },
   "permissions": [
     "allow-assistant-send",

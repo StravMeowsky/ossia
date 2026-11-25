@@ -34,5 +34,7 @@ test('wheel scrolling stops at the top of the first page and the bottom of the l
   expect(Math.round(end.y + end.height - (viewport.y + viewport.height))).toBe(-32);
 
   await scroll.dispatchEvent('wheel', { deltaY: -100_000 });
-  await expect.poll(async () => Math.round((await pages.boundingBox())!.y)).toBe(Math.round(start.y));
+  await expect
+    .poll(async () => Math.round((await pages.boundingBox())!.y))
+    .toBe(Math.round(start.y));
 });

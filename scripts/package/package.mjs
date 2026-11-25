@@ -649,7 +649,8 @@ export function verifyMaterials(resources, entry, commit) {
     manifest.source?.commit !== build.commit ||
     manifest.commit !== build.commit ||
     manifest.source?.tag !== build.buildStamp ||
-    manifest.source?.url !== `https://github.com/StravMeowsky/ossia/archive/${build.commit}.tar.gz` ||
+    manifest.source?.url !==
+      `https://github.com/StravMeowsky/ossia/archive/${build.commit}.tar.gz` ||
     manifest.appVersion !== APP_VERSION ||
     build.appVersion !== APP_VERSION ||
     build.buildStamp !== BUILD_STAMP ||

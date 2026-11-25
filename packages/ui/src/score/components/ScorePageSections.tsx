@@ -14,13 +14,13 @@ import type {
 import { useI18n } from '../../i18n.tsx';
 import type { DrawingController } from '../hooks/useDrawing.ts';
 import type { DrawingMode } from '../hooks/useDrawingInput.ts';
-import type { EraserScope } from '../utils/drawing.ts';
 import type { useScorePlayback } from '../hooks/useScorePlayback.ts';
 import type { useScoreSettings } from '../hooks/useScoreSettings.ts';
 import type { ScoreViewPan } from '../hooks/useScoreViewMemory.ts';
 import type { useSelection } from '../hooks/useSelection.ts';
 import type { useVersionRender } from '../hooks/useVersionRender.ts';
 import type { Api } from '../utils/api.ts';
+import type { EraserScope } from '../utils/drawing.ts';
 import type { ScoreLayout } from '../utils/scoreLayout.ts';
 import { CompareView } from './CompareView.tsx';
 import { ScoreAnnotationBadge } from './ScoreAnnotationBadge.tsx';

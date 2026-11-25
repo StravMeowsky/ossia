@@ -54,12 +54,14 @@ test('About saves the update source and GitHub token', async ({ page }) => {
   const source = page.getByRole('group', { name: '更新源' });
   const tokenRow = page.locator('.update-token-row');
   const channel = page.getByRole('group', { name: '更新通道' });
-  await expect(tokenRow).toHaveCount(0);
   await expect(page.getByText('Ossia 源为中国大陆优化；GitHub 源全球可用。')).toBeVisible();
-  await expect(source.getByRole('button', { name: 'Ossia' })).toHaveAttribute(
+  await expect(source.getByRole('button', { name: 'GitHub' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
+  await expect(tokenRow).toBeVisible();
+  await source.getByRole('button', { name: 'Ossia' }).click();
+  await expect(tokenRow).toHaveCount(0);
   await source.getByRole('button', { name: 'GitHub' }).click();
   await expect(source.getByRole('button', { name: 'GitHub' })).toHaveAttribute(
     'aria-pressed',

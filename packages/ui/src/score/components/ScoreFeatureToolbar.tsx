@@ -16,12 +16,7 @@ import type { MessageKey } from '../../i18n.tsx';
 import type { DrawingMode } from '../hooks/useDrawingInput.ts';
 import type { PlaybackPhase } from '../hooks/useScorePlayback.ts';
 import { resolveAnnotationModifier } from '../utils/annotationInput.ts';
-import {
-  DRAWING_COLORS,
-  DRAWING_PALETTE,
-  ERASER_SIZES,
-  PEN_SIZES,
-} from '../utils/drawing.ts';
+import { DRAWING_COLORS, DRAWING_PALETTE, ERASER_SIZES, PEN_SIZES } from '../utils/drawing.ts';
 import type { EraserScope } from '../utils/drawing.ts';
 
 const COLOR_LABELS: Record<DrawingColor, MessageKey> = {

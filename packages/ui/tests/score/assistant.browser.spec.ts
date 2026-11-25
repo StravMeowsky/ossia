@@ -19,7 +19,8 @@ async function mockDesktop(context: BrowserContext) {
     own.assistantCalls = [];
     own.emitAssistant = (payload) => {
       const handler = listeners.get('assistant-event');
-      if (handler !== undefined) callbacks.get(handler)?.({ event: 'assistant-event', id: 1, payload });
+      if (handler !== undefined)
+        callbacks.get(handler)?.({ event: 'assistant-event', id: 1, payload });
     };
     own.__TAURI_INTERNALS__ = {
       transformCallback: (callback: (event: unknown) => void) => {
@@ -44,7 +45,8 @@ const calls = (page: Page) =>
   page.evaluate(() => (window as Window & { assistantCalls?: Call[] }).assistantCalls ?? []);
 const emit = (page: Page, payload: unknown) =>
   page.evaluate(
-    (event) => (window as Window & { emitAssistant?: (payload: unknown) => void }).emitAssistant?.(event),
+    (event) =>
+      (window as Window & { emitAssistant?: (payload: unknown) => void }).emitAssistant?.(event),
     payload,
   );
 
