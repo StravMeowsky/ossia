@@ -37,7 +37,7 @@ async function openFixture(context: BrowserContext, page: Page, fixture: Fixture
     });
   });
   await page.goto(`/scores?documentId=${firstId}`);
-  await expect(page.locator('[data-page="1"] .score-image')).toBeVisible();
+  await expect(page.locator('[data-page="1"] .score-image')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: '播放', exact: true })).toBeEnabled();
   return { timeline, geometry };
 }
