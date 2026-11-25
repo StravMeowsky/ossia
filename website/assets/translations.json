@@ -71,42 +71,6 @@
     "en": "Ossia browser score page showing Bach Prelude notation, hand-drawn chord markings, and drawing tools",
     "zh": "Ossia 浏览器乐谱页面，展示巴赫前奏曲乐谱、手绘和弦标注与绘画工具栏"
   },
-  "example.title": {
-    "en": "Start with a sentence.",
-    "zh": "从一句话开始"
-  },
-  "example.quote": {
-    "en": "“Add chord symbols to every measure of BWV 846.”",
-    "zh": "“为 BWV 846 的每个小节添加和弦标记。”"
-  },
-  "example.description": {
-    "en": "Your agent reads the score, analyzes every bass inversion measure by measure, writes the chord symbols, verifies every note against the original, and saves a new version—ready for your next refinement.",
-    "zh": "Agent 会先读懂现有乐谱、逐小节分析低音与转位、写入和弦标记，并在核对全部音符无误后保存为新版本。你也可以继续对话，反复打磨直到满意。"
-  },
-  "example.promptLabel": {
-    "en": "Or try asking",
-    "zh": "你还可以这样说"
-  },
-  "example.prompt1": {
-    "en": "Arrange for piano four hands",
-    "zh": "改编成钢琴四手联弹"
-  },
-  "example.prompt2": {
-    "en": "Analyze key & transpose to A minor",
-    "zh": "分析调性并移调到 A 小调"
-  },
-  "example.prompt3": {
-    "en": "Convert to guitar tab with chord diagrams",
-    "zh": "转为吉他六线谱并标注和弦图"
-  },
-  "example.imageLinkLabel": {
-    "en": "View full image: Agent session adding chord symbols to BWV 846",
-    "zh": "查看大图：与 Agent 协作逐小节标注 BWV 846 和弦"
-  },
-  "example.imageAlt": {
-    "en": "Agent conversation on the left and live updated BWV 846 score page on the right",
-    "zh": "左侧为 Agent 对话，右侧为实时更新的 BWV 846 乐谱页面"
-  },
   "download.title": {
     "en": "Start your next score.",
     "zh": "开始你的下一份乐谱"
@@ -550,5 +514,89 @@
   "footer.license": {
     "en": "Open source license",
     "zh": "开源许可证"
+  },
+  "cases.title": {
+    "en": "See what you can create",
+    "zh": "看看你可以做什么"
+  },
+  "cases.note": {
+    "en": "AI can make mistakes. Review the result carefully and refine it through follow-up requests.",
+    "zh": "AI 可能出错，请仔细甄别，鼓励多轮打磨成果。"
+  },
+  "cases.find-score.title": {
+    "en": "Create a score",
+    "zh": "创建乐谱"
+  },
+  "cases.find-score.prompt": {
+    "en": "Create a score for Bach’s Sheep May Safely Graze, BWV 208.",
+    "zh": "创建乐谱：《羊儿可以安静地吃草》，BWV 208。"
+  },
+  "cases.find-score.imageLabel": {
+    "en": "View full image: Create a score",
+    "zh": "查看大图：创建乐谱"
+  },
+  "cases.arrange.title": {
+    "en": "Arrange a score",
+    "zh": "改编乐谱"
+  },
+  "cases.arrange.prompt": {
+    "en": "Arrange Sheep May Safely Graze for piano four hands and save it as a new score.",
+    "zh": "把《羊儿可以安静地吃草》改编成钢琴四手连弹，写入新乐谱。"
+  },
+  "cases.arrange.imageLabel": {
+    "en": "View full image: Arrange a score",
+    "zh": "查看大图：改编乐谱"
+  },
+  "cases.compose.title": {
+    "en": "Compose a melody and accompaniment",
+    "zh": "创作旋律与伴奏"
+  },
+  "cases.compose.prompt": {
+    "en": "Write a beautiful melody, add harmony, and create an accompaniment part.",
+    "zh": "写一段优美的旋律，为旋律配和声并加入伴奏声部。"
+  },
+  "cases.compose.imageLabel": {
+    "en": "View full image: Compose a melody and accompaniment",
+    "zh": "查看大图：创作旋律与伴奏"
+  },
+  "cases.import-image.title": {
+    "en": "Import an image of a score",
+    "zh": "导入图片乐谱"
+  },
+  "cases.import-image.prompt": {
+    "en": "Import this score image, check it carefully against the original, and correct any errors.",
+    "zh": "导入这张图片乐谱，仔细核对原谱并改正错误。"
+  },
+  "cases.import-image.imageLabel": {
+    "en": "View full image: Import an image of a score",
+    "zh": "查看大图：导入图片乐谱"
+  },
+  "cases.transpose.title": {
+    "en": "Analyze and transpose",
+    "zh": "分析调性并移调"
+  },
+  "cases.transpose.prompt": {
+    "en": "What key is Hollow Knight in? Transpose it to A minor.",
+    "zh": "《空洞骑士》是什么调性？移调到 A 小调。"
+  },
+  "cases.transpose.imageLabel": {
+    "en": "View full image: Analyze and transpose",
+    "zh": "查看大图：分析调性并移调"
+  },
+  "cases.guitar-tab.title": {
+    "en": "Arrange for guitar tablature",
+    "zh": "改编吉他六线谱"
+  },
+  "cases.guitar-tab.prompt": {
+    "en": "Arrange Hollow Knight as a new guitar tablature score and add chord diagrams.",
+    "zh": "将《空洞骑士》转成吉他六线谱，保存为新乐谱并标注和弦图。"
+  },
+  "cases.guitar-tab.imageLabel": {
+    "en": "View full image: Arrange for guitar tablature",
+    "zh": "查看大图：改编吉他六线谱"
+  },
+  "navigation.cases": {
+    "en": "Use cases",
+    "zh": "案例演示"
   }
 }

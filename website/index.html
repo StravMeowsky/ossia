@@ -34,6 +34,7 @@
         >
         <nav class="nav" aria-label="Main navigation">
           <a class="nav-link" href="#features" data-i18n="navigation.features">Features</a
+          ><a href="#cases" data-i18n="navigation.cases">Use cases</a
           ><a class="nav-link" href="#download" data-i18n="navigation.download">Download</a
           ><a class="nav-link" href="#mac" data-i18n="navigation.guide">Guide</a
           ><a href="https://github.com/micooz/ossia">GitHub</a
@@ -165,45 +166,143 @@
           </figure>
         </div>
       </section>
-      <section class="example wrap">
-        <div class="example-copy">
-          <h2><span data-i18n="example.title">Start with a sentence.</span></h2>
-          <blockquote>
-            <span data-i18n="example.quote">
-              “Add chord symbols to every measure of BWV 846.”
-            </span>
-          </blockquote>
-          <p>
-            <span data-i18n="example.description">
-              Your agent reads the score, analyzes every bass inversion measure by measure, writes
-              the chord symbols, verifies every note against the original, and saves a new
-              version—ready for your next refinement.
-            </span>
-          </p>
-          <div class="prompt-examples">
-            <p class="prompt-label" data-i18n="example.promptLabel">Or try asking</p>
-            <ul class="prompt-chips">
-              <li data-i18n="example.prompt1">Arrange for piano four hands</li>
-              <li data-i18n="example.prompt2">Analyze key &amp; transpose to A minor</li>
-              <li data-i18n="example.prompt3">Convert to guitar tab with chord diagrams</li>
-            </ul>
-          </div>
+      <section id="cases" class="cases wrap" aria-labelledby="cases-title">
+        <div class="section-heading">
+          <h2 id="cases-title" data-i18n="cases.title">See what you can create</h2>
         </div>
-        <figure class="product-shot">
-          <a
-            href="./assets/agent-session-zh.webp"
-            data-lightbox=""
-            aria-label="View full image: Agent session adding chord symbols to BWV 846"
-            data-i18n-aria-label="example.imageLinkLabel"
-            ><img
-              src="./assets/agent-session-zh.webp"
-              alt="Agent conversation on the left and live updated BWV 846 score page on the right"
-              loading="lazy"
-              width="1150"
-              height="785"
-              data-i18n-alt="example.imageAlt"
-          /></a>
-        </figure>
+        <div class="cases-grid">
+          <article class="case">
+            <h3 data-i18n="cases.find-score.title">Create a score</h3>
+            <figure class="product-shot">
+              <a
+                href="./assets/case-find-score.webp"
+                data-lightbox=""
+                aria-label="View full image: Create a score"
+                data-i18n-aria-label="cases.find-score.imageLabel"
+                ><img
+                  src="./assets/case-find-score.webp"
+                  alt="Create a score"
+                  data-i18n-alt="cases.find-score.title"
+                  loading="lazy"
+                  width="1440"
+                  height="890"
+              /></a>
+            </figure>
+            <p data-i18n="cases.find-score.prompt">
+              Create a score for Bach’s Sheep May Safely Graze, BWV 208.
+            </p>
+          </article>
+          <article class="case">
+            <h3 data-i18n="cases.arrange.title">Arrange a score</h3>
+            <figure class="product-shot">
+              <a
+                href="./assets/case-arrange.webp"
+                data-lightbox=""
+                aria-label="View full image: Arrange a score"
+                data-i18n-aria-label="cases.arrange.imageLabel"
+                ><img
+                  src="./assets/case-arrange.webp"
+                  alt="Arrange a score"
+                  data-i18n-alt="cases.arrange.title"
+                  loading="lazy"
+                  width="1440"
+                  height="890"
+              /></a>
+            </figure>
+            <p data-i18n="cases.arrange.prompt">
+              Arrange Sheep May Safely Graze for piano four hands and save it as a new score.
+            </p>
+          </article>
+          <article class="case">
+            <h3 data-i18n="cases.compose.title">Compose a melody and accompaniment</h3>
+            <figure class="product-shot">
+              <a
+                href="./assets/case-compose.webp"
+                data-lightbox=""
+                aria-label="View full image: Compose a melody and accompaniment"
+                data-i18n-aria-label="cases.compose.imageLabel"
+                ><img
+                  src="./assets/case-compose.webp"
+                  alt="Compose a melody and accompaniment"
+                  data-i18n-alt="cases.compose.title"
+                  loading="lazy"
+                  width="1440"
+                  height="890"
+              /></a>
+            </figure>
+            <p data-i18n="cases.compose.prompt">
+              Write a beautiful melody, add harmony, and create an accompaniment part.
+            </p>
+          </article>
+          <article class="case">
+            <h3 data-i18n="cases.import-image.title">Import an image of a score</h3>
+            <figure class="product-shot">
+              <a
+                href="./assets/case-import-image.webp"
+                data-lightbox=""
+                aria-label="View full image: Import an image of a score"
+                data-i18n-aria-label="cases.import-image.imageLabel"
+                ><img
+                  src="./assets/case-import-image.webp"
+                  alt="Import an image of a score"
+                  data-i18n-alt="cases.import-image.title"
+                  loading="lazy"
+                  width="1440"
+                  height="890"
+              /></a>
+            </figure>
+            <p data-i18n="cases.import-image.prompt">
+              Import this score image, check it carefully against the original, and correct any
+              errors.
+            </p>
+          </article>
+          <article class="case">
+            <h3 data-i18n="cases.transpose.title">Analyze and transpose</h3>
+            <figure class="product-shot">
+              <a
+                href="./assets/case-transpose.webp"
+                data-lightbox=""
+                aria-label="View full image: Analyze and transpose"
+                data-i18n-aria-label="cases.transpose.imageLabel"
+                ><img
+                  src="./assets/case-transpose.webp"
+                  alt="Analyze and transpose"
+                  data-i18n-alt="cases.transpose.title"
+                  loading="lazy"
+                  width="1440"
+                  height="890"
+              /></a>
+            </figure>
+            <p data-i18n="cases.transpose.prompt">
+              What key is Hollow Knight in? Transpose it to A minor.
+            </p>
+          </article>
+          <article class="case">
+            <h3 data-i18n="cases.guitar-tab.title">Arrange for guitar tablature</h3>
+            <figure class="product-shot">
+              <a
+                href="./assets/case-guitar-tab.webp"
+                data-lightbox=""
+                aria-label="View full image: Arrange for guitar tablature"
+                data-i18n-aria-label="cases.guitar-tab.imageLabel"
+                ><img
+                  src="./assets/case-guitar-tab.webp"
+                  alt="Arrange for guitar tablature"
+                  data-i18n-alt="cases.guitar-tab.title"
+                  loading="lazy"
+                  width="1440"
+                  height="890"
+              /></a>
+            </figure>
+            <p data-i18n="cases.guitar-tab.prompt">
+              Arrange Hollow Knight as a new guitar tablature score and add chord diagrams.
+            </p>
+          </article>
+        </div>
+        <p class="cases-note" data-i18n="cases.note">
+          AI can make mistakes. Review the result carefully and refine it through follow-up
+          requests.
+        </p>
       </section>
       <section id="download" class="download">
         <div class="wrap download-inner">
