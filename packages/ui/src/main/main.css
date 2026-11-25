@@ -1176,6 +1176,9 @@ button.score-card-title:hover {
   width: 16px;
   height: 16px;
   background-color: currentColor;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
   mask-position: center;
   mask-repeat: no-repeat;
   mask-size: contain;

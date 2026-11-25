@@ -110,7 +110,10 @@ export function AgentsPage({
                       ) : icon?.monochrome ? (
                         <span
                           className="agent-monochrome-icon"
-                          style={{ maskImage: `url(${icon.src})` }}
+                          style={{
+                            maskImage: `url("${icon.src}")`,
+                            WebkitMaskImage: `url("${icon.src}")`,
+                          }}
                         />
                       ) : icon ? (
                         <img src={icon.src} alt="" draggable={false} />

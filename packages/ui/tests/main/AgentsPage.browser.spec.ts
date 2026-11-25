@@ -26,6 +26,40 @@ test('Agent changes can be queued independently', async ({ page }) => {
   ).toBe(2);
 });
 
+test('Pi icon keeps its shape in light and dark themes', async ({ page }) => {
+  await mockManagement(page, { pi: true });
+  await page.goto('/main.html');
+  const icon = page.getByRole('button', { name: '移除 Pi' }).locator('.agent-chip-icon');
+  const mask = icon.locator('.agent-monochrome-icon');
+  await expect(mask).toHaveCSS('mask-image', /pi.*\.svg/);
+  await expect(mask).not.toHaveCSS('mask-image', /data:/);
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(
+      (value) => document.documentElement.setAttribute('data-theme', value),
+      theme,
+    );
+    const screenshot = await icon.screenshot();
+    const colors = await page.evaluate(async (base64) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${base64}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0);
+      const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      return new Set(
+        Array.from(
+          { length: data.length / 4 },
+          (_, i) => `${data[i * 4]},${data[i * 4 + 1]},${data[i * 4 + 2]}`,
+        ),
+      ).size;
+    }, screenshot.toString('base64'));
+    expect(colors).toBeGreaterThan(2);
+  }
+});
+
 test('Agent notices follow the selected language immediately', async ({ page }, testInfo) => {
   await mockManagement(page);
   await page.goto('/main.html');

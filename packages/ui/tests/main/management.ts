@@ -24,6 +24,7 @@ export async function mockManagement(
     dshState = 'available',
     workbuddies = [],
     claude = false,
+    pi = false,
     initialRuntime = false,
     scores = [],
     archivedScores = [],
@@ -38,6 +39,7 @@ export async function mockManagement(
     agentPaths = {},
   }: {
     claude?: boolean | 'desktop' | 'code';
+    pi?: boolean;
     empty?: boolean;
     initializing?: boolean;
     dshState?: AgentIntegration['state'];
@@ -232,7 +234,13 @@ export async function mockManagement(
   const agents: AgentsSnapshot = {
     agents: empty
       ? []
-      : [connected, available, ...workbuddyAgents, ...(claude ? [claudeAgent] : [])],
+      : [
+          connected,
+          available,
+          ...workbuddyAgents,
+          ...(claude ? [claudeAgent] : []),
+          ...(pi ? [{ ...connected, id: 'pi', name: 'Pi', icon: 'pi' }] : []),
+        ],
     connectionOrder: empty ? [] : ['codex'],
     syncing: false,
     error: null,

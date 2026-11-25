@@ -4,7 +4,7 @@ import antigravityIcon from './assets/agents/antigravity.svg';
 import claudeIcon from './assets/agents/claude.svg';
 import codexIcon from './assets/agents/codex.svg';
 import dshIcon from './assets/agents/dsh.svg';
-import piIcon from './assets/agents/pi.svg';
+import piIcon from './assets/agents/pi.svg?no-inline';
 import workbuddyIcon from './assets/agents/workbuddy.svg';
 
 export type Page = 'agents' | 'scores' | 'general' | 'about';
