@@ -2,6 +2,30 @@ import { expect, test } from '@playwright/test';
 
 import { mockManagement, releaseAgentChange } from './management.ts';
 
+test('Agent changes can be queued independently', async ({ page }) => {
+  await mockManagement(page);
+  await page.goto('/main.html');
+  const codex = page.getByRole('button', { name: '移除 Codex 插件' });
+  const dsh = page.getByRole('button', { name: '安装 DeepSeek Harness 插件' });
+  await codex.click();
+  await expect(codex).toBeDisabled();
+  await expect(dsh).toBeEnabled();
+  await dsh.click();
+  await expect(dsh).toBeDisabled();
+  await expect(dsh).toHaveAttribute('aria-busy', 'true');
+  await releaseAgentChange(page);
+  await expect(page.getByRole('button', { name: '安装 Codex 插件' })).toBeEnabled();
+  await expect(dsh).toBeDisabled();
+  await releaseAgentChange(page);
+  await expect(page.getByRole('button', { name: '移除 DeepSeek Harness 插件' })).toBeEnabled();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { managementAgentChanges?: unknown[] }).managementAgentChanges?.length,
+    ),
+  ).toBe(2);
+});
+
 test('Agent notices follow the selected language immediately', async ({ page }, testInfo) => {
   await mockManagement(page);
   await page.goto('/main.html');

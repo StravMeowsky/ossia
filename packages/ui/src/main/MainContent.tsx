@@ -54,6 +54,8 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
   const serviceDialog = useRef<HTMLDialogElement>(null);
   const [openingDirectory, setOpeningDirectory] = useState(false);
   const [pendingAgents, setPendingAgents] = useState<string[]>([]);
+  const pendingAgentIds = useRef(new Set<string>());
+  const agentQueue = useRef(Promise.resolve());
   const [error, setError] = useState('');
   const [working, setWorking] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
@@ -392,31 +394,38 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
     }
   }
 
-  async function changeAgents(agentIds: string[], enabled: boolean, overwrite = false) {
-    if (!native || working || agentIds.length === 0) return;
-    setWorking(true);
-    setAgentProblems([]);
-    setPendingAgents(agentIds);
+  function changeAgents(agentIds: string[], enabled: boolean, overwrite = false) {
+    if (!native || agentIds.length === 0 || agentIds.some((id) => pendingAgentIds.current.has(id)))
+      return;
+    for (const id of agentIds) pendingAgentIds.current.add(id);
+    setPendingAgents([...pendingAgentIds.current]);
+    setAgentProblems((current) => current.filter((problem) => !agentIds.includes(problem.agentId)));
+    agentQueue.current = agentQueue.current.then(() =>
+      applyAgentChange(agentIds, enabled, overwrite),
+    );
+  }
+
+  async function applyAgentChange(agentIds: string[], enabled: boolean, overwrite: boolean) {
     try {
       const result = await invoke<AgentsMutation>('management_agents_change', {
         change: { agentIds, enabled, overwrite },
       });
       setAgents(result.snapshot);
-      setAgentProblems(result.problems);
+      setAgentProblems((current) => [...current, ...result.problems]);
       if (result.problems.length > 0) {
         notify(result.problems.map((problem) => problem.message).join('; '), 'error');
       }
     } catch (caught) {
       notify(describe(caught), 'error');
     } finally {
-      setWorking(false);
-      setPendingAgents([]);
+      for (const id of agentIds) pendingAgentIds.current.delete(id);
+      setPendingAgents([...pendingAgentIds.current]);
     }
   }
 
   function toggleAgent(agent: AgentIntegration) {
     if (agent.state === 'conflict') {
-      void changeAgents([agent.id], true, true);
+      changeAgents([agent.id], true, true);
       return;
     }
     if (agent.state === 'unavailable') {
@@ -424,18 +433,18 @@ export function MainContent({ native, preferences, setPreferences, notify }: Mai
       return;
     }
     if (agent.state === 'update-required') {
-      void changeAgents([agent.id], true);
+      changeAgents([agent.id], true);
       return;
     }
     if (agent.hosts.length > 0 && agent.managed) {
-      void changeAgents([agent.id], false);
+      changeAgents([agent.id], false);
       return;
     }
-    void changeAgents([agent.id], !(agent.installed && agent.enabled));
+    changeAgents([agent.id], !(agent.installed && agent.enabled));
   }
 
   const list = agents?.agents ?? [];
-  const busy = working || !!agents?.syncing;
+  const busy = !!agents?.syncing;
   const pages: Record<Page, { group: string; title: string }> = {
     agents: { group: t('integrationGroup'), title: t('agents') },
     scores: { group: t('libraryGroup'), title: t('myScores') },

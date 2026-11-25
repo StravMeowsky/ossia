@@ -85,7 +85,7 @@ export function AgentsPage({
                     ]
                       .filter(Boolean)
                       .join(' ')}
-                    disabled={!native || busy}
+                    disabled={!native || busy || pendingAgents.includes(agent.id)}
                     type="button"
                     aria-pressed={on}
                     aria-busy={pendingAgents.includes(agent.id) || !!agents?.syncing}
