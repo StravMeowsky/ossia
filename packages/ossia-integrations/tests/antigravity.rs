@@ -1,4 +1,5 @@
 use super::*;
+#[cfg(unix)]
 use std::collections::BTreeMap;
 
 #[cfg(unix)]
@@ -29,6 +30,7 @@ fn fixture(root: &std::path::Path) -> (Integrator, DetectedAgent) {
     };
     (integrator, detected)
 }
+#[cfg(unix)]
 fn make_record(entries: Vec<ManagedEntry>) -> ManagedRecord {
     ManagedRecord {
         management_id: "ossia:antigravity:default".into(),
