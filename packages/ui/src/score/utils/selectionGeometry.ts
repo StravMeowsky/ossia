@@ -1,22 +1,6 @@
 import type { GeometryPage, SelectionTarget } from '../../generated/protocol.ts';
 import { selectionKey } from './api.ts';
-import { contains, hitElement } from './hitElement.ts';
-
-export { hitElement };
-
-export function hitSelection(
-  page: GeometryPage,
-  x: number,
-  y: number,
-): SelectionTarget | undefined {
-  const element = hitElement(page, x, y);
-  if (element)
-    return element.region.spans.length || element.region.insertionAnchor
-      ? element.region.target
-      : undefined;
-  const measure = page.regions.find((region) => contains(region.bounds, x, y));
-  return measure && { kind: 'measure', locator: measure.locator };
-}
+export { hitElement, hitSelection } from './hitElement.ts';
 
 /** Paint every occurrence of a selected source object. */
 export function selectedBounds(page: GeometryPage, keys: Set<string>) {

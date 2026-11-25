@@ -179,6 +179,7 @@
     "id": "sor-original-locations",
     "source": "sor-original.ly",
     "origin": "Sor study, pickup, simultaneous voices and notehead positions",
+    "selection": { "measures": 26, "staves": 2 },
     "checks": [
       {
         "kind": "playhead",
@@ -293,6 +294,7 @@
     "id": "violin-pickup",
     "source": "violin-pickup.ly",
     "origin": "Bach Allemanda, pickup and two voices",
+    "selection": { "measures": 2, "staves": 1 },
     "checks": [
       {
         "kind": "playhead",
@@ -389,6 +391,7 @@
     "id": "ark-original",
     "source": "ark-original.ly",
     "origin": "Uchuu no Hakobune, measure 21 after an extended silent voice",
+    "selection": { "measures": 32, "staves": 2 },
     "checks": [
       {
         "kind": "playhead",
@@ -454,6 +457,7 @@
     "id": "doraemon-original",
     "source": "doraemon-original.ly",
     "origin": "Doraemon, complete guitar score",
+    "selection": { "measures": 49, "staves": 1 },
     "checks": []
   },
   {
@@ -466,12 +470,14 @@
     "id": "violin-partita",
     "source": "violin-partita.ly",
     "origin": "Bach Partita No. 1, BWV 1002, complete violin score",
+    "selection": { "measures": 27, "staves": 1 },
     "checks": []
   },
   {
     "id": "bach-sheep-four-hands",
     "source": "bach-sheep-four-hands.ly",
     "origin": "Bach BWV 208, complete piano four-hands arrangement",
+    "selection": { "measures": 40, "staves": 4 },
     "checks": [
       {
         "kind": "rest",
@@ -503,6 +509,7 @@
     "id": "rests-and-tempo",
     "source": "rests-and-tempo.ly",
     "origin": "Unequal rests, compressed multimeasure rests, tuplets and a tempo change",
+    "selection": { "measures": 7, "staves": 2 },
     "checks": [
       {
         "kind": "rest",

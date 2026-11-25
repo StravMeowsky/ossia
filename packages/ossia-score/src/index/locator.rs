@@ -26,20 +26,36 @@ pub fn resolve_locator(index: &ScoreIndex, locator: &Locator) -> Result<LocatedR
     };
     let mut spans = Vec::new();
     let mut reason = None;
-    for name in names {
-        if let Some(voice) = index.voice(name) {
-            if voice.capability != LocationCapability::Measure {
-                reason = voice.reason.clone();
+    let rendered = index.rendered_measure_sequence();
+    if !rendered.is_empty() {
+        let start = (locator.measure_start - 1) as usize;
+        let end = (locator.measure_end as usize).min(rendered.len());
+        let mut seen = std::collections::HashSet::new();
+        for measure in rendered.get(start..end).unwrap_or_default() {
+            for item in &measure.measures {
+                if names.contains(&&item.voice)
+                    && seen.insert((item.span.byte_start, item.span.byte_end))
+                {
+                    spans.push(item.span);
+                }
             }
-            spans.extend(
-                voice
-                    .indexed_measures()
-                    .filter(|m| {
-                        m.measure_end >= locator.measure_start
-                            && m.measure_start <= locator.measure_end
-                    })
-                    .map(|m| m.span),
-            );
+        }
+    } else {
+        for name in names {
+            if let Some(voice) = index.voice(name) {
+                if voice.capability != LocationCapability::Measure {
+                    reason = voice.reason.clone();
+                }
+                spans.extend(
+                    voice
+                        .indexed_measures()
+                        .filter(|m| {
+                            m.measure_end >= locator.measure_start
+                                && m.measure_start <= locator.measure_end
+                        })
+                        .map(|m| m.span),
+                );
+            }
         }
     }
     let capability = if reason.is_some() {

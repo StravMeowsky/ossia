@@ -22,6 +22,7 @@ pub struct Measure {
 pub(crate) struct RenderedMeasureRef {
     pub(crate) voice: String,
     pub(crate) measure: u32,
+    pub(crate) span: SourceSpan,
 }
 
 /// One engraved measure, including every parallel voice that occupies it.
@@ -253,10 +254,27 @@ pub fn build_index(source: &str) -> ScoreIndex {
     let decorations = decoration_assignments(&assignments, t);
     let mut voices = Vec::new();
     for a in &ordered {
-        if t[a.open].raw != "{" {
+        let (rhs, open) = if matches!(t[a.rhs].command(), Some("new" | "context"))
+            && t.get(a.rhs + 1)
+                .is_some_and(|t| matches!(t.raw.as_str(), "Voice" | "TabVoice"))
+        {
+            let Some(body) = syntax.context_body(a.rhs, a.end) else {
+                continue;
+            };
+            let Some((open, end)) = syntax.expression(body, a.end) else {
+                continue;
+            };
+            if end != a.end {
+                continue;
+            }
+            (body, open)
+        } else {
+            (a.rhs, a.open)
+        };
+        if t[open].raw != "{" {
             continue;
         }
-        let body = &t[a.open + 1..a.end - 1];
+        let body = &t[open + 1..a.end - 1];
         if body
             .iter()
             .any(|v| matches!(v.kind, TokenKind::Note | TokenKind::Rest | TokenKind::Skip))
@@ -266,8 +284,8 @@ pub fn build_index(source: &str) -> ScoreIndex {
                 source,
                 a.name.clone(),
                 a.start..a.end,
-                a.rhs,
-                a.open,
+                rhs,
+                open,
                 &syntax,
                 &decorations,
             ));
@@ -625,6 +643,7 @@ fn rendered_measure_sequence(
                     measures: vec![RenderedMeasureRef {
                         voice: name.clone(),
                         measure: local,
+                        span: measure.span,
                     }],
                 });
             }

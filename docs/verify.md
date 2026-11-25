@@ -13,6 +13,8 @@ pnpm verify:playback
 pnpm verify:playback xinhu-ledger bittersweet-ties
 pnpm verify:audition
 pnpm verify:audition sor-original-locations
+pnpm verify:selection
+pnpm verify:selection doraemon-original bach-sheep-four-hands sor-original-locations
 ```
 
 ## Playback fixtures
@@ -28,8 +30,7 @@ timed groups and playhead movement across every page. Any finding fails the
 suite, including cases with an empty `checks` array. Manual checkpoints add
 independent pitch, timing and source-position expectations; they must not be
 copied from current output.
-CI installs the locked LilyPond engine on macOS and runs `pnpm verify`. Known
-failures cause the job to fail until fixed.
+CI installs the locked LilyPond engine on macOS and runs `pnpm verify`.
 
 To add a case, add a self-contained `.ly` excerpt and an entry in `cases.json`.
 Confirm the case fails for the reported problem before applying its fix; retain
@@ -87,6 +88,25 @@ reason. Any finding or failed request makes the command fail. This data audit
 uses the page's hit testing and navigation helpers; it does not run a browser.
 Rebuild and restart the backend after Rust changes. Engraved event metadata
 requires a render from the current engine.
+
+## Measure selection
+
+The selection suite renders the same fixtures and visits staff whitespace
+between engraved barlines on every page. It tests the browser's hit function,
+then checks that each selected measure resolves to source spans covering its
+engraved notes and rests. Declared measure counts and staff counts also check
+engraved order, including pickups and alternate endings. The report counts one
+cell for each staff and engraved measure interval.
+
+Both selection commands fail on any finding. `pnpm verify:selection` uses the
+committed fixtures. `pnpm audit:selection` reads the active documents from the
+development backend's project library at `.ossia` and renders each local source
+in a temporary directory. Pass document IDs to audit those files directly.
+
+```sh
+pnpm audit:selection
+pnpm audit:selection <document-id> [<document-id> ...]
+```
 
 ## Playback audit
 

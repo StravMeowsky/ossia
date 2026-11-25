@@ -264,10 +264,11 @@ fn selection_payload(
 fn build_regions(
     index: &ossia_score::ScoreIndex,
     identity: &ossia_score::MusicIdentity,
-    geometry: &[GeometryPage],
+    geometry: Option<&ossia_score::SelectionGeometry>,
     requested: &[SelectionTarget],
 ) -> Result<(Vec<SelectionTarget>, Vec<SelectionRegion>)> {
-    let targets = ossia_score::expand_selection(geometry, requested);
+    let pages = geometry.map_or(&[][..], |geometry| geometry.pages.as_slice());
+    let targets = ossia_score::expand_selection(pages, requested);
     let mut regions = Vec::new();
     for target in &targets {
         if regions
@@ -278,14 +279,18 @@ fn build_regions(
         }
         let region = match target {
             SelectionTarget::Measure { locator } => {
-                if !identity.reliable {
+                if let Some(geometry) = geometry.filter(|geometry| geometry.has_engraved_measures())
+                {
+                    geometry.resolve_measure(index, locator)?
+                } else if identity.reliable {
+                    ossia_score::measure_selection(index, locator)?
+                } else {
                     return Err(AppError::unsupported(
-                        "measure selection requires reliable musical identity",
+                        "measure selection requires source or engraving evidence",
                     ));
                 }
-                ossia_score::measure_selection(index, locator)?
             }
-            SelectionTarget::Element { .. } => geometry
+            SelectionTarget::Element { .. } => pages
                 .iter()
                 .flat_map(|page| &page.elements)
                 .find(|element| &element.region.target == target)
@@ -310,7 +315,7 @@ fn build_regions(
 fn annotation_regions_for_targets(
     index: &ossia_score::ScoreIndex,
     identity: &ossia_score::MusicIdentity,
-    geometry: &[GeometryPage],
+    geometry: Option<&ossia_score::SelectionGeometry>,
     targets: &[SelectionTarget],
 ) -> Result<Vec<SelectionRegion>> {
     build_regions(index, identity, geometry, targets).map(|(_, regions)| regions)

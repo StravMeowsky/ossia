@@ -79,26 +79,23 @@ fn note_duration(raw: &str) -> Option<MeterFraction> {
 fn scaled_duration(
     events: &[Token],
     index: usize,
-    base: MeterFraction,
+    mut duration: MeterFraction,
 ) -> Option<(MeterFraction, usize, usize)> {
-    let Some(star) = events
-        .get(index..)
-        .and_then(|tokens| tokens.iter().position(|token| !token.trivia()))
-        .map(|offset| index + offset)
-        .filter(|star| events[*star].kind == TokenKind::Star)
-    else {
-        return Some((base, events.get(index - 1)?.byte_end, index - 1));
-    };
-    let number_index = events[star + 1..]
+    let mut last = index - 1;
+    while let Some(star) = events[last + 1..]
         .iter()
         .position(|token| !token.trivia())
-        .map(|offset| star + 1 + offset)?;
-    let multiplier = fraction(&events[number_index].raw)?;
-    Some((
-        base.multiply(multiplier)?,
-        events[number_index].byte_end,
-        number_index,
-    ))
+        .map(|offset| last + 1 + offset)
+        .filter(|star| events[*star].kind == TokenKind::Star)
+    {
+        last = events[star + 1..]
+            .iter()
+            .position(|token| !token.trivia())?
+            + star
+            + 1;
+        duration = duration.multiply(fraction(&events[last].raw)?)?;
+    }
+    Some((duration, events[last].byte_end, last))
 }
 
 #[derive(Clone, Copy)]
@@ -106,6 +103,8 @@ struct RhythmicAtom {
     byte_start: usize,
     byte_end: usize,
     duration: MeterFraction,
+    compact: bool,
+    explicit: bool,
 }
 
 struct RhythmScan {
@@ -162,13 +161,15 @@ fn rhythmic_atoms(events: &[Token]) -> Option<RhythmScan> {
                 .skip(index + 1)
                 .find(|(_, next)| !next.trivia())
                 .filter(|(_, next)| next.kind == TokenKind::Num)?;
-            duration = duration_number(&number.raw)?;
-            let (duration, byte_end, last_index) =
-                scaled_duration(events, number_index + 1, duration)?;
+            let (length, byte_end, last_index) =
+                scaled_duration(events, number_index + 1, duration_number(&number.raw)?)?;
+            duration = length;
             atoms.push(RhythmicAtom {
                 byte_start: token.byte_start,
                 byte_end,
                 duration,
+                compact: true,
+                explicit: true,
             });
             index = last_index + 1;
             continue;
@@ -178,12 +179,16 @@ fn rhythmic_atoms(events: &[Token]) -> Option<RhythmScan> {
                 .iter()
                 .position(|next| next.kind == TokenKind::ChordC)
                 .map(|offset| index + 1 + offset)?;
-            duration = note_duration(&events[close].raw).unwrap_or(duration);
-            let (duration, byte_end, last_index) = scaled_duration(events, close + 1, duration)?;
+            let written = note_duration(&events[close].raw);
+            let (length, byte_end, last_index) =
+                scaled_duration(events, close + 1, written.unwrap_or(duration))?;
+            duration = length;
             atoms.push(RhythmicAtom {
                 byte_start: token.byte_start,
                 byte_end,
                 duration,
+                compact: false,
+                explicit: written.is_some(),
             });
             index = last_index + 1;
             continue;
@@ -192,12 +197,16 @@ fn rhythmic_atoms(events: &[Token]) -> Option<RhythmScan> {
             token.kind,
             TokenKind::Note | TokenKind::Rest | TokenKind::Skip
         ) {
-            duration = note_duration(&token.raw).unwrap_or(duration);
-            let (duration, byte_end, last_index) = scaled_duration(events, index + 1, duration)?;
+            let written = note_duration(&token.raw);
+            let (length, byte_end, last_index) =
+                scaled_duration(events, index + 1, written.unwrap_or(duration))?;
+            duration = length;
             atoms.push(RhythmicAtom {
                 byte_start: token.byte_start,
                 byte_end,
                 duration,
+                compact: token.kind == TokenKind::Skip || token.raw.starts_with('R'),
+                explicit: written.is_some(),
             });
             index = last_index + 1;
             continue;
@@ -248,4 +257,96 @@ pub(super) fn implicit_measure_boundaries(
         }
     }
     (elapsed.numerator == 0 && !boundaries.is_empty()).then_some(boundaries)
+}
+
+pub(super) fn fits_in_one_measure(events: &[Token], from: usize) -> Option<bool> {
+    let start = events.partition_point(|token| token.byte_start < from);
+    let tail = &events[start..];
+    let scan = rhythmic_atoms(tail)?;
+    let first = scan.atoms.first()?;
+    if !first.explicit {
+        return None;
+    }
+    let mut measure = MeterFraction::new(1, 1)?;
+    if let Some(time) = events[..start]
+        .iter()
+        .rposition(|token| token.command() == Some("time"))
+    {
+        let signature = events[time + 1..].iter().find(|token| !token.trivia())?;
+        measure = fraction(&signature.raw)?;
+    }
+    for &(position, signature) in &scan.time_signatures {
+        if position >= first.byte_start {
+            return None;
+        }
+        measure = signature;
+    }
+    let length = scan
+        .atoms
+        .into_iter()
+        .try_fold(MeterFraction::new(0, 1)?, |sum, atom| {
+            sum.add(atom.duration)
+        })?;
+    Some(!length.exceeds(measure))
+}
+
+/// Split an explicitly bounded source interval at complete measures. A single
+/// full-bar rest or skip can be the source for several consecutive measures.
+pub(super) fn scaled_measure_boundaries(
+    events: &[Token],
+    from: usize,
+    to: usize,
+) -> Option<Vec<(usize, u32)>> {
+    let start = events.partition_point(|token| token.byte_start < from);
+    let end = events.partition_point(|token| token.byte_end <= to);
+    let scan = rhythmic_atoms(events.get(start..end)?)?;
+    let first = scan.atoms.first()?;
+    if !first.explicit {
+        return None;
+    }
+    let previous = events[..start]
+        .iter()
+        .rposition(|token| token.mode == Mode::Music && token.command() == Some("time"));
+    let mut meter = previous
+        .map(|time| fraction(&events[time + 1..].iter().find(|t| !t.trivia())?.raw))
+        .unwrap_or_else(|| MeterFraction::new(1, 1))?;
+    let explicitly_timed = previous.is_some() || !scan.time_signatures.is_empty();
+    for (position, signature) in scan.time_signatures {
+        if position >= first.byte_start {
+            return None;
+        }
+        meter = signature;
+    }
+    let zero = MeterFraction::new(0, 1)?;
+    let mut elapsed = zero;
+    let mut boundaries = Vec::new();
+    for atom in scan.atoms {
+        if atom.duration.exceeds(meter) {
+            if !explicitly_timed || !atom.compact || elapsed != zero {
+                return None;
+            }
+            let ratio = atom
+                .duration
+                .multiply(MeterFraction::new(meter.denominator, meter.numerator)?)?;
+            if ratio.denominator != 1 {
+                return None;
+            }
+            boundaries.push((atom.byte_end, u32::try_from(ratio.numerator).ok()?));
+        } else {
+            elapsed = elapsed.add(atom.duration)?;
+            if elapsed.exceeds(meter) {
+                return None;
+            }
+            if elapsed == meter {
+                boundaries.push((atom.byte_end, 1));
+                elapsed = zero;
+            }
+        }
+    }
+    match boundaries.last_mut() {
+        Some(last) if elapsed == zero => last.0 = to,
+        None if elapsed != zero => boundaries.push((to, 1)),
+        _ => return None,
+    }
+    Some(boundaries)
 }

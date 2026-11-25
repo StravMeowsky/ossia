@@ -192,6 +192,32 @@ pub(super) fn systems(
                 system.bar_xs.insert(0, left);
             }
         }
+        if let Some(last) = system.bar_xs.last().copied() {
+            let right = system
+                .staves
+                .iter()
+                .map(|s| s.x1)
+                .fold(f64::NEG_INFINITY, f64::max);
+            // A final partial measure can end with the staff rather than a barline.
+            if right - last > staff_space
+                && objects.iter().any(|object| {
+                    let (x, y) = object.bbox.center();
+                    object.span.is_some()
+                        && matches!(
+                            object.kind.as_str(),
+                            "NoteHead" | "TabNoteHead" | "Rest" | "MultiMeasureRest"
+                        )
+                        && x > last + staff_space * 0.5
+                        && x < right
+                        && system
+                            .staves
+                            .iter()
+                            .any(|staff| vertical_distance(staff, y) <= staff_space * 2.)
+                })
+            {
+                system.bar_xs.push(right);
+            }
+        }
         result.push(system);
     }
     Ok((staff_space, result))

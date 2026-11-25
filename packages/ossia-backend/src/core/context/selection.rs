@@ -30,7 +30,8 @@ impl Runtime {
             return self.context(selection.document_id);
         }
         let index = self.score_index(&snapshot);
-        let geometry = if selection
+        let identity = ossia_score::music_identity_with_index(&index, snapshot.source());
+        let has_element = selection
             .targets
             .iter()
             .chain(
@@ -39,26 +40,28 @@ impl Runtime {
                     .iter()
                     .flat_map(|annotation| &annotation.targets),
             )
-            .any(|target| matches!(target, SelectionTarget::Element { .. }))
-        {
-            let document = self.library.get_document(selection.document_id)?;
-            let manifest = document
+            .any(|target| matches!(target, SelectionTarget::Element { .. }));
+        let geometry = if has_element || !identity.reliable {
+            let manifest = self
+                .library
+                .get_document(selection.document_id)?
                 .last_successful_render
                 .filter(|r| r.source_hash == selection.source_hash)
-                .ok_or_else(|| {
-                    AppError::unsupported("element selection requires a current render")
-                })?;
-            self.score_geometry(&snapshot, &manifest)?
+                .ok_or_else(|| AppError::unsupported("selection requires a current render"))?;
+            Some(self.score_geometry(&snapshot, &manifest)?)
         } else {
-            Arc::new(Vec::new())
+            None
         };
-        let identity = ossia_score::music_identity_with_index(&index, snapshot.source());
-        let (targets, regions) = build_regions(&index, &identity, &geometry, &selection.targets)?;
+        let (targets, regions) =
+            build_regions(&index, &identity, geometry.as_deref(), &selection.targets)?;
         let mut annotation_regions = Vec::new();
         for annotation in &selection.annotations {
-            for region in
-                annotation_regions_for_targets(&index, &identity, &geometry, &annotation.targets)?
-            {
+            for region in annotation_regions_for_targets(
+                &index,
+                &identity,
+                geometry.as_deref(),
+                &annotation.targets,
+            )? {
                 if !annotation_regions
                     .iter()
                     .any(|existing: &SelectionRegion| existing.target == region.target)

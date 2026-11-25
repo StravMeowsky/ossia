@@ -1,4 +1,9 @@
-import type { GeometryBounds, GeometryElement, GeometryPage } from '../../generated/protocol.ts';
+import type {
+  GeometryBounds,
+  GeometryElement,
+  GeometryPage,
+  SelectionTarget,
+} from '../../generated/protocol.ts';
 
 /** Test a point against inclusive SVG bounds. */
 export const contains = (bounds: GeometryBounds, x: number, y: number) =>
@@ -14,4 +19,19 @@ export function hitElement(page: GeometryPage, x: number, y: number): GeometryEl
         : contains(candidate.bounds, x, y),
     )
     .sort((a, b) => a.priority - b.priority || area(a.bounds) - area(b.bounds))[0];
+}
+
+/** Select a source element or the measure under a point in staff whitespace. */
+export function hitSelection(
+  page: GeometryPage,
+  x: number,
+  y: number,
+): SelectionTarget | undefined {
+  const element = hitElement(page, x, y);
+  if (element)
+    return element.region.spans.length || element.region.insertionAnchor
+      ? element.region.target
+      : undefined;
+  const measure = page.regions.find((region) => contains(region.bounds, x, y));
+  return measure && { kind: 'measure', locator: measure.locator };
 }

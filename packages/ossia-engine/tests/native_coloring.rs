@@ -158,7 +158,7 @@ fn note_ink_ownership_ties_graces_and_chords_are_exact() {
         })
         .unwrap();
     assert!(c.linked_targets.contains(&grace_mark.region.target));
-    for page in &pages {
+    for page in pages.iter() {
         let raw = layout.pages.iter().find(|p| p.page == page.page).unwrap();
         for region in &page.regions {
             let line = raw

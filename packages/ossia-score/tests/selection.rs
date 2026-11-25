@@ -1,6 +1,46 @@
 use ossia_score::*;
 
 #[test]
+fn unindexed_measures_require_ordered_engraving_with_source_origins() {
+    let source = r#"Music = { \customMusic c'1 d'1 } \score { \new Staff \Music }"#;
+    let index = build_index(source);
+    assert!(index.measure_count().is_err());
+    let first = source.find("c'1").unwrap();
+    let second = source.find("d'1").unwrap();
+    let geometry = |second_moment| {
+        let svg = format!(
+            r#"<svg viewBox="0 0 100 100">
+                <line x1="10" x2="90" y1="20" y2="20"/><line x1="10" x2="90" y1="21" y2="21"/>
+                <line x1="10" x2="90" y1="22" y2="22"/><line x1="10" x2="90" y1="23" y2="23"/>
+                <line x1="10" x2="90" y1="24" y2="24"/>
+                <g data-ossia-kind="BarLine" data-ossia-bounds="10 20 10.2 24"/>
+                <g data-ossia-kind="BarLine" data-ossia-bounds="50 20 50.2 24"/>
+                <g data-ossia-kind="BarLine" data-ossia-bounds="89 20 89.2 24"/>
+                <g data-ossia-kind="NoteHead" data-ossia-staff="0" data-ossia-bounds="20 21 22 23"
+                    data-ossia-source="{first}:{}" data-ossia-note="60,0,1,0,1"/>
+                <g data-ossia-kind="NoteHead" data-ossia-staff="0" data-ossia-bounds="70 21 72 23"
+                    data-ossia-source="{second}:{}" data-ossia-note="62,{second_moment},1,0,1"/>
+            </svg>"#,
+            first + 3,
+            second + 3
+        );
+        let layout = build_layout(&index, &[SvgPage { page: 1, svg: &svg }]).unwrap();
+        selection_geometry(&index, &layout).unwrap()
+    };
+    let ordered = geometry(1);
+    assert!(ordered.has_engraved_measures());
+    let selected = hit_selection(&index, &ordered, 1, 60., 22.)
+        .unwrap()
+        .unwrap();
+    let [span] = selected.spans.as_slice() else {
+        panic!("expected the second note's source span");
+    };
+    assert_eq!(&source[span.byte_start..span.byte_end], "d'1");
+    let tied = geometry(0);
+    assert!(tied[0].regions.is_empty());
+}
+
+#[test]
 fn noteheads_outside_system_bounds_keep_their_source_measure_system() {
     let source = "Music = { c'1 | d'1 | } \\score { \\new Staff \\Music }";
     let first = source.find("c'1").unwrap();

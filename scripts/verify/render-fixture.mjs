@@ -9,7 +9,7 @@ export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 export const fixtures = path.join(root, 'tests/fixtures/playback');
 
 /** Build the fixture executable once, then render each requested score in isolation. */
-export function fixtureRenderer() {
+export function fixtureRenderer({ selection = false } = {}) {
   execFileSync('cargo', ['build', '--quiet', '-p', 'ossia-engine', '--bin', 'playback-fixture'], {
     cwd: root,
     stdio: 'inherit',
@@ -21,8 +21,9 @@ export function fixtureRenderer() {
   );
   const engine = process.env.OSSIA_TEST_LILYPOND_ROOT ?? candidateRoots(root).roots[0].dir;
   return (entry) => {
-    const source = readFileSync(path.join(fixtures, entry.source), 'utf8');
-    const raw = execFileSync(exe, [engine, path.join(fixtures, entry.source)], {
+    const filename = path.resolve(fixtures, entry.source);
+    const source = readFileSync(filename, 'utf8');
+    const raw = execFileSync(exe, [engine, filename, ...(selection ? ['--selection'] : [])], {
       cwd: root,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,

@@ -55,13 +55,7 @@ impl Syntax {
                 .map(|c| (from, c + 1));
         }
         if matches!(t.command(), Some("new" | "context")) {
-            let mut body = from.checked_add(2)?;
-            if self.tokens.get(body).is_some_and(|token| token.raw == "=") {
-                body = body.checked_add(2)?;
-            }
-            if self.tokens.get(body).and_then(Token::command) == Some("with") {
-                body = self.expression(body + 1, limit)?.1;
-            }
+            let body = self.context_body(from, limit)?;
             return self.expression(body, limit).map(|(_, end)| (from, end));
         }
         if matches!(
@@ -91,6 +85,17 @@ impl Syntax {
             return None;
         }
         (t.kind == TokenKind::Cmd).then_some((from, from + 1))
+    }
+
+    pub(crate) fn context_body(&self, from: usize, limit: usize) -> Option<usize> {
+        let mut body = from.checked_add(2)?;
+        if self.tokens.get(body).is_some_and(|token| token.raw == "=") {
+            body = body.checked_add(2)?;
+        }
+        if self.tokens.get(body).and_then(Token::command) == Some("with") {
+            body = self.expression(body + 1, limit)?.1;
+        }
+        (body < limit).then_some(body)
     }
 }
 
@@ -146,15 +151,38 @@ pub(crate) fn region(
     } else {
         byte_end
     };
-    let mut reason = tokens[rhs..end]
-        .iter()
-        .find(|t| unsupported_token(t))
-        .map(|t| format!("unsupported music structure: {}", t.raw));
+    let mut repeat_boundaries = RepeatBoundaries::default();
+    let mut reason = None;
+    for i in rhs..end {
+        let token = &tokens[i];
+        if token.mode == Mode::Text || !unsupported_token(token) {
+            continue;
+        }
+        if token.command() == Some("repeat") {
+            if let Some((start, close)) = volta_body(syntax, i, end) {
+                repeat_boundaries.starts.insert(tokens[start].byte_end);
+                repeat_boundaries.ends.insert(tokens[close].byte_start);
+                continue;
+            }
+        }
+        reason.get_or_insert_with(|| format!("unsupported music structure: {}", token.raw));
+    }
     if tokens[rhs..end].iter().any(|t| {
         t.mode != Mode::Text
             && t.command().is_some_and(|cmd| {
                 !crate::pitch::known_command(cmd)
-                    && !matches!(cmd, "markup" | "compressMMRests" | "notemode" | "skip")
+                    && !matches!(
+                        cmd,
+                        "markup"
+                            | "compressMMRests"
+                            | "notemode"
+                            | "skip"
+                            | "repeat"
+                            | "grace"
+                            | "acciaccatura"
+                            | "appoggiatura"
+                            | "slashedGrace"
+                    )
                     && !decorations.contains(cmd)
             })
     }) {
@@ -189,7 +217,7 @@ pub(crate) fn region(
                     break;
                 };
                 let (measures, branch_reason) =
-                    parse_measure_body(source, body_start, body_end, &map);
+                    parse_measure_body(source, body_start, body_end, &map, &repeat_boundaries);
                 if let Some(branch_reason) = branch_reason {
                     reason.get_or_insert(branch_reason);
                 }
@@ -202,7 +230,8 @@ pub(crate) fn region(
             measure_groups.push(Vec::new());
         }
     } else {
-        let (measures, body_reason) = parse_measure_body(source, body_start, body_end, &map);
+        let (measures, body_reason) =
+            parse_measure_body(source, body_start, body_end, &map, &repeat_boundaries);
         if let Some(body_reason) = body_reason {
             reason.get_or_insert(body_reason);
         }
@@ -227,6 +256,34 @@ pub(crate) fn region(
     }
 }
 
+#[derive(Default)]
+struct RepeatBoundaries {
+    starts: HashSet<usize>,
+    ends: HashSet<usize>,
+}
+
+fn volta_body(syntax: &Syntax, repeat: usize, limit: usize) -> Option<(usize, usize)> {
+    let start = repeat + 3;
+    let [kind, count, open] = syntax.tokens.get(repeat + 1..=start)? else {
+        return None;
+    };
+    if !matches!(kind.raw.as_str(), "volta" | "\"volta\"")
+        || count.raw.parse::<u32>().ok()? < 2
+        || open.raw != "{"
+    {
+        return None;
+    }
+    let close = syntax.close[start].filter(|close| *close < limit)?;
+    // Folded sections use explicit bar checks to establish their internal boundaries.
+    syntax.tokens[start + 1..close]
+        .iter()
+        .enumerate()
+        .any(|(i, token)| {
+            token.kind == TokenKind::Bar && syntax.depth[start + 1 + i] == syntax.depth[start] + 1
+        })
+        .then_some((start, close))
+}
+
 fn expression_body(
     tokens: &[Token],
     syntax: &Syntax,
@@ -249,6 +306,7 @@ fn parse_measure_body(
     body_start: usize,
     body_end: usize,
     map: &SourceMap<'_>,
+    repeats: &RepeatBoundaries,
 ) -> (Vec<super::Measure>, Option<String>) {
     let body = &source[body_start..body_end];
     let events = tokenize(&format!("{{ {body} }}"));
@@ -264,6 +322,22 @@ fn parse_measure_body(
         if t.byte_start < 2 || t.byte_end > body.len() + 2 {
             continue;
         }
+        let token_start = body_start + t.byte_start - 2;
+        let token_end = body_start + t.byte_end - 2;
+        if repeats.starts.contains(&token_end) {
+            if has_music {
+                reason.get_or_insert("repeat starts without an explicit measure boundary".into());
+            } else {
+                from = token_end;
+            }
+        }
+        let closes_repeat = repeats.ends.contains(&token_start);
+        if closes_repeat
+            && has_music
+            && rhythm::fits_in_one_measure(&events[..index], from - body_start + 2) != Some(true)
+        {
+            reason.get_or_insert("repeat ends without a reliable measure boundary".into());
+        }
         if t.mode == Mode::Music
             && matches!(
                 t.kind,
@@ -273,7 +347,8 @@ fn parse_measure_body(
             has_music = true;
             trailing_music = true;
         }
-        if t.kind == TokenKind::Comment && t.mode == Mode::Music {
+        // Printed numbers can be repeated or offset by a pickup in folded music.
+        if t.kind == TokenKind::Comment && t.mode == Mode::Music && repeats.starts.is_empty() {
             let marker = t.raw.strip_prefix('%').unwrap_or("").trim();
             if !marker.is_empty()
                 && marker.bytes().all(|b| b.is_ascii_digit())
@@ -300,7 +375,9 @@ fn parse_measure_body(
                 }
             }
         }
-        let boundary = if t.kind == TokenKind::Bar && t.mode == Mode::Music {
+        let boundary = if closes_repeat {
+            Some(t.byte_start)
+        } else if t.kind == TokenKind::Bar && t.mode == Mode::Music {
             Some(t.byte_end)
         } else if t.command() == Some("bar") && t.mode != Mode::Text {
             Some(
@@ -324,6 +401,9 @@ fn parse_measure_body(
             trailing_music = false;
             has_music = false;
         }
+        if closes_repeat {
+            from = token_end;
+        }
     }
     if trailing_music && has_music {
         if let Some(boundaries) = rhythm::implicit_measure_boundaries(&events, body_start, from) {
@@ -342,18 +422,72 @@ fn parse_measure_body(
     if measures.is_empty() || trailing_music {
         reason.get_or_insert("music without explicit complete measure boundaries".into());
     }
-    let meaningful: Vec<_> = events.iter().filter(|t| !t.trivia()).collect();
-    for w in meaningful.windows(2) {
-        if matches!(w[0].kind, TokenKind::Rest | TokenKind::Skip) && w[1].kind == TokenKind::Star {
-            let byte = body_start + w[0].byte_start.saturating_sub(2);
-            if measures.iter().any(|m| {
-                byte >= m.span.byte_start
-                    && byte < m.span.byte_end
-                    && !marked.contains(&m.span.byte_start)
-            }) {
-                reason.get_or_insert("multiplied rest requires measure-number markers".into());
+    let measures = expand_scaled_measures(&events, body_start, map, measures, &marked)
+        .unwrap_or_else(|| {
+            reason.get_or_insert("ambiguous multiplied rest or skip".into());
+            Vec::new()
+        });
+    (measures, reason)
+}
+
+fn expand_scaled_measures(
+    events: &[Token],
+    body_start: usize,
+    map: &SourceMap<'_>,
+    measures: Vec<super::Measure>,
+    marked: &HashSet<usize>,
+) -> Option<Vec<super::Measure>> {
+    let tokens = events.iter().filter(|t| !t.trivia()).collect::<Vec<_>>();
+    let scaled = tokens
+        .windows(2)
+        .filter(|w| {
+            matches!(w[0].kind, TokenKind::Rest | TokenKind::Skip)
+                && w[0].mode == Mode::Music
+                && w[1].kind == TokenKind::Star
+        })
+        .map(|w| w[0].byte_start)
+        .collect::<Vec<_>>();
+    if scaled.is_empty() {
+        return Some(measures);
+    }
+    let mut result = Vec::new();
+    let mut next = 1u32;
+    for measure in measures {
+        let mut from = measure.span.byte_start;
+        let to = measure.span.byte_end;
+        let start = from - body_start + 2;
+        let end = to - body_start + 2;
+        let scaled_here = scaled
+            .get(scaled.partition_point(|byte| *byte < start))
+            .is_some_and(|byte| *byte < end);
+        if scaled_here && !marked.contains(&from) {
+            for (boundary, count) in rhythm::scaled_measure_boundaries(events, start, end)? {
+                let boundary = body_start + boundary - 2;
+                let last = next.checked_add(count - 1)?;
+                result.push(super::Measure {
+                    measure_start: next,
+                    measure_end: last,
+                    span: map.span(from, boundary).ok()?,
+                });
+                next = last.checked_add(1)?;
+                from = boundary;
             }
+        } else {
+            let last = if marked.contains(&from) {
+                measure.measure_end
+            } else {
+                next
+            };
+            if last < next {
+                return None;
+            }
+            result.push(super::Measure {
+                measure_start: next,
+                measure_end: last,
+                span: measure.span,
+            });
+            next = last.checked_add(1)?;
         }
     }
-    (measures, reason)
+    Some(result)
 }

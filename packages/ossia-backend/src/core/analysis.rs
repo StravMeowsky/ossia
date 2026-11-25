@@ -1,5 +1,5 @@
 use super::*;
-use ossia_score::{ScoreIndex, ScoreLayout};
+use ossia_score::{ScoreIndex, ScoreLayout, SelectionGeometry};
 use ossia_types::ScorePlayback;
 
 const CACHE_ENTRIES: usize = 8;
@@ -8,7 +8,7 @@ const CACHE_ENTRIES: usize = 8;
 pub(super) struct AnalysisCache {
     indexes: VecDeque<(ContentHash, Arc<ScoreIndex>)>,
     layouts: VecDeque<(ContentHash, Arc<ScoreLayout>)>,
-    geometries: VecDeque<(ContentHash, Arc<Vec<GeometryPage>>)>,
+    geometries: VecDeque<(ContentHash, Arc<SelectionGeometry>)>,
     playbacks: VecDeque<(ContentHash, Arc<ScorePlayback>)>,
 }
 
@@ -17,7 +17,7 @@ impl Runtime {
         &self,
         snapshot: &SourceSnapshot,
         manifest: &RenderManifest,
-    ) -> Result<Arc<Vec<GeometryPage>>> {
+    ) -> Result<Arc<SelectionGeometry>> {
         if snapshot.source_hash() != &manifest.source_hash {
             return Err(stale());
         }

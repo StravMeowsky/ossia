@@ -159,16 +159,10 @@ pub fn build_layout(index: &ScoreIndex, pages: &[SvgPage<'_>]) -> Result<ScoreLa
                                         candidates.iter().map(|m| m.measure_end).min().unwrap();
                                     (start <= end).then_some((start, end))
                                 };
-                                let local = candidates
-                                    .iter()
-                                    .map(|m| (m.measure_start, m.measure_end))
-                                    .reduce(|(left_start, left_end), (start, end)| {
-                                        (left_start.min(start), left_end.max(end))
-                                    });
                                 if let Some(range) = candidate {
                                     *occurrences.entry(range).or_default() += 1;
                                 }
-                                evidence.push((candidate, local, !candidates.is_empty()));
+                                evidence.push((candidate, candidates));
                                 columns.push(MeasureColumn {
                                     page: p.page,
                                     system_index,
@@ -187,19 +181,22 @@ pub fn build_layout(index: &ScoreIndex, pages: &[SvgPage<'_>]) -> Result<ScoreLa
         result.push(page);
     }
     let rendered = index.rendered_measure_sequence();
-    let global_grid = rendered.len() == columns.len()
-        && columns
+    let matches_sources = |measure: &crate::index::RenderedMeasure, sources: &[&crate::Measure]| {
+        sources
             .iter()
-            .zip(evidence.iter())
-            .zip(rendered.iter())
-            .all(|((_, (_, local, _)), measure)| {
-                local.is_none_or(|(start, end)| {
-                    measure
-                        .measures
-                        .iter()
-                        .any(|item| item.measure >= start && item.measure <= end)
-                })
-            });
+            .all(|source| measure.measures.iter().any(|item| item.span == source.span))
+    };
+    let global_grid = rendered.len() == columns.len()
+        && evidence
+            .iter()
+            .zip(rendered)
+            .all(|((_, sources), measure)| matches_sources(measure, sources));
+    let renumbered = rendered.iter().enumerate().any(|(i, measure)| {
+        measure
+            .measures
+            .iter()
+            .any(|item| item.measure as usize != i + 1)
+    });
     let mut used = HashMap::<(u32, u32), u32>::new();
     let mut next = Some(1u32);
     let mut previous_page = 0;
@@ -222,13 +219,23 @@ pub fn build_layout(index: &ScoreIndex, pages: &[SvgPage<'_>]) -> Result<ScoreLa
                 partial = true;
             }
             previous_system = Some(column.system_index);
-            let (candidate, _local, conflicting) = evidence[offset];
+            let (candidate, sources) = &evidence[offset];
             let global = global_grid.then_some(offset as u32 + 1);
             offset += 1;
             let range = if let Some(measure) = global {
                 Some((measure, measure))
+            } else if renumbered {
+                // A local number can occur in several source sections. A partial
+                // grid can use it only when its origins identify one engraved slot.
+                let mut matches = rendered.iter().enumerate().filter(|(_, measure)| {
+                    !sources.is_empty() && matches_sources(measure, sources)
+                });
+                matches.next().and_then(|(i, _)| {
+                    let number = i as u32 + 1;
+                    matches.next().is_none().then_some((number, number))
+                })
             } else {
-                match candidate {
+                match *candidate {
                     Some((start, end)) if start == end => Some((start, end)),
                     Some(range @ (start, end)) => {
                         let count = occurrences[&range];
@@ -243,7 +250,7 @@ pub fn build_layout(index: &ScoreIndex, pages: &[SvgPage<'_>]) -> Result<ScoreLa
                             None
                         }
                     }
-                    None if !conflicting => {
+                    None if sources.is_empty() => {
                         next.filter(|n| *n <= index.max_measures).map(|n| (n, n))
                     }
                     _ => None,

@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { test } from 'vite-plus/test';
 
-import { auditPlayback, compareExpected } from '../../scripts/verify/playback-audit.mjs';
+import { auditPlayback, compareExpected } from '../../../scripts/verify/playback-audit.mjs';
 
 function fixture() {
   const span = { page: 1, systemIndex: 0 };
@@ -124,6 +127,25 @@ test('compares the observed trace against independently checked source positions
   );
 });
 
+test('compares positions only within the onset tolerance and on the expected page and system', () => {
+  const { geometry, playback } = fixture();
+  geometry.pages[0].elements[1].region.spans = [{ byteStart: 42 }];
+  const { trace } = auditPlayback(playback, geometry);
+  const expected = { time: 1.0005, page: 1, system: 0, sourceByteStart: 42 };
+  const checks = [
+    expected,
+    { ...expected, time: 1.002 },
+    { ...expected, page: 2 },
+    { ...expected, system: 1 },
+  ];
+  const issues = compareExpected(trace, checks);
+  assert.deepEqual(
+    issues.map((issue) => issue.expected),
+    checks.slice(1),
+  );
+  assert.equal(issues[0].actual, null);
+});
+
 test('reports a group spanning different notehead positions for review', () => {
   const { geometry, playback } = fixture();
   playback.groups[1].elementIds = ['b', 'c'];
@@ -219,4 +241,63 @@ test('rejects timed groups extending past the playback duration', () => {
   const report = auditPlayback(playback, geometry);
   assert.equal(report.issues[0].kind, 'out-of-range-group');
   assert.equal(report.issues[0].end, 3);
+});
+
+test('CLI validates independent checkpoints and rejects stale or omitted expected documents', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'ossia-playback-expect-'));
+  const { geometry, playback } = fixture();
+  geometry.pages[0].elements[0].region.spans = [{ byteStart: 42 }];
+  const server = createServer((request, response) => {
+    response.end(
+      JSON.stringify(
+        request.url.endsWith('/context')
+          ? { document: { title: 'Fixture' }, render: { renderKey: 'r' } }
+          : request.url.endsWith('/geometry')
+            ? geometry
+            : playback,
+      ),
+    );
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const input = path.join(directory, 'expect.json');
+    const run = () =>
+      promisify(execFile)(process.execPath, [
+        'scripts/verify/playback-audit.mjs',
+        'fixture',
+        `--base=http://127.0.0.1:${server.address().port}/`,
+        `--expect=${input}`,
+      ]);
+    const checkpoint = { time: 0, page: 1, system: 0, sourceByteStart: 42 };
+    const expected = { sourceHash: 's', checkpoints: [checkpoint] };
+    await writeFile(input, JSON.stringify({ fixture: expected }));
+    const { stdout } = await run();
+    assert.deepEqual(JSON.parse(stdout)[0].issues, []);
+
+    checkpoint.sourceByteStart = 99;
+    await writeFile(input, JSON.stringify({ fixture: expected }));
+    await assert.rejects(
+      run(),
+      (error) =>
+        error.code === 1 && JSON.parse(error.stdout)[0].issues[0].kind === 'expected-mismatch',
+    );
+
+    await writeFile(
+      input,
+      JSON.stringify({
+        fixture: { ...expected, sourceHash: 'other' },
+        omitted: expected,
+      }),
+    );
+    await assert.rejects(run(), (error) => {
+      assert.equal(error.code, 1);
+      const [stale, omitted] = JSON.parse(error.stdout);
+      assert.match(stale.error, /expectations do not match this source snapshot/);
+      assert.deepEqual(omitted, { documentId: 'omitted', error: 'expected score was not audited' });
+      return true;
+    });
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(directory, { recursive: true, force: true });
+  }
 });

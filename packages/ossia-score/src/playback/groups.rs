@@ -45,7 +45,7 @@ fn playable_events(
     layout: &ScoreLayout,
     events: &[SourcePlaybackEvent],
 ) -> Result<PlayableEvents, AppError> {
-    let pages = selection_geometry(index, layout)?;
+    let pages = selection_geometry(index, layout)?.pages;
     let tie_ids = pages
         .iter()
         .flat_map(|page| &page.elements)

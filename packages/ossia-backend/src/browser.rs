@@ -103,7 +103,7 @@ impl Runtime {
         Ok(RenderGeometry {
             render_key: key.clone(),
             source_hash: manifest.source_hash.clone(),
-            pages: self.score_geometry(&snapshot, &manifest)?.as_ref().clone(),
+            pages: self.score_geometry(&snapshot, &manifest)?.pages.clone(),
         })
     }
 

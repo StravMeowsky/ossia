@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { test } from 'vite-plus/test';
 
-import { auditAudition } from '../../scripts/verify/audition-audit.mjs';
+import { auditAudition } from '../../../scripts/verify/audition-audit.mjs';
 
 function fixture() {
   const elements = ['a', 'b', 'c'].map((id, i) => ({
@@ -50,8 +56,14 @@ test('audits every head, including missing click groups and multi-pitch audition
 test('detects keyboard steps that are skipped because two groups share an identity', () => {
   const { geometry, playback } = fixture();
   playback.groups.splice(1, 0, { ...playback.groups[0], startSeconds: 0.5 });
-  assert(
-    auditAudition(playback, geometry).issues.some((i) => i.kind === 'ambiguous-keyboard-step'),
+  const { issues } = auditAudition(playback, geometry);
+  assert.ok(issues.some((i) => i.kind === 'ambiguous-keyboard-step' && i.elementId === 'a'));
+  assert.ok(issues.some((i) => i.kind === 'ambiguous-audition' && i.elementId === 'a'));
+  assert.ok(
+    issues.some(
+      (i) =>
+        i.kind === 'keyboard-skipped-head' && i.elementId === 'b' && i.directions.includes('next'),
+    ),
   );
 });
 
@@ -76,7 +88,8 @@ test('rejects mixed renders and accepts independently reachable single-note grou
 });
 
 test('simultaneous audition deduplicates notation copies but preserves independent performers', async () => {
-  const { auditionSounds } = await import('../../packages/ui/src/score/utils/playbackTimeline.ts');
+  const { auditionSounds } =
+    await import('../../../packages/ui/src/score/utils/playbackTimeline.ts');
   const group = {
     partId: 'guitar',
     pitches: [60],
@@ -123,4 +136,68 @@ test('compares simultaneous audition with the MIDI attack multiset', () => {
       actual: [60],
     },
   ]);
+});
+
+test('requires an attack at the mapped pitch and time for audible heads', () => {
+  const { geometry, playback } = fixture();
+  playback.notes[2].startSeconds = 2.1;
+  const report = auditAudition(playback, geometry);
+  assert.deepEqual(
+    report.issues.map(({ kind }) => kind),
+    ['missing-audition-attack', 'simultaneous-audition-mismatch'],
+  );
+  assert.equal(report.issues[0].elementId, 'c');
+});
+
+const run = (...args) =>
+  promisify(execFile)(process.execPath, ['scripts/verify/audition-audit.mjs', ...args]);
+
+test('CLI audits a captured render and fails with its report when an audition group is missing', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'ossia-audition-input-'));
+  try {
+    const input = path.join(directory, 'render.json');
+    const bundle = fixture();
+    await writeFile(input, JSON.stringify(bundle));
+    const { stdout } = await run(`--input=${input}`);
+    assert.equal(JSON.parse(stdout).clickable, 3);
+    bundle.playback.groups.pop();
+    await writeFile(input, JSON.stringify(bundle));
+    await assert.rejects(
+      run(`--input=${input}`),
+      (error) =>
+        error.code === 1 && JSON.parse(error.stdout).issues[0].kind === 'unauditionable-head',
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('CLI paginates the library and returns per-score errors alongside healthy audits', async () => {
+  const { geometry, playback } = fixture();
+  const responses = new Map([
+    ['/api/documents?limit=200&offset=0', { items: [{ documentId: 'one' }], nextOffset: 200 }],
+    ['/api/documents?limit=200&offset=200', { items: [{ documentId: 'two' }], nextOffset: null }],
+    ['/api/documents/one/context', { document: { title: 'First' }, render: { renderKey: 'r' } }],
+    ['/api/documents/two/context', { document: { title: 'Second' }, render: null }],
+    ['/api/renders/r/geometry', geometry],
+    ['/api/renders/r/playback', playback],
+  ]);
+  const server = createServer((request, response) => {
+    const data = responses.get(request.url);
+    response.statusCode = data ? 200 : 404;
+    response.end(JSON.stringify(data ?? {}));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    await assert.rejects(run(`--base=http://127.0.0.1:${server.address().port}/api`), (error) => {
+      assert.equal(error.code, 1);
+      const [first, second] = JSON.parse(error.stdout);
+      assert.equal(first.documentId, 'one');
+      assert.deepEqual(first.issues, []);
+      assert.deepEqual(second, { documentId: 'two', error: 'Error: no render' });
+      return true;
+    });
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

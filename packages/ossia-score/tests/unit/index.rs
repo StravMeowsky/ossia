@@ -1,6 +1,32 @@
 use super::build_index;
 
 #[test]
+fn scaled_silence_preserves_a_shared_span_and_the_following_number() {
+    let source = r#"Music = { \time 3/4 c'2. s2.*2*2 | d'2. | } \score { \new Staff \Music }"#;
+    let index = build_index(source);
+    assert_eq!(index.measure_count(), Ok(6));
+    let voice = index.voice("Music").unwrap();
+    let spans = voice
+        .indexed_measures()
+        .map(|m| {
+            (
+                m.measure_start,
+                m.measure_end,
+                source[m.span.byte_start..m.span.byte_end].trim(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        spans,
+        [
+            (1, 1, "\\time 3/4 c'2."),
+            (2, 5, "s2.*2*2 |"),
+            (6, 6, "d'2. |")
+        ]
+    );
+}
+
+#[test]
 fn common_engraving_commands_preserve_measure_index() {
     let source =
         r#"notes = { \tupletSpan 8 \stemUp c'4\trill d' e' f' | } \score { \new Staff \notes }"#;
@@ -31,12 +57,45 @@ fn repeated_references_in_parallel_music_do_not_claim_a_count() {
 
 #[test]
 fn repeats_and_multiple_scores_do_not_return_guessed_counts() {
-    let repeat =
-        r#"music = { \partial 16 c'16 | \repeat volta 2 { c'1 | } } \score { \new Staff \music }"#;
+    let unfolded =
+        r#"music = { \partial 16 c'16 | \repeat unfold 2 { c'1 | } } \score { \new Staff \music }"#;
+    let unmarked = r#"music = { \repeat volta 2 { c'1 d'1 } } \score { \new Staff \music }"#;
+    let overfull = r#"music = { \repeat volta 2 { c'1 | d'1 e'1 } } \score { \new Staff \music }"#;
     let multiple =
         r#"music = { c'1 | } \score { \new Staff \music } \score { \new Staff \music \midi {} }"#;
-    assert!(build_index(repeat).measure_count().is_err());
+    assert!(build_index(unfolded).measure_count().is_err());
+    assert!(build_index(unmarked).measure_count().is_err());
+    assert!(build_index(overfull).measure_count().is_err());
     assert!(build_index(multiple).measure_count().is_err());
+}
+
+#[test]
+fn named_voice_assignment_keeps_the_staff_and_folded_music() {
+    let source = r#"
+theme = \new Voice = "theme" \relative c' {
+  \repeat volta 2 { \partial 4 c4 | d1 | e2. }
+  \repeat volta 2 { f4 | g1 | a2. }
+}
+\score { \new Staff { \theme } }
+"#;
+    let index = build_index(source);
+    assert_eq!(index.staves[0].voices, ["theme"]);
+    assert_eq!(index.measure_count(), Ok(6));
+    let locator = ossia_types::Locator {
+        staff_index: 0,
+        measure_start: 3,
+        measure_end: 4,
+        voice: None,
+    };
+    let selection = crate::measure_selection(&index, &locator).unwrap();
+    assert_eq!(
+        selection
+            .spans
+            .iter()
+            .map(|span| source[span.byte_start..span.byte_end].trim())
+            .collect::<Vec<_>>(),
+        ["e2.", "f4 |"]
+    );
 }
 
 #[test]
@@ -117,4 +176,22 @@ two = { c''1 | d''1 | }
     assert_eq!(index.rendered_measure("intro", 2, None), Some(2));
     assert_eq!(index.rendered_measure("main", 2, None), Some(4));
     assert_eq!(index.rendered_measure("two", 1, None), Some(8));
+    let selection = crate::measure_selection(
+        &index,
+        &ossia_types::Locator {
+            staff_index: 0,
+            measure_start: 7,
+            measure_end: 8,
+            voice: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        selection
+            .spans
+            .iter()
+            .map(|span| source[span.byte_start..span.byte_end].trim())
+            .collect::<Vec<_>>(),
+        ["b'1 |", "c''1 |"]
+    );
 }

@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = env::args_os().skip(1);
     let root = PathBuf::from(args.next().ok_or("missing LilyPond root")?);
     let path = PathBuf::from(args.next().ok_or("missing score fixture")?);
+    let check_selection = args.next().is_some_and(|arg| arg == "--selection");
     let source = fs::read_to_string(path)?;
     let work_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/playback-verify");
     fs::create_dir_all(&work_root)?;
@@ -13,10 +14,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let engine = Engine::verify(&root, &work.path().join("scratch"), &context)?;
     let snapshot = SourceSnapshot::new(DocumentId::new(), source.as_bytes().to_vec())?;
     let assets = work.path().join("assets");
+    let mut formats = vec![RenderFormat::Svg];
+    if !check_selection {
+        formats.push(RenderFormat::Midi);
+    }
     let render = engine.compile(
         &snapshot,
         &CompileOptions {
-            formats: vec![RenderFormat::Svg, RenderFormat::Midi],
+            formats,
             point_and_click: true,
         },
         &assets,
@@ -25,9 +30,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !render.format_errors.is_empty() {
         return Err(format!("{:?}", render.format_errors).into());
     }
-    let midi = ossia_score::parse_midi(&fs::read(
-        assets.join(render.midi.ok_or("missing MIDI")?.path),
-    )?)?;
     let pages = render
         .pages
         .iter()
@@ -47,11 +49,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect::<Vec<_>>(),
     )?;
     let key = ContentHash::of(source.as_bytes());
-    let playback = ossia_score::build_playback(&index, &layout, &midi, key.clone())?;
-    let geometry = serde_json::json!({ "renderKey": key, "sourceHash": index.source_hash, "pages": ossia_score::selection_geometry(&index, &layout)? });
+    let (playback, midi_note_count) = if check_selection {
+        (None, None)
+    } else {
+        let midi = ossia_score::parse_midi(&fs::read(
+            assets.join(render.midi.ok_or("missing MIDI")?.path),
+        )?)?;
+        (
+            Some(ossia_score::build_playback(
+                &index,
+                &layout,
+                &midi,
+                key.clone(),
+            )?),
+            Some(
+                midi.tracks
+                    .iter()
+                    .map(|track| track.notes.len())
+                    .sum::<usize>(),
+            ),
+        )
+    };
+    let selection_geometry = ossia_score::selection_geometry(&index, &layout)?;
+    let selection = check_selection
+        .then(|| {
+            let reliable = selection_geometry.has_engraved_measures()
+                || ossia_score::music_identity_with_index(&index, &source).reliable;
+            let pages = selection_geometry
+                .iter()
+                .map(|page| {
+                    page.regions
+                        .iter()
+                        .map(|region| selection_geometry.resolve_measure(&index, &region.locator))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok::<_, ossia_types::AppError>(serde_json::json!({
+                "reliable": reliable,
+                "measureCountError": index.measure_count().err(),
+                "staves": index.staves,
+                "voices": index.voices,
+                "pages": pages
+            }))
+        })
+        .transpose()?;
+    let geometry = serde_json::json!({ "renderKey": key, "sourceHash": index.source_hash, "pages": selection_geometry.pages });
     println!(
         "{}",
-        serde_json::json!({"playback": playback, "geometry": geometry, "layout": layout, "pages": pages, "midiNoteCount": midi.tracks.iter().map(|track| track.notes.len()).sum::<usize>()})
+        serde_json::json!({"playback": playback, "geometry": geometry, "layout": layout, "selection": selection, "pages": pages, "midiNoteCount": midi_note_count})
     );
     Ok(())
 }

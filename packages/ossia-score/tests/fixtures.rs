@@ -142,16 +142,15 @@ fn compressed_rest_score_tail_context_ids_and_staff_reuse_are_fixed() {
 }
 
 #[test]
-fn unsupported_music_never_claims_precise_ranges_or_partial_pitches() {
-    for id in ["chordmode", "repeat"] {
+fn folded_measures_are_indexed_independently_of_pitch_support() {
+    for (id, capability, count) in [
+        ("chordmode", LocationCapability::AnchorOnly, 0),
+        ("repeat", LocationCapability::Measure, 2),
+    ] {
         let source = input(id);
         let index = build_index(&source);
-        assert_eq!(
-            index.capability,
-            LocationCapability::AnchorOnly,
-            "{id}: {index:?}"
-        );
-        assert!(index.voices.iter().all(|v| v.measures.is_empty()));
+        assert_eq!(index.capability, capability, "{id}: {index:?}");
+        assert_eq!(index.voices[0].measures.len(), count);
         let span = index.voices[0].music_span;
         let result = resolve_pitches(&source, span).unwrap();
         assert!(result.unsupported.is_some(), "{id}");

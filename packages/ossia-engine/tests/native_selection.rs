@@ -552,7 +552,7 @@ fn native_source_selection_matches_static_render() {
     .unwrap();
     let pages = selection_geometry(&index, &layout).unwrap();
     let mut notes = 0;
-    for page in &pages {
+    for page in pages.iter() {
         let note = page
             .elements
             .iter()

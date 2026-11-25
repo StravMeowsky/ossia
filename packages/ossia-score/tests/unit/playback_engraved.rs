@@ -45,7 +45,7 @@ fn fixture(pitches: &[u8]) -> (ScoreLayout, Vec<GeometryPage>, MidiFile) {
         tempos: Vec::new(),
         time_signatures: Vec::new(),
     };
-    (layout, pages, midi)
+    (layout, pages.pages, midi)
 }
 
 #[test]

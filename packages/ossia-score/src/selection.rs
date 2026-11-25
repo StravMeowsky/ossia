@@ -5,6 +5,72 @@ use ossia_types::{
 };
 use std::collections::HashMap;
 
+mod engraved;
+
+/// Browser hit areas and the source evidence needed to resolve engraved measures.
+#[derive(Debug)]
+pub struct SelectionGeometry {
+    pub pages: Vec<GeometryPage>,
+    source_hash: ContentHash,
+    engraved: engraved::EngravedMeasures,
+}
+
+impl std::ops::Deref for SelectionGeometry {
+    type Target = [GeometryPage];
+
+    fn deref(&self) -> &Self::Target {
+        &self.pages
+    }
+}
+
+impl SelectionGeometry {
+    /// Whether measure selection is grounded in this exact render.
+    pub fn has_engraved_measures(&self) -> bool {
+        !self.engraved.is_empty()
+    }
+
+    /// Resolve a selection against the same source and measure grid used for hit testing.
+    pub fn resolve_measure(
+        &self,
+        index: &ScoreIndex,
+        locator: &Locator,
+    ) -> Result<SelectionRegion, AppError> {
+        if self.source_hash != index.source_hash {
+            return Err(AppError::new(
+                ossia_types::ErrorCode::StaleSelection,
+                "geometry belongs to another source",
+            ));
+        }
+        if self.engraved.is_empty() {
+            return measure_selection(index, locator);
+        }
+        if locator.measure_start == 0 || locator.measure_end < locator.measure_start {
+            return Err(AppError::invalid("invalid measure range"));
+        }
+        if locator.voice.is_some() {
+            return Err(AppError::unsupported(
+                "engraved measures require a staff target",
+            ));
+        }
+        let range = (locator.staff_index, locator.measure_start)
+            ..=(locator.staff_index, locator.measure_end);
+        let mut spans = Vec::new();
+        let mut count = 0;
+        for (_, sources) in self.engraved.range(range) {
+            spans.extend_from_slice(sources);
+            count += 1;
+        }
+        if count != locator.measure_end - locator.measure_start + 1 {
+            return Err(AppError::unsupported(
+                "selection requires a reliable measure location",
+            ));
+        }
+        spans.sort_unstable_by_key(|span| (span.byte_start, span.byte_end));
+        spans.dedup();
+        Ok(measure_region(locator, spans))
+    }
+}
+
 fn bounds(b: BBox) -> GeometryBounds {
     GeometryBounds {
         x0: b.x0,
@@ -208,7 +274,11 @@ pub fn measure_selection(
             "selection requires a reliable measure location",
         ));
     }
-    Ok(SelectionRegion {
+    Ok(measure_region(locator, located.spans))
+}
+
+fn measure_region(locator: &Locator, spans: Vec<SourceSpan>) -> SelectionRegion {
+    SelectionRegion {
         target: SelectionTarget::Measure {
             locator: locator.clone(),
         },
@@ -219,13 +289,13 @@ pub fn measure_selection(
             locator.measure_end
         ),
         element_kind: None,
-        spans: located.spans,
+        spans,
         insertion_anchor: None,
         staff_index: Some(locator.staff_index),
         voice: locator.voice.clone(),
         reason: None,
         occurrences: Vec::new(),
-    })
+    }
 }
 
 fn object_region(
@@ -333,7 +403,7 @@ fn object_region(
 pub fn selection_geometry(
     index: &ScoreIndex,
     layout: &ScoreLayout,
-) -> Result<Vec<GeometryPage>, AppError> {
+) -> Result<SelectionGeometry, AppError> {
     if index.source_hash != layout.source_hash {
         return Err(AppError::new(
             ossia_types::ErrorCode::StaleSelection,
@@ -353,6 +423,7 @@ pub fn selection_geometry(
                 .or_insert(Some(element.span));
         }
     }
+    let engraved = engraved::measures(index, layout).unwrap_or_default();
     let mut pages = Vec::new();
     for page in &layout.pages {
         let elements = page
@@ -396,11 +467,23 @@ pub fn selection_geometry(
             })
             .collect::<Vec<_>>();
         let mut regions = Vec::new();
-        for column in layout.columns.iter().filter(|c| c.page == page.page) {
+        for (ordinal, column) in layout
+            .columns
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.page == page.page)
+        {
             let Some(system) = page.systems.get(column.system_index) else {
                 continue;
             };
-            let (Some(start), Some(end)) = (column.measure_start, column.measure_end) else {
+            let range = if engraved.is_empty() {
+                column.measure_start.zip(column.measure_end)
+            } else {
+                u32::try_from(ordinal + 1)
+                    .ok()
+                    .map(|number| (number, number))
+            };
+            let Some((start, end)) = range else {
                 continue;
             };
             for (staff_index, staff) in system.staves.iter().enumerate() {
@@ -410,7 +493,9 @@ pub fn selection_geometry(
                     measure_end: end,
                     voice: None,
                 };
-                if resolve_locator(index, &locator)?.capability != LocationCapability::Measure {
+                if engraved.is_empty()
+                    && resolve_locator(index, &locator)?.capability != LocationCapability::Measure
+                {
                     continue;
                 }
                 let mut x0 = column.x0.max(staff.x0);
@@ -487,8 +572,12 @@ pub fn selection_geometry(
         pages.push(GeometryPage {
             page: page.page,
             view_box: page.view_box.map(bounds),
-            capability: page.capability,
-            reason: page.reason.clone(),
+            capability: if engraved.is_empty() {
+                page.capability
+            } else {
+                LocationCapability::Measure
+            },
+            reason: engraved.is_empty().then(|| page.reason.clone()).flatten(),
             regions,
             elements,
         });
@@ -517,13 +606,17 @@ pub fn selection_geometry(
         }
     }
     graphics::associate(index, layout, &instrument_spans, &mut pages);
-    Ok(pages)
+    Ok(SelectionGeometry {
+        pages,
+        source_hash: index.source_hash.clone(),
+        engraved,
+    })
 }
 
 /// Pick local symbols before spanning marks and measure whitespace.
 pub fn hit_selection(
     index: &ScoreIndex,
-    pages: &[GeometryPage],
+    geometry: &SelectionGeometry,
     page: u32,
     x: f64,
     y: f64,
@@ -531,7 +624,7 @@ pub fn hit_selection(
     if !x.is_finite() || !y.is_finite() {
         return Err(AppError::invalid("point must be finite"));
     }
-    let Some(page) = pages.iter().find(|p| p.page == page) else {
+    let Some(page) = geometry.iter().find(|p| p.page == page) else {
         return Ok(None);
     };
     let contains = |b: &GeometryBounds| x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
@@ -557,7 +650,7 @@ pub fn hit_selection(
     page.regions
         .iter()
         .find(|r| contains(&r.bounds))
-        .map(|r| measure_selection(index, &r.locator))
+        .map(|r| geometry.resolve_measure(index, &r.locator))
         .transpose()
 }
 
