@@ -25,6 +25,7 @@ fn playback(notes: Vec<PlaybackNote>) -> ScorePlayback {
 #[test]
 fn renders_stereo_pcm_wav_with_audible_piano_samples() {
     let timeline = playback(vec![PlaybackNote {
+        ornament_anchor: None,
         part_id: "part".into(),
         instrument: SampleInstrument::Piano,
         pitch: 69,
@@ -64,6 +65,7 @@ fn renders_each_bundled_instrument_with_its_own_samples() {
         SampleInstrument::Ukulele,
     ] {
         let timeline = playback(vec![PlaybackNote {
+            ornament_anchor: None,
             part_id: "part".into(),
             instrument,
             pitch: 69,
@@ -93,6 +95,7 @@ fn catalog_gain_scales_rendered_samples() {
     let render = |instrument| {
         let bytes = render_wav(
             &playback(vec![PlaybackNote {
+                ornament_anchor: None,
                 part_id: "part".into(),
                 instrument,
                 pitch: 69,
@@ -131,6 +134,7 @@ fn honours_cancellation_while_mixing() {
     context.cancellation.cancel();
     let error = render_wav(
         &playback(vec![PlaybackNote {
+            ornament_anchor: None,
             part_id: "part".into(),
             instrument: SampleInstrument::Piano,
             pitch: 60,
@@ -148,6 +152,7 @@ fn honours_cancellation_while_mixing() {
 fn reports_missing_catalog_and_corrupt_sample_paths() {
     let dir = tempfile::tempdir().unwrap();
     let timeline = playback(vec![PlaybackNote {
+        ornament_anchor: None,
         part_id: "part".into(),
         instrument: SampleInstrument::Piano,
         pitch: 69,

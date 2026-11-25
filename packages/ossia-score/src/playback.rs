@@ -1,15 +1,21 @@
 use crate::{MidiFile, ScoreIndex, ScoreLayout};
-use ossia_types::{AppError, ContentHash, ErrorCode, PlaybackNote, ScorePlayback};
+use ossia_types::{AppError, ContentHash, ErrorCode, MeasureRange, PlaybackNote, ScorePlayback};
+use std::ops::Range;
 
 mod engraved;
 mod fallback;
+mod fermatas;
 mod geometry;
+mod graces;
 mod groups;
+mod matching;
+mod ornaments;
 mod parts;
 mod source;
 mod systems;
 mod timing;
 
+use fermatas::Fermatas;
 use groups::{note_groups, NoteGroupBuild};
 use systems::system_spans;
 use timing::{ppqn, seconds_at};
@@ -56,6 +62,28 @@ fn unsupported(message: impl Into<String>) -> AppError {
     AppError::new(ErrorCode::UnsupportedSource, message)
 }
 
+/// Resolve MIDI measure boundaries in the expressive playback timeline.
+pub fn playback_measure_bounds(
+    index: &ScoreIndex,
+    layout: &ScoreLayout,
+    midi: &MidiFile,
+    range: MeasureRange,
+) -> Result<Range<f64>, AppError> {
+    let bounds = crate::midi_measure_bounds(midi, range)?;
+    let ppqn = ppqn(midi)?;
+    let fermatas = Fermatas::from_layout(index, layout, midi, ppqn);
+    let time = |tick: u64| {
+        let shifted = if tick == 0 {
+            tick
+        } else {
+            tick.checked_add(fermatas.origin_tick)
+                .ok_or_else(|| unsupported("playback measure range overflow"))?
+        };
+        Ok::<_, AppError>(fermatas.time(seconds_at(shifted, ppqn, midi)))
+    };
+    Ok(time(bounds.start_tick)?..time(bounds.end_tick)?)
+}
+
 /// Build playback data from one immutable score render.
 pub fn build_playback(
     index: &ScoreIndex,
@@ -70,6 +98,7 @@ pub fn build_playback(
         ));
     }
     let ppqn = ppqn(midi)?;
+    let fermatas = Fermatas::from_layout(index, layout, midi, ppqn);
     let programs = crate::instruments::ProgramTimeline::new(midi);
     let mut notes = Vec::new();
     for (track_index, track) in midi.tracks.iter().enumerate() {
@@ -84,6 +113,7 @@ pub fn build_playback(
                     duration_seconds: seconds_at(note.time + duration, ppqn, midi)
                         - seconds_at(note.time, ppqn, midi),
                     part_id: format!("{track_index}:{}", note.channel),
+                    ornament_anchor: None,
                     instrument: crate::select_sample_instrument(
                         track.name.as_deref(),
                         (note.channel != 9)
@@ -107,6 +137,7 @@ pub fn build_playback(
         .iter()
         .flat_map(|track| &track.notes)
         .map(|note| note.time + note.duration.unwrap_or(0))
+        .chain([fermatas.last_release_tick])
         .max()
         .unwrap_or(0);
     let systems = system_spans(
@@ -120,8 +151,9 @@ pub fn build_playback(
         mut groups,
         muted_notes,
         element_positions,
+        pages,
     } = note_groups(index, layout, midi, ppqn, &systems)?;
-    let systems =
+    let mut systems =
         systems::refine_system_spans(layout, groups.as_slice(), &element_positions, systems);
     notes.retain(|(note, tick, track, channel)| {
         !muted_notes.iter().any(|muted| {
@@ -132,19 +164,22 @@ pub fn build_playback(
         })
     });
     let parts = parts::assign_parts(index, midi, &programs, &mut notes, &mut groups);
+    let mut notes = ornaments::expand(index, layout, midi, ppqn, &pages, &mut groups, notes);
+    fermatas.apply(&mut notes, &mut groups, &mut systems);
     notes.sort_by(|a, b| {
-        a.0.start_seconds
-            .total_cmp(&b.0.start_seconds)
-            .then_with(|| a.0.pitch.cmp(&b.0.pitch))
-            .then_with(|| a.0.part_id.cmp(&b.0.part_id))
+        a.start_seconds
+            .total_cmp(&b.start_seconds)
+            .then_with(|| a.pitch.cmp(&b.pitch))
+            .then_with(|| a.part_id.cmp(&b.part_id))
+            .then_with(|| a.ornament_anchor.cmp(&b.ornament_anchor))
     });
-    notes.dedup_by(|(left, ..), (right, ..)| {
+    notes.dedup_by(|left, right| {
         left.part_id == right.part_id
             && left.pitch == right.pitch
+            && left.ornament_anchor == right.ornament_anchor
             && (left.start_seconds - right.start_seconds).abs() <= ONSET_EPSILON_SECONDS
             && (left.duration_seconds - right.duration_seconds).abs() <= ONSET_EPSILON_SECONDS
     });
-    let notes = notes.into_iter().map(|(note, ..)| note).collect::<Vec<_>>();
     let duration_seconds =
         notes
             .iter()
@@ -153,6 +188,7 @@ pub fn build_playback(
             .chain(groups.iter().filter_map(|group| {
                 Some(group.start_seconds? + group.duration_seconds.unwrap_or(0.))
             }))
+            .chain(fermatas.end())
             .fold(0.0, f64::max);
     Ok(ScorePlayback {
         render_key,

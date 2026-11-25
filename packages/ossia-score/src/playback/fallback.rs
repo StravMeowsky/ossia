@@ -359,6 +359,7 @@ pub(super) fn visual_note_groups(
                     voice: onset.voice.clone(),
                     start_seconds: Some(performed.start_seconds),
                     duration_seconds: Some(performed.end_seconds - performed.start_seconds),
+                    playhead_seconds: None,
                     part_id: None,
                 });
             }
@@ -388,6 +389,7 @@ pub(super) fn visual_note_groups(
             voice: None,
             start_seconds: Some(performed.start_seconds),
             duration_seconds: Some(performed.end_seconds - performed.start_seconds),
+            playhead_seconds: None,
             part_id: None,
         });
     }
@@ -446,6 +448,7 @@ fn push_visual_groups(
                 voice: onset.voice.clone(),
                 start_seconds: Some(performed.start_seconds),
                 duration_seconds: Some(performed.end_seconds - performed.start_seconds),
+                playhead_seconds: None,
                 part_id: None,
             });
         }
@@ -591,6 +594,7 @@ fn push_group(
             voice,
             start_seconds: Some(start_seconds),
             duration_seconds: Some(end_seconds - start_seconds),
+            playhead_seconds: None,
             part_id: None,
         });
     }

@@ -83,6 +83,7 @@ soprano = \relative c'' {
         d16^( cis16 b16 a16) g'8 b,4 cis8
 
         %16-20
+        % In measure 16 the d2 resolution sounds with bassThree's a,8.
         \appoggiatura cis16 d8^~[ d32 e32 d32 cis32] \appoggiatura cis8 d2
     } %end of repeated section
     \repeat volta 2 { %begin repeated section

@@ -32,6 +32,7 @@ pub(super) struct NoteGroupBuild {
     pub(super) groups: Vec<PlaybackNoteGroup>,
     pub(super) muted_notes: Vec<MutedNote>,
     pub(super) element_positions: HashMap<String, ElementPosition>,
+    pub(super) pages: Vec<GeometryPage>,
 }
 
 pub(super) struct ElementPosition {
@@ -405,6 +406,7 @@ pub(super) fn note_groups(
                 voice: Some(event.voice.clone()),
                 start_seconds: None,
                 duration_seconds: None,
+                playhead_seconds: None,
                 part_id: None,
             });
             continue;
@@ -692,6 +694,7 @@ pub(super) fn note_groups(
                 voice: Some(event.voice.clone()),
                 start_seconds,
                 duration_seconds,
+                playhead_seconds: None,
                 part_id: muted_key.map(|(_, track, channel)| format!("{track}:{channel}")),
             });
             continue;
@@ -717,6 +720,7 @@ pub(super) fn note_groups(
                 voice: Some(event.voice.clone()),
                 start_seconds,
                 duration_seconds,
+                playhead_seconds: None,
                 part_id: muted_key.map(|(_, track, channel)| format!("{track}:{channel}")),
             });
         }
@@ -916,6 +920,7 @@ pub(super) fn note_groups(
         groups,
         muted_notes,
         element_positions,
+        pages,
     })
 }
 

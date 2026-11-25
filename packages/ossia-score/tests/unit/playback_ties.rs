@@ -48,6 +48,7 @@ fn group(start: f64, element_ids: &[&str]) -> PlaybackNoteGroup {
         voice: Some("music".into()),
         start_seconds: Some(start),
         duration_seconds: Some(0.5),
+        playhead_seconds: None,
         part_id: None,
     }
 }

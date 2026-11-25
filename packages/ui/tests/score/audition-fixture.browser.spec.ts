@@ -17,6 +17,7 @@ interface Fixture {
   playback: ScorePlayback;
   pages: [number, string][];
   trace: { time: number; page: number; system: number; x: number }[];
+  auditionAttacks: Record<number, number[]>;
 }
 const input = process.env.OSSIA_AUDITION_FIXTURES;
 const fixtures: Fixture[] = input ? JSON.parse(readFileSync(input, 'utf8')) : [];
@@ -50,6 +51,16 @@ async function showPage(page: Page, number: number) {
   await expect(host.locator('.score-image')).toBeVisible();
 }
 
+async function audioModuleUrl(page: Page) {
+  return page.evaluate(() => {
+    const entry = performance
+      .getEntriesByType('resource')
+      .find(({ name }) => new URL(name).pathname === '/src/score/scoreAudio.ts');
+    if (!entry) throw new Error('Score audio module was not loaded');
+    return entry.name;
+  });
+}
+
 test.describe.configure({ mode: 'parallel' });
 // Repeated SVG snapshots dominate full-score traversal; retain actions and failure screenshots.
 test.use({
@@ -58,28 +69,91 @@ test.use({
 });
 
 for (const fixture of fixtures) {
+  if (fixture.id === 'bach-goldberg-aria') {
+    test('Goldberg mordent and appoggiatura use their performed durations', async ({
+      context,
+      page,
+    }) => {
+      await openFixture(context, page, fixture);
+      await page.evaluate(
+        async (modulePath) => {
+          const { scoreAudio } = await import(modulePath);
+          let origin: number | undefined;
+          Reflect.set(window, 'fixtureClock', 0);
+          Reflect.set(window, 'ornamentAttacks', []);
+          scoreAudio.now = () => Reflect.get(window, 'fixtureClock');
+          Reflect.set(scoreAudio, 'load', async () => {});
+          Reflect.set(scoreAudio, 'resume', async () => {});
+          scoreAudio.play = async (
+            [pitch]: number[],
+            start: number,
+            duration: number,
+            _instrument: string,
+            exact: boolean,
+          ) => {
+            origin ??= start;
+            if (exact && start - origin < 4) {
+              Reflect.get(window, 'ornamentAttacks').push([
+                pitch,
+                Math.round((start - origin) * 1e3),
+                Math.round(duration * 1e3),
+              ]);
+            }
+          };
+        },
+        await audioModuleUrl(page),
+      );
+      await page.getByRole('button', { name: '播放', exact: true }).click();
+      await expect(page.getByRole('button', { name: '暂停', exact: true })).toBeVisible();
+      const attacks = () =>
+        page.evaluate(() => Reflect.get(window, 'ornamentAttacks') as number[][]);
+      for (const [clock, count] of [
+        [1.96, 2],
+        [2.1, 4],
+        [2.23, 6],
+        [3.42, 7],
+        [3.67, 8],
+      ]) {
+        await page.evaluate((time) => Reflect.set(window, 'fixtureClock', time), clock);
+        await expect.poll(async () => (await attacks()).length).toBeGreaterThanOrEqual(count!);
+      }
+      expect(await attacks()).toEqual([
+        [83, 2000, 65],
+        [81, 2065, 65],
+        [83, 2130, 65],
+        [81, 2195, 65],
+        [79, 2260, 65],
+        [81, 2325, 425],
+        [79, 3500, 250],
+        [78, 3750, 250],
+      ]);
+    });
+  }
+
   test(`${fixture.id}: real noteheads click individually, arrows visit each group, Alt combines attacks`, async ({
     context,
     page,
   }) => {
     test.setTimeout(900_000);
     const { timeline, geometry } = await openFixture(context, page, fixture);
-    await page.evaluate(async () => {
-      const modulePath = '/src/score/scoreAudio.ts';
-      const { scoreAudio } = await import(modulePath);
-      const play = scoreAudio.play.bind(scoreAudio);
-      const calls: number[][] = [];
-      Reflect.set(window, 'auditionCalls', calls);
-      scoreAudio.play = async (
-        pitches: number[],
-        start: number,
-        duration: number,
-        instrument: string,
-      ) => {
-        calls.push([...pitches]);
-        await play(pitches, start, duration, instrument);
-      };
-    });
+    await page.evaluate(
+      async (modulePath) => {
+        const { scoreAudio } = await import(modulePath);
+        const play = scoreAudio.play.bind(scoreAudio);
+        const calls: number[][] = [];
+        Reflect.set(window, 'auditionCalls', calls);
+        scoreAudio.play = async (
+          pitches: number[],
+          start: number,
+          duration: number,
+          instrument: string,
+        ) => {
+          calls.push([...pitches]);
+          await play(pitches, start, duration, instrument);
+        };
+      },
+      await audioModuleUrl(page),
+    );
     for (const scorePage of geometry.pages) {
       await showPage(page, scorePage.page);
       const playable = scorePage.elements.filter(
@@ -241,10 +315,7 @@ for (const fixture of fixtures) {
         const group = groupFor(head);
         if (group.startSeconds === null || onsets.has(group.startSeconds)) continue;
         onsets.add(group.startSeconds);
-        const expected = timeline.notes
-          .filter((note) => Math.abs(note.startSeconds - group.startSeconds!) < 0.001)
-          .map((note) => note.pitch)
-          .sort((a, b) => a - b);
+        const expected = group.pitches.length ? fixture.auditionAttacks[group.startSeconds] : [];
         await reset();
         await click(head, true);
         await expect.poll(sounds, { message: `Alt at ${group.startSeconds}` }).toEqual(expected);
@@ -255,22 +326,27 @@ for (const fixture of fixtures) {
   test(`${fixture.id}: playhead visits every onset on every page`, async ({ context, page }) => {
     test.setTimeout(180_000);
     await openFixture(context, page, fixture);
-    await page.evaluate(async (firstOnset) => {
-      const modulePath = '/src/score/scoreAudio.ts';
-      const { scoreAudio } = await import(modulePath);
-      Reflect.set(window, 'fixtureClock', 0);
-      Reflect.set(window, 'fixtureLead', null);
-      Reflect.set(scoreAudio, 'load', async () => {});
-      Reflect.set(scoreAudio, 'resume', async () => {});
-      scoreAudio.now = () => Reflect.get(window, 'fixtureClock');
-      scoreAudio.play = async (_pitches: number[], start: number) => {
-        if (Reflect.get(window, 'fixtureLead') === null) {
-          const lead = start - firstOnset;
-          Reflect.set(window, 'fixtureLead', lead);
-          Reflect.set(window, 'fixtureClock', Reflect.get(window, 'fixtureClock') + lead);
-        }
-      };
-    }, fixture.playback.notes[0]?.startSeconds ?? 0);
+    await page.evaluate(
+      async ({ modulePath, firstOnset }) => {
+        const { scoreAudio } = await import(modulePath);
+        Reflect.set(window, 'fixtureClock', 0);
+        Reflect.set(window, 'fixtureLead', null);
+        Reflect.set(scoreAudio, 'load', async () => {});
+        Reflect.set(scoreAudio, 'resume', async () => {});
+        scoreAudio.now = () => Reflect.get(window, 'fixtureClock');
+        scoreAudio.play = async (_pitches: number[], start: number) => {
+          if (Reflect.get(window, 'fixtureLead') === null) {
+            const lead = start - firstOnset;
+            Reflect.set(window, 'fixtureLead', lead);
+            Reflect.set(window, 'fixtureClock', Reflect.get(window, 'fixtureClock') + lead);
+          }
+        };
+      },
+      {
+        modulePath: await audioModuleUrl(page),
+        firstOnset: fixture.playback.notes[0]?.startSeconds ?? 0,
+      },
+    );
     await page.getByRole('button', { name: '播放', exact: true }).click();
     await expect(page.getByRole('button', { name: '暂停', exact: true })).toBeVisible();
     let currentPage = 0;
@@ -289,6 +365,18 @@ for (const fixture of fixtures) {
           intervals: [16],
         })
         .toBeCloseTo(frame.x, 4);
+    }
+    if (fixture.id === 'bach-goldberg-aria') {
+      const last = fixture.trace.at(-1)!;
+      await page.evaluate(async () => {
+        Reflect.set(window, 'fixtureClock', 96.75 + Reflect.get(window, 'fixtureLead'));
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      });
+      await expect(page.getByRole('button', { name: '暂停', exact: true })).toBeVisible();
+      const line = page.locator(`[data-page="${last.page}"] .score-playhead`);
+      await expect.poll(async () => Number(await line.getAttribute('x1'))).toBeCloseTo(last.x, 4);
     }
     await page.getByRole('button', { name: '暂停', exact: true }).click();
   });

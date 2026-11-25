@@ -144,8 +144,9 @@ export function useScorePlayback(
         .play(
           [note.pitch],
           anchorRef.current + note.startSeconds,
-          Math.max(0.05, note.durationSeconds),
+          note.ornamentAnchor ? note.durationSeconds : Math.max(0.05, note.durationSeconds),
           settingsRef.current?.instruments[note.partId] ?? note.instrument,
+          !!note.ornamentAnchor,
         )
         .catch(onError);
     }
@@ -301,13 +302,21 @@ export function useScorePlayback(
       if (sounds.length) {
         try {
           const instruments = sounds.map((member) => {
-            const note = timelineRef.current?.notes.find(
-              (candidate) =>
-                candidate.partId === member.partId &&
+            const note = timelineRef.current?.notes.find((candidate) => {
+              const start = member.startSeconds;
+              if (candidate.partId !== member.partId || start === null) return false;
+              if (candidate.ornamentAnchor) {
+                return (
+                  member.elementIds.includes(candidate.ornamentAnchor) &&
+                  candidate.startSeconds >= start - 0.001 &&
+                  candidate.startSeconds <= start + (member.durationSeconds ?? 0) + 0.001
+                );
+              }
+              return (
                 member.pitches.includes(candidate.pitch) &&
-                member.startSeconds !== null &&
-                Math.abs(candidate.startSeconds - member.startSeconds) < 0.001,
-            );
+                Math.abs(candidate.startSeconds - start) < 0.001
+              );
+            });
             return (
               (member.partId && settingsRef.current?.instruments[member.partId]) ||
               note?.instrument ||

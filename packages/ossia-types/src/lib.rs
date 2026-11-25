@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 pub const PROTOCOL_VERSION: u32 = 13;
 /// Version of interactive SVG metadata and derived render caches.
-pub const INTERACTION_VERSION: u32 = 9;
+pub const INTERACTION_VERSION: u32 = 12;
 pub const SCHEMA_VERSION: u32 = 4;
 /// Default loopback port for installed builds. Development launchers select 3211.
 pub const DEFAULT_BACKEND_PORT: u16 = 3212;

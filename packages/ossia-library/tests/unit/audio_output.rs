@@ -1,5 +1,4 @@
 use super::clip_playback;
-use ossia_score::{MidiDivision, MidiFile, MidiTimeSignature};
 use ossia_types::*;
 
 #[test]
@@ -12,6 +11,7 @@ fn clips_playback_to_overlapping_measure_range() {
         parts: Vec::new(),
         notes: vec![
             PlaybackNote {
+                ornament_anchor: None,
                 part_id: "a".into(),
                 instrument: SampleInstrument::Guitar,
                 pitch: 60,
@@ -19,6 +19,7 @@ fn clips_playback_to_overlapping_measure_range() {
                 duration_seconds: 1.5,
             },
             PlaybackNote {
+                ornament_anchor: None,
                 part_id: "a".into(),
                 instrument: SampleInstrument::Guitar,
                 pitch: 62,
@@ -26,6 +27,7 @@ fn clips_playback_to_overlapping_measure_range() {
                 duration_seconds: 0.5,
             },
             PlaybackNote {
+                ornament_anchor: None,
                 part_id: "b".into(),
                 instrument: SampleInstrument::Violin,
                 pitch: 64,
@@ -33,6 +35,7 @@ fn clips_playback_to_overlapping_measure_range() {
                 duration_seconds: 1.0,
             },
             PlaybackNote {
+                ornament_anchor: None,
                 part_id: "a".into(),
                 instrument: SampleInstrument::Guitar,
                 pitch: 65,
@@ -54,20 +57,7 @@ fn clips_playback_to_overlapping_measure_range() {
             y1: 1.0,
         }],
     };
-    let midi = MidiFile {
-        format: 1,
-        division: MidiDivision::Ppqn {
-            ticks_per_quarter: 96,
-        },
-        tracks: Vec::new(),
-        time_signatures: vec![MidiTimeSignature {
-            tick: 0,
-            numerator: 4,
-            denominator: 4,
-        }],
-        tempos: Vec::new(),
-    };
-    let clipped = clip_playback(playback, &midi, MeasureRange { start: 2, end: 3 }).unwrap();
+    let clipped = clip_playback(playback, 2.0..6.0, 3).unwrap();
     assert_eq!(clipped.notes[2].part_id, "b");
     assert_eq!(clipped.notes[2].instrument, SampleInstrument::Violin);
     assert_eq!(clipped.duration_seconds, 4.0);

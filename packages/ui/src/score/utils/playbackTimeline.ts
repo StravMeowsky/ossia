@@ -14,13 +14,22 @@ export function measureSpanAt(timeline: ScorePlayback, position: number) {
   );
 }
 
+/** Time at which the playhead visits a printed notehead or rest. */
+export function playheadOnset(group: PlaybackNoteGroup) {
+  return group.playheadSeconds ?? group.startSeconds;
+}
+
 export function groupAt(timeline: ScorePlayback, position: number) {
-  const previous = timeline.groups.filter(
-    (group) => group.startSeconds !== null && group.startSeconds <= position + 0.001,
-  );
-  if (!previous.length) return null;
-  const latest = Math.max(...previous.map((group) => group.startSeconds ?? 0));
-  const current = previous.filter((group) => Math.abs((group.startSeconds ?? 0) - latest) <= 0.001);
+  const limit = position + SIMULTANEOUS_ONSET_SECONDS;
+  let latest = -Infinity;
+  for (const group of timeline.groups) {
+    const onset = playheadOnset(group);
+    if (onset !== null && onset <= limit) latest = Math.max(latest, onset);
+  }
+  const current = timeline.groups.filter((group) => {
+    const onset = playheadOnset(group);
+    return onset !== null && onset <= limit && latest - onset <= SIMULTANEOUS_ONSET_SECONDS;
+  });
   return current.find((group) => group.pitches.length > 0) ?? current[0] ?? null;
 }
 

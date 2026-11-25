@@ -406,6 +406,10 @@ pub struct PlaybackNote {
     pub duration_seconds: f64,
     pub part_id: String,
     pub instrument: SampleInstrument,
+    /// Printed notehead that owns this ornament attack.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ornament_anchor: Option<String>,
 }
 
 /// One independently assignable sounding part in a score render.
@@ -430,6 +434,10 @@ pub struct PlaybackNoteGroup {
     pub voice: Option<String>,
     pub start_seconds: Option<f64>,
     pub duration_seconds: Option<f64>,
+    /// Display time for this printed head when a grace note and its beat need separate steps.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub playhead_seconds: Option<f64>,
     pub part_id: Option<String>,
 }
 

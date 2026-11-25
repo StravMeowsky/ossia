@@ -270,6 +270,7 @@ pub(crate) fn read_svg(
                                 objects.push(SvgObject {
                                     note: object.note,
                                     timing: object.timing,
+                                    ornament: object.ornament.clone(),
                                     kind: object.kind.clone(),
                                     bbox,
                                     span: object.span,

@@ -67,11 +67,12 @@ export class ScoreAudio {
     start: number,
     duration: number,
     instrument: SampleInstrument,
+    exactDuration = false,
   ) {
     const state = await this.load([instrument]);
     const bank = await this.bank(state, instrument);
     const when = Math.max(start, state.context.currentTime);
-    const length = Math.max(0.05, duration);
+    const length = exactDuration ? duration : Math.max(0.05, duration);
     for (const pitch of pitches) {
       const sample = bank.samples.reduce((best, candidate) =>
         Math.abs(candidate.pitch - pitch) < Math.abs(best.pitch - pitch) ? candidate : best,

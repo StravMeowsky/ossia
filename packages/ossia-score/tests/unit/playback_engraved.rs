@@ -125,6 +125,7 @@ fn muted_heads_remain_silent() {
         voice: Some("music".into()),
         start_seconds: Some(0.),
         duration_seconds: Some(0.5),
+        playhead_seconds: None,
         part_id: None,
     }];
     note_groups(
@@ -153,14 +154,15 @@ fn moments_reject_negative_non_integral_and_zero_denominator_ticks() {
         grace_numerator: 0,
         grace_denominator: 1,
     };
-    assert_eq!(tick(note, 480), Some(480));
+    assert_eq!(tick(note, 480, 0), Some(480));
     assert_eq!(
         tick(
             EngravedNote {
                 numerator: -1,
                 ..note
             },
-            480
+            480,
+            0
         ),
         None
     );
@@ -170,7 +172,8 @@ fn moments_reject_negative_non_integral_and_zero_denominator_ticks() {
                 denominator: 7,
                 ..note
             },
-            480
+            480,
+            0
         ),
         None
     );
@@ -180,7 +183,8 @@ fn moments_reject_negative_non_integral_and_zero_denominator_ticks() {
                 denominator: 0,
                 ..note
             },
-            480
+            480,
+            0
         ),
         None
     );
@@ -200,6 +204,7 @@ fn accurate_groups_keep_their_joined_notation_targets() {
         voice: Some("music".into()),
         start_seconds: Some(0.),
         duration_seconds: Some(0.5),
+        playhead_seconds: None,
         part_id: Some("0:0".into()),
     }];
     note_groups(

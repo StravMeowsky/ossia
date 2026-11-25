@@ -10,10 +10,17 @@ struct Head<'a> {
     voice: Option<&'a str>,
 }
 
-fn tick(note: EngravedNote, ppqn: u64) -> Option<u64> {
+pub(super) fn tick(note: EngravedNote, ppqn: u64, midi_origin: u64) -> Option<u64> {
     if note.grace_numerator == 0 {
-        return moment_ticks(i128::from(note.numerator), note.denominator, ppqn);
+        return moment_ticks(i128::from(note.numerator), note.denominator, ppqn)?
+            .checked_add(midi_origin);
     }
+    (grace_ticks(note, ppqn)? + i128::from(midi_origin))
+        .try_into()
+        .ok()
+}
+
+fn grace_ticks(note: EngravedNote, ppqn: u64) -> Option<i128> {
     if note.denominator == 0 || note.grace_denominator == 0 {
         return None;
     }
@@ -26,10 +33,35 @@ fn tick(note: EngravedNote, ppqn: u64) -> Option<u64> {
     let denominator = i128::from(note.denominator)
         .checked_mul(i128::from(note.grace_denominator))?
         .checked_mul(40)?;
-    (numerator / denominator).try_into().ok()
+    Some(numerator / denominator)
 }
 
-fn moment_ticks(numerator: i128, denominator: u64, ppqn: u64) -> Option<u64> {
+/// LilyPond offsets the full MIDI score when the first grace begins before tick zero.
+pub(super) fn midi_origin(index: &ScoreIndex, layout: &ScoreLayout, ppqn: u64) -> u64 {
+    let leading = layout
+        .pages
+        .iter()
+        .flat_map(|page| &page.objects)
+        .filter(|object| !object.hit_only)
+        .filter_map(|object| {
+            let note = object.note?;
+            (note.numerator == 0 && note.grace_numerator < 0).then_some((object, note))
+        });
+    if !leading
+        .clone()
+        .any(|(object, _)| super::graces::is_marked(object))
+        || super::ornaments::midi_is_articulated(index)
+    {
+        return 0;
+    }
+    leading
+        .filter_map(|(_, note)| grace_ticks(note, ppqn))
+        .min()
+        .and_then(|tick| (-tick).try_into().ok())
+        .unwrap_or(0)
+}
+
+pub(super) fn moment_ticks(numerator: i128, denominator: u64, ppqn: u64) -> Option<u64> {
     if denominator == 0 {
         return None;
     }
@@ -47,6 +79,7 @@ fn rest_groups(
     pages: &[GeometryPage],
     midi: &MidiFile,
     ppqn: u64,
+    midi_origin: u64,
     groups: &mut Vec<PlaybackNoteGroup>,
 ) {
     let timings = layout
@@ -83,7 +116,8 @@ fn rest_groups(
             continue;
         }
         let (Some(start), Some(length)) = (
-            moment_ticks(i128::from(timing.numerator), timing.denominator, ppqn),
+            moment_ticks(i128::from(timing.numerator), timing.denominator, ppqn)
+                .and_then(|time| time.checked_add(midi_origin)),
             moment_ticks(
                 i128::from(timing.duration_numerator),
                 timing.duration_denominator,
@@ -114,6 +148,7 @@ fn rest_groups(
                 voice: element.region.voice.clone(),
                 start_seconds: Some(start_seconds),
                 duration_seconds: Some(seconds_at(end, ppqn, midi) - start_seconds),
+                playhead_seconds: None,
                 part_id: None,
             },
         );
@@ -140,7 +175,8 @@ pub(super) fn note_groups(
     hints: &HashMap<String, u8>,
     groups: &mut Vec<PlaybackNoteGroup>,
 ) {
-    rest_groups(layout, pages, midi, ppqn, groups);
+    let midi_origin = midi_origin(index, layout, ppqn);
+    rest_groups(layout, pages, midi, ppqn, midi_origin, groups);
     let muted = groups
         .iter()
         .filter(|group| group.pitches.is_empty())
@@ -175,10 +211,10 @@ pub(super) fn note_groups(
                 .filter_map(|id| objects.get(id.as_str()))
                 .collect::<Vec<_>>();
             let note = **notes.first()?;
-            if notes
-                .iter()
-                .any(|other| other.pitch != note.pitch || tick(**other, ppqn) != tick(note, ppqn))
-            {
+            if notes.iter().any(|other| {
+                other.pitch != note.pitch
+                    || tick(**other, ppqn, midi_origin) != tick(note, ppqn, midi_origin)
+            }) {
                 return None;
             }
             Some(Head {
@@ -216,7 +252,7 @@ pub(super) fn note_groups(
         if chain.iter().any(|id| !by_id.contains_key(id.as_str())) {
             continue;
         }
-        chain.sort_by_key(|id| tick(by_id[id.as_str()].note, ppqn));
+        chain.sort_by_key(|id| tick(by_id[id.as_str()].note, ppqn, midi_origin));
         continuations.extend(chain.into_iter().skip(1));
     }
     let mut offsets = HashMap::<(Option<usize>, Option<&str>), HashSet<i16>>::new();
@@ -227,7 +263,7 @@ pub(super) fn note_groups(
         if head.note.pitch.fract() != 0. {
             continue;
         }
-        let Some(time) = tick(head.note, ppqn) else {
+        let Some(time) = tick(head.note, ppqn, midi_origin) else {
             continue;
         };
         let candidates = midi
@@ -261,7 +297,7 @@ pub(super) fn note_groups(
             replaced.insert(head.id);
             continue;
         }
-        let Some(time) = tick(head.note, ppqn) else {
+        let Some(time) = tick(head.note, ppqn, midi_origin) else {
             continue;
         };
         let matching = midi
@@ -311,6 +347,7 @@ pub(super) fn note_groups(
             voice: head.voice.map(str::to_owned),
             start_seconds: Some(start),
             duration_seconds,
+            playhead_seconds: None,
             part_id: (matching.len() == 1).then(|| format!("{track}:{}", note.channel)),
         });
         replaced.insert(head.id);

@@ -18,6 +18,7 @@ fn ledger_line_notes_keep_their_system() {
     let note = SvgObject {
         note: None,
         timing: None,
+        ornament: None,
         kind: "NoteHead".into(),
         bbox: BBox {
             x0: 20.,
@@ -59,6 +60,7 @@ fn staff_ids_outside_the_system_group_fall_back_to_geometry() {
     let note = |staff_index, y| SvgObject {
         note: None,
         timing: None,
+        ornament: None,
         kind: "NoteHead".into(),
         bbox: BBox {
             x0: 20.,

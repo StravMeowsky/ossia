@@ -101,10 +101,18 @@ fn imported_scores_have_playback_trajectory() {
                     note.start_seconds >= system.start_seconds
                         && note.start_seconds < system.end_seconds
                 }) || !playback.groups.iter().any(|group| {
-                    group.pitches.contains(&note.pitch)
-                        && group
-                            .start_seconds
-                            .is_some_and(|start| (start - note.start_seconds).abs() < 0.001)
+                    group.start_seconds.is_some_and(|start| {
+                        if let Some(anchor) = &note.ornament_anchor {
+                            group.element_ids.contains(anchor)
+                                && group.part_id.as_ref() == Some(&note.part_id)
+                                && start <= note.start_seconds + 0.001
+                                && note.start_seconds + note.duration_seconds
+                                    <= start + group.duration_seconds.unwrap_or(0.) + 0.001
+                        } else {
+                            group.pitches.contains(&note.pitch)
+                                && (start - note.start_seconds).abs() < 0.001
+                        }
+                    })
                 })
             })
             .count();

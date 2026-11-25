@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, test, vi } from 'vite-plus/test';
 
-import { auditAudition } from '../../../scripts/verify/audition-audit.mjs';
+import { auditionAttacks, auditAudition } from '../../../scripts/verify/audition-audit.mjs';
 import { runAuditionCases } from '../../../scripts/verify/audition-cases.mjs';
 import { auditPlayback } from '../../../scripts/verify/playback-audit.mjs';
 import { fixtureRenderer, root } from '../../../scripts/verify/render-fixture.mjs';
@@ -18,7 +18,10 @@ vi.mock('node:fs', () => ({
   rmSync: vi.fn(),
   writeFileSync: vi.fn(),
 }));
-vi.mock('../../../scripts/verify/audition-audit.mjs', () => ({ auditAudition: vi.fn() }));
+vi.mock('../../../scripts/verify/audition-audit.mjs', () => ({
+  auditionAttacks: vi.fn(),
+  auditAudition: vi.fn(),
+}));
 vi.mock('../../../scripts/verify/playback-audit.mjs', () => ({ auditPlayback: vi.fn() }));
 vi.mock('../../../scripts/verify/render-fixture.mjs', () => ({
   root: process.cwd(),
@@ -41,6 +44,7 @@ beforeEach(() => {
   mkdtempSync.mockReturnValue(directory);
   fixtureRenderer.mockReturnValue(vi.fn(() => bundle));
   auditAudition.mockReturnValue({ issues: [] });
+  auditionAttacks.mockReturnValue({ 0: [60] });
   auditPlayback.mockReturnValue({ issues: [], untimedGroups: 0, trace });
 });
 afterEach(() => vi.restoreAllMocks());
@@ -49,7 +53,12 @@ test('passes only selected fixture data and the flattened trace to Playwright', 
   assert.equal(runAuditionCases(['two']), 0);
   const input = path.join(directory, 'fixtures.json');
   assert.deepEqual(JSON.parse(writeFileSync.mock.calls[0][1]), [
-    { id: 'two', ...bundle, trace: [{ time: 0, x: 12, page: 1, system: 0 }, { time: 1 }] },
+    {
+      id: 'two',
+      ...bundle,
+      auditionAttacks: { 0: [60] },
+      trace: [{ time: 0, x: 12, page: 1, system: 0 }, { time: 1 }],
+    },
   ]);
   const [command, args, options] = execFileSync.mock.calls[0];
   assert.equal(command, process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm');
@@ -78,7 +87,12 @@ test('exports validated fixtures for browser shards without starting Playwright'
       ([filename]) => filename === '/tmp/audition-fixtures.json',
     );
     assert.deepEqual(JSON.parse(exported[1]), [
-      { id: 'one', ...bundle, trace: [{ time: 0, x: 12, page: 1, system: 0 }, { time: 1 }] },
+      {
+        id: 'one',
+        ...bundle,
+        auditionAttacks: { 0: [60] },
+        trace: [{ time: 0, x: 12, page: 1, system: 0 }, { time: 1 }],
+      },
     ]);
   } finally {
     vi.unstubAllEnvs();

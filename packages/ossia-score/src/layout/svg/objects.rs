@@ -19,6 +19,8 @@ pub struct EngravedTiming {
     pub denominator: u64,
     pub duration_numerator: u64,
     pub duration_denominator: u64,
+    #[serde(default)]
+    pub dots: u8,
 }
 
 /// Exact stencil bounds and source metadata emitted by the engine.
@@ -27,6 +29,9 @@ pub struct EngravedTiming {
 pub struct SvgObject {
     pub note: Option<EngravedNote>,
     pub timing: Option<EngravedTiming>,
+    /// Engraved ornament symbol, arpeggio direction, grace kind, or neighbor intervals.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ornament: Option<String>,
     pub kind: String,
     pub bbox: BBox,
     pub span: Option<ossia_types::SourceSpan>,
@@ -41,6 +46,7 @@ pub struct SvgObject {
 pub(super) struct ObjectOrigin {
     pub(super) note: Option<EngravedNote>,
     pub(super) timing: Option<EngravedTiming>,
+    pub(super) ornament: Option<String>,
     pub(super) kind: String,
     pub(super) span: Option<ossia_types::SourceSpan>,
     pub(super) staff_index: Option<usize>,
@@ -78,7 +84,7 @@ pub(super) fn read(
         .map(|raw| {
             let fields = raw.split(',').collect::<Vec<_>>();
             let invalid = || AppError::invalid("invalid engraved timing metadata");
-            if fields.len() != 4 {
+            if !matches!(fields.len(), 4 | 5) {
                 return Err(invalid());
             }
             let timing = EngravedTiming {
@@ -86,6 +92,10 @@ pub(super) fn read(
                 denominator: fields[1].parse().map_err(|_| invalid())?,
                 duration_numerator: fields[2].parse().map_err(|_| invalid())?,
                 duration_denominator: fields[3].parse().map_err(|_| invalid())?,
+                dots: fields
+                    .get(4)
+                    .map_or(Ok(0), |value| value.parse())
+                    .map_err(|_| invalid())?,
             };
             if timing.denominator == 0 || timing.duration_denominator == 0 {
                 return Err(invalid());
@@ -95,6 +105,7 @@ pub(super) fn read(
         .transpose()?;
     let origin = ObjectOrigin {
         timing,
+        ornament: attrs.get("data-ossia-ornament").cloned(),
         note: attrs
             .get("data-ossia-note")
             .map(|raw| {
@@ -150,6 +161,7 @@ pub(super) fn read(
             Ok(SvgObject {
                 note: origin.note,
                 timing: origin.timing,
+                ornament: origin.ornament.clone(),
                 kind: kind.clone(),
                 bbox: matrix.bbox(BBox::points(&[
                     (coords[0], coords[1]),

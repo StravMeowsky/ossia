@@ -43,6 +43,52 @@
 #(define ossia-heads '())
 #(define ossia-attachments (make-hash-table))
 #(define ossia-graces (make-hash-table))
+#(define ossia-neighbors (make-hash-table))
+
+#(define (ossia-fermata? event)
+   (and (ly:stream-event? event)
+        (memq (ly:event-property event 'articulation-type #f)
+              '(fermata shortfermata longfermata veryshortfermata verylongfermata
+                henzeshortfermata henzelongfermata))))
+
+#(define (ossia-ornament event)
+   (let ((name (and (ly:stream-event? event)
+                    (ly:event-property event 'articulation-type #f))))
+     (and (memq name '(mordent prall prallmordent downprall prallup
+                      prallprall turn reverseturn trill))
+          name)))
+
+#(define (ossia-neighbor-context context pitch step)
+   (let* ((degree (+ (ly:pitch-notename pitch) step))
+          (octave (+ (ly:pitch-octave pitch) (floor (/ degree 7))))
+          (name (modulo degree 7))
+          (neighbor (ly:make-pitch octave name))
+          (local (assoc-get (cons octave name) (ly:context-property context 'localAlterations '())))
+          (key (find-pitch-entry (ly:context-property context 'keyAlterations '()) neighbor #t #f))
+          (alteration (cond
+                        ((and (pair? local) (number? (car local))
+                              (eqv? (cadr local) (ly:context-property context 'currentBarNumber)))
+                         (car local))
+                        (key (cdr key))
+                        (else 0))))
+     (- (* 2 (ly:pitch-tones (ly:make-pitch octave name alteration)))
+        (* 2 (ly:pitch-tones pitch)))))
+
+#(define (ossia-ornament-metadata kind grob cause)
+   (cond
+     ((ossia-note-head-name? kind)
+      (let ((grace (and (ly:stream-event? cause)
+                        (ly:event-property cause 'ossia-grace-kind #f))))
+        (if grace (symbol->string grace) (hashq-ref ossia-neighbors grob ""))))
+     ((memq kind '(Script MultiMeasureRestScript))
+      (let ((ornament (ossia-ornament cause)))
+        (cond (ornament (symbol->string ornament))
+              ((ossia-fermata? cause) "fermata")
+              (else ""))))
+     ((eq? kind 'Arpeggio)
+      (if (eqv? (ly:grob-property grob 'arpeggio-direction) DOWN) "down" "up"))
+     (else "")))
+
 #(define (ossia-id grob)
    (or (hashq-ref ossia-grob-ids grob)
        (begin
@@ -95,6 +141,23 @@
 #(define (ossia-origin-key origin)
    (and (ly:input-location? origin)
         (format #f "~a" (ly:input-file-line-char-column origin))))
+
+#(set-object-property! 'ossia-grace-kind 'music-type? symbol?)
+#(define (ossia-grace-function name kind)
+   (let ((original (ly:music-function-extract (ly:parser-lookup name))))
+     (define-music-function (music) (ly:music?)
+       (original
+         (music-map
+           (lambda (note)
+             (when (music-is-of-type? note 'note-event)
+               (ly:music-set-property! note 'ossia-grace-kind kind))
+             note)
+           (ly:music-deep-copy music))))))
+
+appoggiatura = #(ossia-grace-function 'appoggiatura 'appoggiatura)
+acciaccatura = #(ossia-grace-function 'acciaccatura 'acciaccatura)
+slashedGrace = #(ossia-grace-function 'slashedGrace 'acciaccatura)
+
 #(define ossia-original-after-grace
    (ly:music-function-extract (ly:parser-lookup 'afterGrace)))
 afterGrace =
@@ -194,8 +257,8 @@ afterGrace =
             (when (ossia-note-head-name? kind) (set! ossia-heads (cons grob ossia-heads)))
             (when (memq kind '(Stem Beam Flag Dots Accidental AccidentalCautionary StemTremolo
                               NoteHead TabNoteHead Rest MultiMeasureRest Clef KeySignature
-                              TimeSignature DynamicText TextScript TextSpanner Script
-                              Fingering RehearsalMark MetronomeMark Slur PhrasingSlur
+                              TimeSignature DynamicText TextScript TextSpanner Script MultiMeasureRestScript
+                              Fingering Arpeggio RehearsalMark MetronomeMark Slur PhrasingSlur
                               Hairpin Tie TextMark SectionLabel BarLine ChordName
                               InstrumentName ShortInstrumentName))
               (let* ((original (ly:grob-property-data grob 'stencil))
@@ -212,10 +275,12 @@ afterGrace =
                      (duration (and (ly:stream-event? cause)
                                     (ly:event-property cause 'duration #f)))
                      (length (and (ly:duration? duration) (ly:duration->moment duration)))
-                     (timing (if (and length (= 0 (ly:moment-grace-numerator moment)))
-                                 (format #f "~a,~a,~a,~a"
+                     (timing (if (and length (or (ossia-note-head-name? kind)
+                                                 (= 0 (ly:moment-grace-numerator moment))))
+                                 (format #f "~a,~a,~a,~a,~a"
                                    (ly:moment-main-numerator moment) (ly:moment-main-denominator moment)
-                                   (ly:moment-main-numerator length) (ly:moment-main-denominator length))
+                                   (ly:moment-main-numerator length) (ly:moment-main-denominator length)
+                                   (ly:duration-dot-count duration))
                                  ""))
                      (staff-index (if staff (list-index (lambda (s) (eq? s staff)) staves) -1))
                      (origin (ossia-origin grob))
@@ -231,12 +296,25 @@ afterGrace =
                                            (where (format #f "~a:~a" (cadr where) (caddr where)))
                                            (else "-1:-1")))
                            (url (format #f "ossia:~a:~a:~a" piece-kind staff-index location))
-                           (owners (if (eq? kind 'Tie)
-                                       (filter ly:grob? (list (ly:spanner-bound grob LEFT) (ly:spanner-bound grob RIGHT)))
-                                       (ossia-owner-heads piece 0)))
+                           (owners (cond
+                                     ((eq? kind 'Tie)
+                                      (filter ly:grob? (list (ly:spanner-bound grob LEFT) (ly:spanner-bound grob RIGHT))))
+                                     ((eq? kind 'MultiMeasureRestScript)
+                                      (let ((rest (ly:grob-parent piece X)))
+                                        (if (and (ly:grob? rest) (eq? (grob::name rest) 'MultiMeasureRest))
+                                            (list (ly:grob-original rest)) '())))
+                                     ((eq? kind 'Arpeggio)
+                                      (delete-duplicates
+                                        (append-map (lambda (stem) (ossia-owner-heads stem 0))
+                                                    (ossia-grobs (ly:grob-object piece 'stems)))
+                                        eq?))
+                                     (else (ossia-owner-heads piece 0))))
                            (id (ossia-id piece))
-                           (related (if (ossia-note-head-name? kind) (hashq-ref ossia-attachments grob '()) '()))
-                           (metadata (string-append url ":" id ":" (string-join (map ossia-id owners) ",") ":" (string-join (map ossia-id related) ",") ":" note ":" timing)))
+                           (related (cond
+                                      ((ossia-note-head-name? kind) (hashq-ref ossia-attachments grob '()))
+                                      ((and (eq? kind 'MultiMeasureRest) (not (eq? piece grob))) (list grob))
+                                      (else '())))
+                           (metadata (string-append url ":" id ":" (string-join (map ossia-id owners) ",") ":" (string-join (map ossia-id related) ",") ":" note ":" timing ":" (ossia-ornament-metadata kind piece cause))))
                       (ossia-box kind (ly:unpure-call original piece) metadata id owners piece)))))))))
        ((stop-translation-timestep engraver)
         (let ((voices (delete-duplicates (map cdr timestep) eq?)))
@@ -265,13 +343,30 @@ afterGrace =
                   (lambda (grob)
                     (when (memq (grob::name grob) '(Script Fingering TextScript))
                       (let* ((event (ly:grob-property grob 'cause))
+                             (rhythmic (if (ossia-fermata? event)
+                                           (append heads (filter
+                                             (lambda (item) (memq (grob::name item) '(Rest MultiMeasureRest)))
+                                             items))
+                                           heads))
                              (specific (filter
                                (lambda (head)
                                  (let ((cause (ly:grob-property head 'cause)))
                                    (and (ly:stream-event? cause)
                                         (memq event (ly:event-property cause 'articulations '())))))
-                               heads)))
-                        (hashq-set! ossia-attachments grob (if (pair? specific) specific heads)))))
+                               rhythmic))
+                             (owners (if (pair? specific) specific rhythmic)))
+                        (hashq-set! ossia-attachments grob owners)
+                        (when (and (not grace?) (ossia-ornament event))
+                          (for-each
+                            (lambda (head)
+                              (let* ((pitch (ly:event-property (ly:grob-property head 'cause) 'pitch #f))
+                                     (staff (or (ly:context-find voice 'Staff) voice)))
+                                (when (ly:pitch? pitch)
+                                  (hashq-set! ossia-neighbors head
+                                    (format #f "~a,~a"
+                                      (exact->inexact (ossia-neighbor-context staff pitch -1))
+                                      (exact->inexact (ossia-neighbor-context staff pitch 1)))))))
+                            owners)))))
                   items)))
             voices))
         (set! timestep '())))))

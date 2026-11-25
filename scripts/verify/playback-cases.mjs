@@ -14,12 +14,46 @@ export function runPlaybackCases(ids, renderFixture) {
   const render = renderFixture ?? fixtureRenderer();
   let failed = false;
   for (const entry of selected) {
-    const { source, playback, geometry, midiNoteCount } = render(entry);
+    const { source, playback, geometry, layout, midiNoteCount } = render(entry);
     const report = auditPlayback(playback, geometry);
     const elements = geometry.pages.flatMap((page) =>
       page.elements.map((element) => ({ page: page.page, ...element })),
     );
     const failures = [];
+    const ornamentAnchors = new Set(playback.notes.flatMap((note) => note.ornamentAnchor ?? []));
+    if (entry.ornamentAnchors !== undefined && ornamentAnchors.size !== entry.ornamentAnchors) {
+      failures.push({
+        kind: 'ornament-coverage',
+        expected: entry.ornamentAnchors,
+        actual: ornamentAnchors.size,
+      });
+    }
+    if (entry.appoggiaturaCount !== undefined) {
+      const appoggiaturaGraphics = new Set(
+        layout.pages.flatMap((page) =>
+          page.objects
+            .filter((object) => object.ornament === 'appoggiatura')
+            .map((object) => object.graphicId),
+        ),
+      );
+      const sounded = new Set(
+        elements.flatMap((element) => {
+          const { target } = element.region;
+          return target.kind === 'element' &&
+            ornamentAnchors.has(target.elementId) &&
+            element.graphicIds.some((id) => appoggiaturaGraphics.has(id))
+            ? [target.elementId]
+            : [];
+        }),
+      );
+      if (sounded.size !== entry.appoggiaturaCount) {
+        failures.push({
+          kind: 'appoggiatura-coverage',
+          expected: entry.appoggiaturaCount,
+          actual: sounded.size,
+        });
+      }
+    }
     for (const check of entry.checks) {
       if (check.kind === 'forward') {
         const steps = report.trace.filter(
@@ -64,7 +98,7 @@ export function runPlaybackCases(ids, renderFixture) {
           failures.push(check);
         continue;
       }
-      if (!['mapped', 'playhead'].includes(check.kind))
+      if (!['mapped', 'playhead', 'ornament'].includes(check.kind))
         throw new Error(`${entry.id}: unsupported check ${check.kind}`);
       const start = source.indexOf(check.needle);
       if (start < 0 || source.indexOf(check.needle, start + 1) !== -1)
@@ -73,8 +107,11 @@ export function runPlaybackCases(ids, renderFixture) {
       const matching = elements.filter(
         (element) =>
           ['NoteHead', 'TabNoteHead'].includes(element.region.elementKind) &&
-          element.region.spans.some(
-            (span) => span.byteStart <= sourceByte && sourceByte < span.byteEnd,
+          element.region.spans.some((span) =>
+            check.kind === 'ornament'
+              ? sourceByte <= span.byteStart &&
+                span.byteStart < sourceByte + Buffer.byteLength(check.needle)
+              : span.byteStart <= sourceByte && sourceByte < span.byteEnd,
           ),
       );
       const ids = new Set(
@@ -82,6 +119,26 @@ export function runPlaybackCases(ids, renderFixture) {
           .filter((element) => element.region.target.kind === 'element')
           .map((element) => element.region.target.elementId),
       );
+      if (check.kind === 'ornament') {
+        const notes = playback.notes.filter(
+          (note) =>
+            ids.has(note.ornamentAnchor) &&
+            note.startSeconds >= check.time - 0.001 &&
+            note.startSeconds < check.end,
+        );
+        if (
+          notes.length !== check.pitches.length ||
+          notes.some(
+            (note, i) =>
+              note.pitch !== check.pitches[i] ||
+              Math.abs(note.startSeconds - (check.time + i * check.step)) > 0.001,
+          ) ||
+          Math.abs(Math.max(...notes.map((n) => n.startSeconds + n.durationSeconds)) - check.end) >
+            0.001
+        )
+          failures.push({ ...check, sounding: notes });
+        continue;
+      }
       const note = playback.notes.some(
         (item) =>
           item.pitch === check.pitch &&
@@ -110,7 +167,8 @@ export function runPlaybackCases(ids, renderFixture) {
         );
       }
       if (check.kind === 'playhead') {
-        const trace = report.trace.find((item) => Math.abs(item.time - check.time) < 0.001);
+        const playheadTime = check.playheadTime ?? check.time;
+        const trace = report.trace.find((item) => Math.abs(item.time - playheadTime) < 0.001);
         valid &&=
           !!trace?.position &&
           matching.some(

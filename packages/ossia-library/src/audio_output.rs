@@ -1,5 +1,6 @@
 use crate::*;
-use ossia_score::{MidiFile, ScoreIndex, SvgPage};
+use ossia_score::{ScoreIndex, SvgPage};
+use std::ops::Range;
 
 impl Library {
     pub(crate) fn audio_render(
@@ -14,6 +15,7 @@ impl Library {
                 && render.midi.is_some()
                 && render.engine_build_id == engine.build_id()
                 && render.source_hash == *snapshot.source_hash()
+                && render.options_hash == ossia_engine::render_options_hash(true)
             {
                 return Ok(render.clone());
             }
@@ -84,23 +86,23 @@ impl Library {
         let Some(range) = range else {
             return Ok(playback);
         };
-        clip_playback(playback, &midi, range)
+        let bounds = ossia_score::playback_measure_bounds(&index, &layout, &midi, range)?;
+        clip_playback(playback, bounds, range.end)
     }
 }
 
 fn clip_playback(
     playback: ScorePlayback,
-    midi: &MidiFile,
-    range: MeasureRange,
+    bounds: Range<f64>,
+    end_measure: u32,
 ) -> Result<ScorePlayback> {
-    let bounds = ossia_score::midi_measure_bounds(midi, range)?;
     let last_measure = playback
         .systems
         .iter()
         .map(|system| system.measure_end)
         .max()
         .unwrap_or(0);
-    if last_measure == 0 || range.end > last_measure {
+    if last_measure == 0 || end_measure > last_measure {
         return Err(AppError::invalid(format!(
             "measure range exceeds the score's {last_measure} measures"
         )));
@@ -109,21 +111,19 @@ fn clip_playback(
         .notes
         .into_iter()
         .filter_map(|note| {
-            let start = note.start_seconds.max(bounds.start_seconds);
-            let end = (note.start_seconds + note.duration_seconds).min(bounds.end_seconds);
+            let start = note.start_seconds.max(bounds.start);
+            let end = (note.start_seconds + note.duration_seconds).min(bounds.end);
             (start < end).then_some(PlaybackNote {
-                pitch: note.pitch,
-                start_seconds: start - bounds.start_seconds,
+                start_seconds: start - bounds.start,
                 duration_seconds: end - start,
-                part_id: note.part_id,
-                instrument: note.instrument,
+                ..note
             })
         })
         .collect();
     Ok(ScorePlayback {
         render_key: playback.render_key,
         source_hash: playback.source_hash,
-        duration_seconds: bounds.end_seconds - bounds.start_seconds,
+        duration_seconds: bounds.end - bounds.start,
         parts: playback.parts,
         notes,
         groups: Vec::new(),

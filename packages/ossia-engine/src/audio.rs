@@ -177,7 +177,11 @@ pub fn render_wav(
                 sample_names.len() - 1
             };
         let start_frame = seconds_to_frames(note.start_seconds.max(0.0))?;
-        let hold_seconds = note.duration_seconds.max(f64::from(MIN_NOTE_SECONDS)) as f32;
+        let hold_seconds = if note.ornament_anchor.is_some() {
+            note.duration_seconds
+        } else {
+            note.duration_seconds.max(f64::from(MIN_NOTE_SECONDS))
+        } as f32;
         let hold_frames = seconds_to_frames(f64::from(hold_seconds))?;
         let stop_frames = seconds_to_frames(f64::from(
             hold_seconds + RELEASE_SECONDS + STOP_TAIL_SECONDS,

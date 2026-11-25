@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { auditAudition } from './audition-audit.mjs';
+import { auditionAttacks, auditAudition } from './audition-audit.mjs';
 import { auditPlayback } from './playback-audit.mjs';
 import { fixtureRenderer, fixtures, root } from './render-fixture.mjs';
 
@@ -37,6 +37,7 @@ export function runAuditionCases(ids, renderFixture) {
       return {
         id: entry.id,
         ...bundle,
+        auditionAttacks: auditionAttacks(bundle.playback),
         trace: playback.trace.map((frame) => ({ time: frame.time, ...frame.position })),
       };
     });

@@ -579,10 +579,36 @@
     "source": "bach-goldberg-aria.ly",
     "origin": "Bach, Goldberg Variations, BWV 988: Aria, complete keyboard score (Mutopia 979)",
     "selection": { "measures": 32, "staves": 2 },
+    "ornamentAnchors": 76,
+    "appoggiaturaCount": 27,
     "checks": [
       {
-        "kind": "playhead",
+        "kind": "ornament",
+        "needle": "a8.\\prallmordent) b16",
+        "time": 2,
+        "end": 2.75,
+        "pitches": [83, 81, 83, 81, 79, 81],
+        "step": 0.065
+      },
+      {
+        "kind": "ornament",
+        "needle": "<g b e g>4\\arpeggio",
+        "time": 30,
+        "end": 31,
+        "pitches": [67, 71, 76, 79],
+        "step": 0.025
+      },
+      {
+        "kind": "ornament",
+        "needle": "g16 fis8 \\appoggiatura e16",
         "time": 3.5,
+        "end": 4,
+        "pitches": [79, 78],
+        "step": 0.25
+      },
+      {
+        "kind": "playhead",
+        "time": 3.75,
         "pitch": 78,
         "needle": "fis8 \\appoggiatura e16"
       },
@@ -596,9 +622,16 @@
       },
       {
         "kind": "mapped",
-        "time": 9.885416666666666,
+        "time": 10,
         "pitch": 64,
         "needle": "e8 d2"
+      },
+      {
+        "kind": "playhead",
+        "time": 20.5,
+        "pitch": 52,
+        "needle": "g16 fis16 e16 fis16",
+        "offset": 10
       },
       {
         "kind": "mapped",
@@ -606,6 +639,53 @@
         "pitch": 64,
         "needle": "f4\\rest \\staffUpper e4",
         "offset": 20
+      },
+      {
+        "kind": "playhead",
+        "time": 46,
+        "pitch": 73,
+        "needle": "\\appoggiatura cis8 d2",
+        "offset": 14
+      },
+      {
+        "kind": "playhead",
+        "time": 46,
+        "playheadTime": 46.065,
+        "pitch": 66,
+        "duration": 2,
+        "needle": "%16-20\n    g4 fis2",
+        "offset": 14
+      },
+      {
+        "kind": "playhead",
+        "time": 46.5,
+        "pitch": 57,
+        "duration": 0.5,
+        "needle": "f4\\rest f8\\rest a,8 d4",
+        "offset": 16
+      },
+      {
+        "kind": "playhead",
+        "time": 46.5,
+        "playheadTime": 46.065,
+        "pitch": 74,
+        "duration": 1.5,
+        "needle": "\\appoggiatura cis8 d2",
+        "offset": 19
+      },
+      {
+        "kind": "mapped",
+        "time": 95,
+        "pitch": 43,
+        "duration": 2,
+        "needle": "g,4_\\fermata"
+      },
+      {
+        "kind": "mapped",
+        "time": 95.5,
+        "pitch": 67,
+        "duration": 1.5,
+        "needle": "g4\\fermata"
       }
     ]
   }

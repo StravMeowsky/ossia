@@ -70,6 +70,7 @@ fn piano_staves_share_a_setting_without_merging_other_instruments() {
         .map(|track| {
             (
                 PlaybackNote {
+                    ornament_anchor: None,
                     pitch: 60 + track as u8,
                     start_seconds: 0.,
                     duration_seconds: 0.5,
@@ -90,6 +91,7 @@ fn piano_staves_share_a_setting_without_merging_other_instruments() {
             voice: None,
             start_seconds: Some(0.),
             duration_seconds: Some(0.5),
+            playhead_seconds: None,
             part_id: Some(format!("{staff}:{staff}")),
         })
         .collect::<Vec<_>>();
@@ -154,6 +156,7 @@ fn program_change_is_applied_to_later_notes_even_with_a_named_staff() {
     let mut notes = vec![
         (
             PlaybackNote {
+                ornament_anchor: None,
                 pitch: 60,
                 start_seconds: 0.,
                 duration_seconds: 0.5,
@@ -166,6 +169,7 @@ fn program_change_is_applied_to_later_notes_even_with_a_named_staff() {
         ),
         (
             PlaybackNote {
+                ornament_anchor: None,
                 pitch: 62,
                 start_seconds: 0.5,
                 duration_seconds: 0.5,
@@ -184,6 +188,7 @@ fn program_change_is_applied_to_later_notes_even_with_a_named_staff() {
         voice: None,
         start_seconds: Some(0.),
         duration_seconds: Some(0.5),
+        playhead_seconds: None,
         part_id: Some("0:0".into()),
     }];
     let parts = assign_parts(&index, &midi, &programs, &mut notes, &mut groups);
@@ -232,6 +237,7 @@ fn context_identifier_does_not_override_explicit_midi_instrument() {
     let programs = crate::instruments::ProgramTimeline::new(&midi);
     let mut notes = vec![(
         PlaybackNote {
+            ornament_anchor: None,
             pitch: 60,
             start_seconds: 0.,
             duration_seconds: 0.5,
@@ -249,6 +255,7 @@ fn context_identifier_does_not_override_explicit_midi_instrument() {
         voice: None,
         start_seconds: Some(0.),
         duration_seconds: Some(0.5),
+        playhead_seconds: None,
         part_id: Some("0:0".into()),
     }];
     assign_parts(&index, &midi, &programs, &mut notes, &mut groups);
@@ -285,6 +292,7 @@ fn unique_staff_identity_survives_reordering_and_ambiguous_identity_does_not() {
             .map(|track| {
                 (
                     PlaybackNote {
+                        ornament_anchor: None,
                         pitch: 60 + track as u8,
                         start_seconds: 0.,
                         duration_seconds: 0.5,
@@ -305,6 +313,7 @@ fn unique_staff_identity_survives_reordering_and_ambiguous_identity_does_not() {
                 voice: None,
                 start_seconds: Some(0.),
                 duration_seconds: Some(0.5),
+                playhead_seconds: None,
                 part_id: Some(format!("{staff}:{staff}")),
             })
             .collect::<Vec<_>>();

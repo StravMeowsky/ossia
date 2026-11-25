@@ -9,6 +9,42 @@ import {
   sameVoice,
 } from '../../packages/ui/src/score/utils/playbackTimeline.ts';
 
+/** Notated attacks are the audition reference, even when a symbol changes the performed notes. */
+export function auditionAttacks(playback) {
+  const ornaments = new Set(playback.notes.flatMap((note) => note.ornamentAnchor ?? []));
+  const onsets = [
+    ...new Set(playback.groups.filter((g) => g.pitches.length).map((g) => g.startSeconds)),
+  ];
+  return Object.fromEntries(
+    onsets
+      .filter((time) => time !== null)
+      .map((time) => {
+        const ordinary = playback.notes
+          .filter((note) => !note.ornamentAnchor && Math.abs(note.startSeconds - time) <= 0.001)
+          .map((note) => note.pitch);
+        const marked = playback.groups.filter(
+          (g) =>
+            g.startSeconds !== null &&
+            Math.abs(g.startSeconds - time) <= 0.001 &&
+            g.elementIds.some((id) => ornaments.has(id)),
+        );
+        const unique = new Map();
+        for (const group of marked) {
+          for (const pitch of group.pitches) {
+            const key = JSON.stringify([
+              group.partId,
+              pitch,
+              group.startSeconds,
+              group.durationSeconds,
+            ]);
+            unique.set(key, pitch);
+          }
+        }
+        return [time, [...ordinary, ...unique.values()].sort((a, b) => a - b)];
+      }),
+  );
+}
+
 /** Check every visible notehead against the page's click, single-note and keyboard contracts. */
 export function auditAudition(playback, geometry) {
   if (playback.renderKey !== geometry.renderKey || playback.sourceHash !== geometry.sourceHash)
@@ -88,8 +124,12 @@ export function auditAudition(playback, geometry) {
         (group.pitches.length > 0 &&
           !playback.notes.some(
             (note) =>
-              note.pitch === group.pitches[0] &&
-              Math.abs(note.startSeconds - group.startSeconds) <= 0.001,
+              (note.pitch === group.pitches[0] &&
+                Math.abs(note.startSeconds - group.startSeconds) <= 0.001) ||
+              (group.elementIds.includes(note.ornamentAnchor) &&
+                note.partId === group.partId &&
+                note.startSeconds >= group.startSeconds - 0.001 &&
+                note.startSeconds <= group.startSeconds + (group.durationSeconds ?? 0) + 0.001),
           ))
       )
         issues.push({ kind: 'missing-audition-attack', ...detail });
@@ -128,15 +168,13 @@ export function auditAudition(playback, geometry) {
         issues.push({ kind: 'invalid-audition-modifier', ...detail });
     }
   }
+  const expectedAttacks = auditionAttacks(playback);
   const onsets = new Set();
   for (const group of playback.groups) {
     if (group.startSeconds === null || !group.pitches.length || onsets.has(group.startSeconds))
       continue;
     onsets.add(group.startSeconds);
-    const expected = playback.notes
-      .filter((note) => Math.abs(note.startSeconds - group.startSeconds) <= 0.001)
-      .map((note) => note.pitch)
-      .sort((a, b) => a - b);
+    const expected = expectedAttacks[group.startSeconds];
     const actual = auditionSounds(auditionMembers(playback, group, true))
       .flatMap((member) => member.pitches)
       .sort((a, b) => a - b);

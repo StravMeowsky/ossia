@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-import { groupAt } from '../../packages/ui/src/score/utils/playbackTimeline.ts';
+import { groupAt, playheadOnset } from '../../packages/ui/src/score/utils/playbackTimeline.ts';
 import { locatePlayhead } from '../../packages/ui/src/score/utils/playheadPosition.ts';
 
 const EPSILON = 0.001;
@@ -33,7 +33,7 @@ export function auditPlayback(playback, geometry) {
     throw new Error('playback and geometry are from different renders');
   }
   const groups = playback.groups.filter((group) => group.startSeconds !== null);
-  const onsets = [...new Set(groups.map((group) => group.startSeconds))].sort((a, b) => a - b);
+  const onsets = [...new Set(groups.map(playheadOnset))].sort((a, b) => a - b);
   const issues = [];
   for (const group of groups) {
     const end = group.startSeconds + (group.durationSeconds ?? 0);
@@ -122,14 +122,26 @@ export function auditPlayback(playback, geometry) {
     }
     previous = current;
   }
+  const unmappedOnsets = new Set();
   for (const note of playback.notes) {
-    if (
-      !groups.some(
-        (group) =>
-          Math.abs(group.startSeconds - note.startSeconds) <= EPSILON &&
-          group.pitches.includes(note.pitch),
-      )
-    ) {
+    const mapped = groups.some((group) => {
+      if (note.ornamentAnchor) {
+        return (
+          group.elementIds.includes(note.ornamentAnchor) &&
+          group.pitches.length > 0 &&
+          group.partId === note.partId &&
+          note.startSeconds >= group.startSeconds - EPSILON &&
+          note.startSeconds + note.durationSeconds <=
+            group.startSeconds + (group.durationSeconds ?? 0) + EPSILON
+        );
+      }
+      return (
+        Math.abs(group.startSeconds - note.startSeconds) <= EPSILON &&
+        group.pitches.includes(note.pitch)
+      );
+    });
+    if (!mapped) {
+      unmappedOnsets.add(note.startSeconds);
       issues.push({
         kind: 'unmapped-note',
         time: note.startSeconds,
@@ -197,12 +209,7 @@ export function auditPlayback(playback, geometry) {
     }
   }
   const soundingOnsets = [...new Set(playback.notes.map((note) => note.startSeconds))];
-  const missingSoundingOnsets = soundingOnsets.filter(
-    (time) =>
-      !groups.some(
-        (group) => Math.abs(group.startSeconds - time) <= EPSILON && group.pitches.length,
-      ),
-  ).length;
+  const missingSoundingOnsets = unmappedOnsets.size;
   const referenced = new Set(playback.groups.flatMap((group) => group.elementIds));
   let noteheads = 0;
   for (const page of geometry.pages) {
