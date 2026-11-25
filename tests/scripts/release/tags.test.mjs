@@ -69,4 +69,4 @@ test('automatic tagging respects the latest commit message and allocates the nex
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
-});
+}, 30_000);

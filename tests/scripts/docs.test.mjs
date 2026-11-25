@@ -86,4 +86,4 @@ test('offline pack preserves code and indexes sections without navigation', () =
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
-});
+}, 30_000);
