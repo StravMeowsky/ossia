@@ -1131,9 +1131,17 @@ test('version selection, restore order and export dialog use the viewed version'
   await expect(dialog.locator('.export-page-count')).toHaveCSS('border-top-width', '0px');
   const includeDrawing = dialog.getByRole('checkbox', { name: '包含绘画' });
   await expect(includeDrawing).toBeChecked();
-  const drawingRow = await dialog.locator('label[for="export-include-drawing"]').boundingBox();
-  const passwordLabel = await dialog.locator('label[for="export-pdf-password"]').boundingBox();
-  expect(passwordLabel!.y - (drawingRow!.y + drawingRow!.height)).toBeGreaterThanOrEqual(10);
+  await expect
+    .poll(() =>
+      dialog.evaluate((node) => {
+        const drawingRow = node.querySelector('label[for="export-include-drawing"]')!;
+        const passwordLabel = node.querySelector('label[for="export-pdf-password"]')!;
+        return (
+          passwordLabel.getBoundingClientRect().top - drawingRow.getBoundingClientRect().bottom
+        );
+      }),
+    )
+    .toBeGreaterThanOrEqual(10);
   await includeDrawing.focus();
   await page.keyboard.press('Space');
   await expect(includeDrawing).not.toBeChecked();
