@@ -244,9 +244,18 @@ afterGrace =
 #(define (ossia-header-value kind source value)
    (if (markup? value) (make-ossiaHeader-markup kind source value) value))
 
+% Scores engrave in file order; each one's moments start after the scores before it.
+#(define ossia-score-lengths '())
+#(define ossia-score-ordinal -1)
+#(define (ossia-score-offset)
+   (fold ly:moment-add ZERO-MOMENT
+     (list-head ossia-score-lengths (min (max 0 ossia-score-ordinal) (length ossia-score-lengths)))))
+
 #(define (ossia-engraver context)
    (let ((staves '()) (timestep '()))
      (make-engraver
+       ((initialize engraver)
+        (set! ossia-score-ordinal (1+ ossia-score-ordinal)))
        (acknowledgers
          ((grob-interface engraver grob source-engraver)
           (let* ((kind (grob::name grob))
@@ -265,7 +274,8 @@ afterGrace =
                      (cause (ly:grob-property grob 'cause))
                      (pitch (and (ossia-note-head-name? kind) (ly:stream-event? cause)
                                  (ly:event-property cause 'pitch #f)))
-                     (moment (ly:context-current-moment (ly:translator-context source-engraver)))
+                     (moment (ly:moment-add (ossia-score-offset)
+                                          (ly:context-current-moment (ly:translator-context source-engraver))))
                      (note (if (ly:pitch? pitch)
                                (format #f "~a,~a,~a,~a,~a"
                                  (exact->inexact (+ 60 (ly:pitch-semitones pitch)))

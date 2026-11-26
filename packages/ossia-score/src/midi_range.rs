@@ -105,20 +105,20 @@ fn seconds_at(tick: u64, ppqn: u64, midi: &MidiFile) -> f64 {
     seconds
 }
 
-struct RawMidi {
-    format: u16,
-    division: u16,
-    tracks: Vec<Vec<RawEvent>>,
-    last_tick: u64,
+pub(crate) struct RawMidi {
+    pub(crate) format: u16,
+    pub(crate) division: u16,
+    pub(crate) tracks: Vec<Vec<RawEvent>>,
+    pub(crate) last_tick: u64,
 }
 
-struct RawEvent {
-    tick: u64,
-    serial: usize,
-    kind: RawEventKind,
+pub(crate) struct RawEvent {
+    pub(crate) tick: u64,
+    pub(crate) serial: usize,
+    pub(crate) kind: RawEventKind,
 }
 
-enum RawEventKind {
+pub(crate) enum RawEventKind {
     Channel(u8, u8, Option<u8>),
     Meta(u8, Vec<u8>),
     SysEx(u8, Vec<u8>),
@@ -139,11 +139,11 @@ struct ActiveNote {
     serial: usize,
 }
 
-struct SliceEvent {
-    tick: u64,
-    priority: u8,
-    serial: usize,
-    kind: RawEventKind,
+pub(crate) struct SliceEvent {
+    pub(crate) tick: u64,
+    pub(crate) priority: u8,
+    pub(crate) serial: usize,
+    pub(crate) kind: RawEventKind,
 }
 
 /// Slice a Standard MIDI File by inclusive one-based measures.
@@ -209,7 +209,7 @@ fn measure_count(midi: &MidiFile, last_tick: u64) -> usize {
     count
 }
 
-fn parse_raw(bytes: &[u8]) -> Result<RawMidi, AppError> {
+pub(crate) fn parse_raw(bytes: &[u8]) -> Result<RawMidi, AppError> {
     let mut reader = Reader::new(bytes);
     if reader.take(4)? != b"MThd" {
         return Err(AppError::invalid("not a Standard MIDI File"));
@@ -425,7 +425,7 @@ fn clone_kind(kind: &RawEventKind) -> RawEventKind {
     }
 }
 
-fn write_midi(
+pub(crate) fn write_midi(
     format: u16,
     division: u16,
     length: u64,

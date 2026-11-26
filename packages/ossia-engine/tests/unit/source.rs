@@ -21,7 +21,6 @@ fn separate_layout_and_midi_scores_select_the_requested_output() {
     assert!(source::validate_render_structure(&midi.text).is_ok());
     assert!(source::validate_render_structure(&svg.text).is_ok());
     for text in [
-        "\\score { c'1 \\layout {} } \\score { d'1 \\layout {} }",
         "\\score { c'1 \\midi {} } \\score { d'1 \\midi {} }",
         "\\book { \\score { c'1 \\layout {} } \\score { d'1 \\midi {} } }",
     ] {
@@ -115,6 +114,33 @@ fn midi_derivation_removes_chord_name_contexts() {
 }
 
 #[test]
+fn consecutive_scores_form_one_timeline() {
+    let text = "\\score { { c'1 } \\layout {} }\n\\score { { d'2 e' } \\layout {} \\midi {} }";
+    let midi = source::derive(text, RenderFormat::Midi, true).unwrap();
+    // The first score gains a MIDI block; both report their lengths in order.
+    assert_eq!(midi.text.matches("\\midi {}").count(), 2);
+    assert!(midi.text.contains("toplevel-score-handler"));
+    assert_eq!(
+        midi.original_byte(midi.text.find("d'2").unwrap()),
+        text.find("d'2")
+    );
+    let svg = source::derive(text, RenderFormat::Svg, true).unwrap();
+    assert!(svg.text.contains("toplevel-score-handler"));
+    assert!(source::validate_render_structure(&svg.text).is_ok());
+    let single = source::derive("\\score { { c'1 } }", RenderFormat::Midi, true).unwrap();
+    assert!(!single.text.contains("toplevel-score-handler"));
+    let midi_only = "\\score { c'1 \\layout {} } \\score { d'1 \\midi {} } \\score { e'1 }";
+    assert_eq!(
+        source::derive(midi_only, RenderFormat::Svg, true)
+            .unwrap_err()
+            .code,
+        ErrorCode::UnsupportedSource
+    );
+    let book = "\\book { \\score { c'1 } \\score { d'1 } }";
+    assert!(source::validate_render_structure(book).is_err());
+}
+
+#[test]
 fn derived_text_respects_comments_strings_scheme_and_actual_score_boundaries() {
     let text = r#"\pointAndClickOff
 %{ \score { fake } %{ nested %} %}
@@ -139,7 +165,6 @@ name = "\\score { escaped \" quote"
     assert_eq!(text.matches("\\midi").count(), 0);
     for opaque in [
         "{ c'1 }",
-        "\\score { c'1 } \\score { d'1 }",
         "\\score \\Music",
         "\\score { c'1",
         "\\score { #{ c #} }",

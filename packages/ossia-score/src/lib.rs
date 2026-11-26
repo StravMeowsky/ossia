@@ -4,6 +4,7 @@ mod instruments;
 mod layout;
 mod lexer;
 mod midi;
+mod midi_concat;
 mod midi_range;
 mod pitch;
 mod position;
@@ -21,6 +22,7 @@ pub use instruments::*;
 pub use layout::*;
 pub use lexer::{serialize, tokenize, Mode, Token, TokenKind};
 pub use midi::*;
+pub use midi_concat::*;
 pub use midi_range::*;
 pub use ossia_types::{
     AppError, ContentHash, ErrorCode, LocatedRegion, LocationCapability, Locator, MeasureRange,

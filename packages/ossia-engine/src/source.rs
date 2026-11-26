@@ -141,6 +141,40 @@ pub(crate) fn derive(
     if format == RenderFormat::Svg && anchors {
         edits.extend(interaction::edits(source));
     }
+    let kept_scores = tokens.as_ref().ok().and_then(|tokens| {
+        let scores = scores::literal_scores(tokens)?;
+        Some(
+            scores
+                .into_iter()
+                .filter(|score| omitted_score.as_ref() != Some(&score.range))
+                .collect::<Vec<_>>(),
+        )
+    });
+    if let (Some(scores), Ok(tokens)) = (&kept_scores, &tokens) {
+        if scores.len() > 1 {
+            // Consecutive scores form one timeline; each must reach both outputs in order.
+            if tokens.iter().any(|t| {
+                matches!(
+                    t.raw.as_str(),
+                    "\\book" | "\\bookpart" | "\\bookOutputName" | "\\bookOutputSuffix"
+                )
+            }) {
+                return Err(AppError::unsupported(
+                    "multiple scores cannot be combined with \\book or \\bookpart",
+                ));
+            }
+            if scores.iter().any(|score| score.midi && !score.layout) {
+                return Err(AppError::unsupported(
+                    "every \\score in a multi-score file must be engraved",
+                ));
+            }
+            edits.push(Edit {
+                range: 0..0,
+                replacement: format!("{}\n", include_str!("scores.ily")),
+                maps_to_original: false,
+            });
+        }
+    }
     if let Ok(tokens) = &tokens {
         {
             let override_command = if anchors {
@@ -188,11 +222,6 @@ pub(crate) fn derive(
             })
             .collect();
         edits.extend(chord_name_edits(&tokens));
-        let scores: Vec<_> = tokens
-            .iter()
-            .enumerate()
-            .filter(|(_, t)| t.raw == "\\score")
-            .collect();
         if tokens.iter().any(|t| {
             matches!(
                 t.raw.as_str(),
@@ -203,40 +232,14 @@ pub(crate) fn derive(
                 "playback does not support LilyPond \\book or \\bookpart structures",
             ));
         }
-        if scores.len() != 1 {
-            return Err(AppError::unsupported(
-                "MIDI requires one unambiguous explicit score",
-            ));
+        let scores = kept_scores
+            .ok_or_else(|| AppError::unsupported("MIDI requires literal top-level score blocks"))?;
+        if scores.is_empty() {
+            return Err(AppError::unsupported("MIDI requires an explicit score"));
         }
-        let start = scores[0].0 + 1;
-        if tokens.get(start).map(|t| t.raw.as_str()) != Some("{") {
-            return Err(AppError::unsupported("MIDI requires a literal score block"));
-        }
-        let mut depth = 0;
-        let mut end = None;
-        let mut midi = false;
-        for (i, token) in tokens.iter().enumerate().skip(start) {
-            if depth == 1 && token.raw == "\\midi" {
-                if tokens.get(i + 1).map(|t| t.raw.as_str()) != Some("{") {
-                    return Err(AppError::unsupported("MIDI block is not literal"));
-                }
-                midi = true;
-            }
-            if token.raw == "{" {
-                depth += 1;
-            }
-            if token.raw == "}" {
-                depth -= 1;
-                if depth == 0 {
-                    end = Some(token.range.start);
-                    break;
-                }
-            }
-        }
-        let end = end.ok_or_else(|| AppError::unsupported("unbalanced score block"))?;
-        if !midi {
+        for score in scores.iter().filter(|score| !score.midi) {
             edits.push(Edit {
-                range: end..end,
+                range: score.close..score.close,
                 replacement: "\n\\midi {}\n".into(),
                 maps_to_original: false,
             });
@@ -362,8 +365,10 @@ fn matching_brace(tokens: &[Lexeme], open: usize) -> Option<usize> {
 
 pub(crate) fn validate_render_structure(source: &str) -> Result<(), AppError> {
     if let Ok(tokens) = scan(source) {
-        if tokens.iter().filter(|t| t.raw == "\\score").count() > 1
-            || tokens.iter().filter(|t| t.raw == "\\book").count() > 1
+        let books = tokens.iter().filter(|t| t.raw == "\\book").count();
+        // Several top-level scores share one timeline; inside \\book they stay ambiguous.
+        if books > 1
+            || (books == 1 && tokens.iter().filter(|t| t.raw == "\\score").count() > 1)
             || tokens.iter().any(|t| t.raw == "\\bookpart")
         {
             return Err(AppError::unsupported(

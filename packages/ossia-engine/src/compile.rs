@@ -5,7 +5,7 @@ use crate::cache::Cache;
 pub fn render_options_hash(point_and_click: bool) -> ContentHash {
     ContentHash::of(
         &serde_json::to_vec(&serde_json::json!({
-            "pointAndClick": point_and_click, "derivationVersion": 5,
+            "pointAndClick": point_and_click, "derivationVersion": 6,
             "interactionVersion": ossia_types::INTERACTION_VERSION,
         }))
         .expect("render options serialize"),
@@ -130,8 +130,14 @@ impl Engine {
         }
         args.push("score.ly");
         let output = self.run("lilypond", &args, &scratch, context)?;
+        let log = output
+            .log
+            .lines()
+            .filter(|line| !line.starts_with(SCORE_LENGTH_PREFIX))
+            .collect::<Vec<_>>()
+            .join("\n");
         let diagnostics = diagnostics::parse(
-            &output.log,
+            &log,
             scratch.path(),
             &self.root,
             Some(&derived),
@@ -144,7 +150,18 @@ impl Engine {
                 detail: Some(serde_json::json!({"diagnostics":diagnostics})),
             });
         }
-        let files = collect(scratch.path(), format)?;
+        let mut files = collect(scratch.path(), format)?;
+        let mut midi_join = None;
+        if format == RenderFormat::Midi && files.len() > 1 {
+            // Consecutive scores write one MIDI file each; join them at their music lengths.
+            let lengths = score_lengths(&output.log)?;
+            let parts = files
+                .iter()
+                .map(|(_, path)| fs::read(path).map_err(io_error))
+                .collect::<Result<Vec<_>, _>>()?;
+            midi_join = Some(ossia_score::concat_midi(&parts, &lengths)?);
+            files.truncate(1);
+        }
         let mut result = RenderManifest {
             source_hash: template.source_hash.clone(),
             engine_build_id: template.engine_build_id.clone(),
@@ -156,7 +173,10 @@ impl Engine {
             format_errors: Vec::new(),
         };
         for (page, path) in files {
-            let mut bytes = fs::read(path).map_err(io_error)?;
+            let mut bytes = match midi_join.take() {
+                Some(bytes) => bytes,
+                None => fs::read(path).map_err(io_error)?,
+            };
             if bytes.is_empty() {
                 return Err(failure(
                     "missing-output",
@@ -195,6 +215,23 @@ impl Engine {
     }
 }
 
+/// Log prefix of the per-score music lengths printed by `scores.ily`.
+const SCORE_LENGTH_PREFIX: &str = "ossia-score-length:";
+
+/// Music lengths, in whole notes, of every `\\score` in file order.
+fn score_lengths(log: &str) -> Result<Vec<(u64, u64)>, AppError> {
+    log.lines()
+        .filter_map(|line| line.strip_prefix(SCORE_LENGTH_PREFIX))
+        .map(|value| {
+            value
+                .trim()
+                .split_once('/')
+                .and_then(|(n, d)| Some((n.parse().ok()?, d.parse().ok()?)))
+                .ok_or_else(|| failure("score-length", "unreadable score length in engine log"))
+        })
+        .collect()
+}
+
 pub(crate) fn collect(
     directory: &Path,
     format: RenderFormat,
@@ -218,11 +255,18 @@ pub(crate) fn collect(
         let stem = name.strip_suffix(&format!(".{extension}")).unwrap();
         let page = if stem == "score" {
             1
-        } else if format == RenderFormat::Svg {
-            stem.strip_prefix("score-")
+        } else if matches!(format, RenderFormat::Svg | RenderFormat::Midi) {
+            // SVG pages and the MIDI files of consecutive scores share LilyPond's -N suffixes.
+            let index = stem
+                .strip_prefix("score-")
                 .and_then(|s| s.parse::<u32>().ok())
                 .filter(|p| *p > 0)
-                .ok_or_else(|| AppError::unsupported("ambiguous engine output group"))?
+                .ok_or_else(|| AppError::unsupported("ambiguous engine output group"))?;
+            if format == RenderFormat::Svg {
+                index
+            } else {
+                index + 1
+            }
         } else {
             return Err(AppError::unsupported(
                 "multiple books or named outputs are not supported",
@@ -234,7 +278,7 @@ pub(crate) fn collect(
     if files.is_empty() {
         return Err(AppError::unsupported("engine produced no requested output"));
     }
-    if (format != RenderFormat::Svg && files.len() != 1)
+    if (format == RenderFormat::Pdf && files.len() != 1)
         || files
             .iter()
             .enumerate()
