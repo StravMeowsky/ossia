@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   PlaybackNoteGroup,
   RenderReference,
+  SampleInstrument,
   ScorePlayback,
   ScoreSettings,
 } from '../../generated/protocol.ts';
@@ -45,6 +46,29 @@ const EMPTY_STATE: PlaybackState = {
 
 const LOOKAHEAD_SECONDS = 0.18;
 const START_LEAD_SECONDS = 0.03;
+
+/** The sample instrument an audition member sounds with. */
+function auditionInstrument(
+  timeline: ScorePlayback | null,
+  settings: ScoreSettings | null,
+  member: PlaybackNoteGroup,
+): SampleInstrument {
+  const start = member.startSeconds;
+  const note = timeline?.notes.find((candidate) => {
+    if (candidate.partId !== member.partId || start === null) return false;
+    if (candidate.ornamentAnchor) {
+      return (
+        member.elementIds.includes(candidate.ornamentAnchor) &&
+        candidate.startSeconds >= start - 0.001 &&
+        candidate.startSeconds <= start + (member.durationSeconds ?? 0) + 0.001
+      );
+    }
+    return (
+      member.pitches.includes(candidate.pitch) && Math.abs(candidate.startSeconds - start) < 0.001
+    );
+  });
+  return (member.partId && settings?.instruments[member.partId]) || note?.instrument || 'piano';
+}
 
 /** Own score playback timing, audio scheduling, audition state and the playhead. */
 export function useScorePlayback(
@@ -283,14 +307,14 @@ export function useScorePlayback(
           ? { ...combined, elementIds: [options.highlightElementId] }
           : combined;
       auditionGroupRef.current = group;
-      setState((current) => ({ ...current, activeGroup }));
       const start = group.startSeconds;
+      if (start !== null) auditionRef.current = start;
+      if (start !== null && phaseRef.current === 'playing') {
+        setState((current) => ({ ...current, activeGroup }));
+        await beginAt(start);
+        return;
+      }
       if (start !== null) {
-        auditionRef.current = start;
-        if (phaseRef.current === 'playing') {
-          await beginAt(start);
-          return;
-        }
         resumeReadyRef.current = false;
         scoreAudio.stopAll();
         positionRef.current = start;
@@ -299,41 +323,33 @@ export function useScorePlayback(
         scoreAudio.stopAll();
       }
       const sounds = auditionSounds(members);
-      if (sounds.length) {
+      const instruments = sounds.map((member) =>
+        auditionInstrument(timelineRef.current, settingsRef.current, member),
+      );
+      // Sound before paint: re-rendering a large score must not hold back the note.
+      const immediate = sounds.length > 0 && scoreAudio.ready(instruments);
+      if (immediate) {
         try {
-          const instruments = sounds.map((member) => {
-            const note = timelineRef.current?.notes.find((candidate) => {
-              const start = member.startSeconds;
-              if (candidate.partId !== member.partId || start === null) return false;
-              if (candidate.ornamentAnchor) {
-                return (
-                  member.elementIds.includes(candidate.ornamentAnchor) &&
-                  candidate.startSeconds >= start - 0.001 &&
-                  candidate.startSeconds <= start + (member.durationSeconds ?? 0) + 0.001
-                );
-              }
-              return (
-                member.pitches.includes(candidate.pitch) &&
-                Math.abs(candidate.startSeconds - start) < 0.001
-              );
-            });
-            return (
-              (member.partId && settingsRef.current?.instruments[member.partId]) ||
-              note?.instrument ||
-              'piano'
-            );
-          });
-          await scoreAudio.load(instruments);
-          await scoreAudio.resume();
-          const now = scoreAudio.now();
-          await Promise.all(
-            sounds.map((member, index) =>
-              scoreAudio.play(member.pitches, now, auditionDuration(member), instruments[index]!),
-            ),
+          sounds.forEach((member, index) =>
+            scoreAudio.playNow(member.pitches, auditionDuration(member), instruments[index]!),
           );
         } catch (error) {
           onError(error);
         }
+      }
+      setState((current) => ({ ...current, activeGroup }));
+      if (!sounds.length || immediate) return;
+      try {
+        await scoreAudio.load(instruments);
+        await scoreAudio.resume();
+        const now = scoreAudio.now();
+        await Promise.all(
+          sounds.map((member, index) =>
+            scoreAudio.play(member.pitches, now, auditionDuration(member), instruments[index]!),
+          ),
+        );
+      } catch (error) {
+        onError(error);
       }
     },
     [beginAt, enabled, onError],

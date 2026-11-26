@@ -515,6 +515,37 @@ test('clicking notes auditions and keeps only the latest notehead active', async
   await expect.poll(async () => Number(await line.getAttribute('x1'))).toBeGreaterThan(60);
 });
 
+test('a warm audition starts its sound before the score repaints the highlight', async ({
+  context,
+}) => {
+  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  await page.evaluate(() => {
+    const starts: boolean[] = [];
+    Reflect.set(window, 'auditionStarts', starts);
+    const prototype = AudioBufferSourceNode.prototype;
+    const start = Reflect.get(prototype, 'start') as AudioBufferSourceNode['start'];
+    prototype.start = function (this: AudioBufferSourceNode, ...args) {
+      starts.push(
+        document.querySelector('[data-ossia-graphic="second-graphic"].playback-active') !== null,
+      );
+      start.apply(this, args);
+    };
+  });
+  const starts = () => page.evaluate(() => Reflect.get(window, 'auditionStarts') as boolean[]);
+  const overlay = page.locator('.overlay').first();
+  const box = (await overlay.boundingBox())!;
+  // The first audition loads and decodes the samples.
+  await overlay.click({ position: { x: box.width * 0.31, y: (box.height * 25) / 140 } });
+  await expect.poll(async () => (await starts()).length, { timeout: 20_000 }).toBe(1);
+  await page.evaluate(() => (Reflect.get(window, 'auditionStarts') as boolean[]).splice(0));
+  await overlay.click({ position: { x: box.width * 0.61, y: (box.height * 25) / 140 } });
+  await expect(page.locator('[data-ossia-graphic="second-graphic"].playback-active')).toHaveCount(
+    2,
+  );
+  // The warm note sounded while it was still unpainted.
+  expect(await starts()).toEqual([false]);
+});
+
 test('escape clears the audition highlight but keeps the next playback start', async ({
   context,
 }) => {

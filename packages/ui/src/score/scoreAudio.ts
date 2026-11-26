@@ -37,6 +37,7 @@ export class ScoreAudio {
   private loaded: AudioState | null = null;
   private loading: Promise<AudioState> | null = null;
   private banks = new Map<SampleInstrument, Promise<Bank>>();
+  private decoded = new Map<SampleInstrument, Bank>();
   private sources = new Set<AudioBufferSourceNode>();
 
   async load(instruments: readonly SampleInstrument[] = []) {
@@ -71,6 +72,41 @@ export class ScoreAudio {
   ) {
     const state = await this.load([instrument]);
     const bank = await this.bank(state, instrument);
+    this.start(state, bank, instrument, pitches, start, duration, exactDuration);
+  }
+
+  /** Whether `playNow` can sound these instruments without waiting for loading or resuming. */
+  ready(instruments: readonly SampleInstrument[]) {
+    return (
+      this.loaded?.context.state === 'running' &&
+      instruments.every((instrument) => this.decoded.has(instrument))
+    );
+  }
+
+  /** Start pitches at once on a running context with a decoded bank; check `ready` first. */
+  playNow(pitches: readonly number[], duration: number, instrument: SampleInstrument) {
+    const bank = this.decoded.get(instrument);
+    if (!this.loaded || !bank) throw new Error(`${instrument} samples are not loaded`);
+    this.start(
+      this.loaded,
+      bank,
+      instrument,
+      pitches,
+      this.loaded.context.currentTime,
+      duration,
+      false,
+    );
+  }
+
+  private start(
+    state: AudioState,
+    bank: Bank,
+    instrument: SampleInstrument,
+    pitches: readonly number[],
+    start: number,
+    duration: number,
+    exactDuration: boolean,
+  ) {
     const when = Math.max(start, state.context.currentTime);
     const length = exactDuration ? duration : Math.max(0.05, duration);
     for (const pitch of pitches) {
@@ -157,7 +193,9 @@ export class ScoreAudio {
             }
           }),
         );
-        return { samples, buffers, gain };
+        const bank = { samples, buffers, gain };
+        this.decoded.set(instrument, bank);
+        return bank;
       })().catch((error) => {
         this.banks.delete(instrument);
         throw error;
