@@ -324,7 +324,7 @@ fn xml_transforms_paths_and_anomalies_have_checked_results() {
         "",
         "<svg/>",
         "<svg viewBox='0 0 100 100'><g></svg>",
-        "<svg viewBox='0 0 100 100'><g transform='rotate(2)'/></svg>",
+        "<svg viewBox='0 0 100 100'><g transform='skewX(2)'/></svg>",
         "<!DOCTYPE svg><svg viewBox='0 0 1 1'/>",
         "<svg viewBox='0 0 NaN 100'/>",
     ] {
@@ -586,3 +586,21 @@ fn malformed_and_unsupported_svg_are_distinct_structured_errors() {
         assert_eq!(layout.pages[0].error.as_ref().unwrap().code, code);
     }
 }
+
+#[test]
+fn rotated_markup_keeps_page_geometry() {
+    let source = "Music = { c'1 | } \\score { \\new Staff \\Music }";
+    let index = build_index(source);
+    let rotated = "<svg viewBox='0 0 100 100'><g transform='rotate(90 50 50)'><a href='textedit:///score.ly:1:10:11'><path d='M 1 2 L 3 4'/></a></g></svg>";
+    let skewed = "<svg viewBox='0 0 100 100'><g transform='skewX(2)'><path d='M 1 2 L 3 4'/></g></svg>";
+    let reason = |svg: &str| {
+        build_layout(&index, &[SvgPage { page: 1, svg }])
+            .unwrap()
+            .pages[0]
+            .reason
+            .clone()
+    };
+    assert_ne!(reason(rotated).as_deref(), Some("unsupported SVG transform"));
+    assert_eq!(reason(skewed).as_deref(), Some("unsupported SVG transform"));
+}
+

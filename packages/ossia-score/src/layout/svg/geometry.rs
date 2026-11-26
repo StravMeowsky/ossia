@@ -105,6 +105,19 @@ pub(super) fn numbers(mut s: &str) -> Result<Vec<f64>, AppError> {
     }
 }
 
+/// SVG `rotate(angle cx cy)`: degrees, about (cx, cy).
+fn rotation(angle: f64, cx: f64, cy: f64) -> Matrix {
+    let (sin, cos) = angle.to_radians().sin_cos();
+    Matrix([
+        cos,
+        sin,
+        -sin,
+        cos,
+        cx - cos * cx + sin * cy,
+        cy - sin * cx - cos * cy,
+    ])
+}
+
 pub(super) fn transform(mut s: &str) -> Result<Matrix, AppError> {
     let mut result = Matrix::identity();
     while !s.trim().is_empty() {
@@ -128,6 +141,9 @@ pub(super) fn transform(mut s: &str) -> Result<Matrix, AppError> {
             ("scale", [x]) => Matrix([*x, 0., 0., *x, 0., 0.]),
             ("scale", [x, y]) => Matrix([*x, 0., 0., *y, 0., 0.]),
             ("matrix", [a, b, c, d, e, f]) => Matrix([*a, *b, *c, *d, *e, *f]),
+            // LilyPond rotates some markup and grobs, such as rotated text and arpeggio glyphs.
+            ("rotate", [angle]) => rotation(*angle, 0., 0.),
+            ("rotate", [angle, cx, cy]) => rotation(*angle, *cx, *cy),
             _ => return Err(AppError::unsupported("unsupported SVG transform")),
         };
         result = result.then(mat);
