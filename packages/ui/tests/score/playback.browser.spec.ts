@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import type {
   GeometryElement,
   PlaybackSystemSpan,
+  SampleInstrument,
   ScorePlayback,
   SelectionTarget,
 } from '../../src/generated/protocol.ts';
@@ -293,17 +294,27 @@ test('audition uses the selected part sound for simultaneous notes', async ({ co
     { ...timeline.groups[1]!, partId: 'part-b', startSeconds: 0 },
   ];
   const { page } = await pageWithPlayback(context, timeline);
-  const requests: string[] = [];
-  page.on('response', (response) => {
-    if (response.ok()) requests.push(response.url());
+  await page.evaluate(async () => {
+    const entry = performance
+      .getEntriesByType('resource')
+      .find(({ name }) => new URL(name).pathname.endsWith('/scoreAudio.ts'));
+    if (!entry) throw new Error('Score audio module was not loaded');
+    const { scoreAudio } = await import(entry.name);
+    const playNow = scoreAudio.playNow.bind(scoreAudio);
+    const instruments: SampleInstrument[] = [];
+    Reflect.set(window, 'heardInstruments', instruments);
+    scoreAudio.playNow = (pitches: number[], duration: number, instrument: SampleInstrument) => {
+      instruments.push(instrument);
+      playNow(pitches, duration, instrument);
+    };
   });
+  const heard = () => page.evaluate(() => Reflect.get(window, 'heardInstruments'));
   const overlay = page.locator('.overlay').first();
   const box = (await overlay.boundingBox())!;
   await overlay.click({ position: { x: box.width * 0.31, y: box.height * 0.18 } });
-  await expect.poll(() => requests.some((url) => url.includes('/audio/violin/'))).toBe(true);
-  expect(requests.some((url) => url.includes('/audio/guitar/'))).toBe(false);
+  await expect.poll(heard).toEqual(['violin']);
   await overlay.click({ position: { x: box.width * 0.61, y: box.height * 0.18 } });
-  await expect.poll(() => requests.some((url) => url.includes('/audio/guitar/'))).toBe(true);
+  await expect.poll(heard).toEqual(['violin', 'guitar']);
 });
 
 test('score settings remain usable on a narrow screen and return keyboard focus to the score', async ({
@@ -491,6 +502,47 @@ test('historical versions expose playback, audition and restore controls', async
   );
 });
 
+test('clicking empty score clears the audition highlight', async ({ context }) => {
+  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const overlay = page.locator('.overlay').first();
+  const box = (await overlay.boundingBox())!;
+  await overlay.click({ position: { x: box.width * 0.31, y: (box.height * 25) / 140 } });
+  await expect(page.locator('[data-ossia-graphic="first-graphic"].playback-active')).toHaveCount(2);
+  await overlay.click({ position: { x: box.width * 0.45, y: box.height * 0.8 } });
+  await expect(page.locator('.playback-active')).toHaveCount(0);
+});
+
+test('the mouse cursor shows which notes a click will audition', async ({ context }) => {
+  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const overlay = page.locator('.overlay').first();
+  const box = (await overlay.boundingBox())!;
+  const y = box.y + (box.height * 25) / 140;
+  await page.mouse.move(box.x + box.width * 0.31, y);
+  await expect(overlay).toHaveCSS('cursor', 'pointer');
+  await page.mouse.move(box.x + box.width * 0.45, y);
+  await expect(overlay).toHaveCSS('cursor', 'default');
+  await page.mouse.move(box.x + box.width * 0.61, y);
+  await expect(overlay).toHaveCSS('cursor', 'pointer');
+  await page.mouse.move(box.x - 20, y);
+  await expect(overlay).toHaveCSS('cursor', 'default');
+});
+
+test('auditioning a note highlights a copy without restyling the page drawing', async ({
+  context,
+}) => {
+  const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+  const overlay = page.locator('.overlay').first();
+  const box = (await overlay.boundingBox())!;
+  await overlay.click({ position: { x: box.width * 0.31, y: (box.height * 25) / 140 } });
+  await expect(
+    page
+      .locator('.score-playback-layer [data-ossia-graphic="first-graphic"].playback-active path')
+      .first(),
+  ).toHaveCSS('fill', 'rgb(50, 116, 214)');
+  await expect(page.locator('.score-image .playback-active')).toHaveCount(0);
+  await expect(page.locator('.score-image [style]')).toHaveCount(0);
+});
+
 test('clicking notes auditions and keeps only the latest notehead active', async ({ context }) => {
   const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
   const overlay = page.locator('.overlay').first();
@@ -515,6 +567,51 @@ test('clicking notes auditions and keeps only the latest notehead active', async
   await expect.poll(async () => Number(await line.getAttribute('x1'))).toBeGreaterThan(60);
 });
 
+test('a cold audition starts while an unrelated sample is still loading', async ({ context }) => {
+  let release!: () => void;
+  let unrelatedRequested = false;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await context.route('**/audio/salamander/*', async (route) => {
+    if (!/\/C4\.(ogg|mp3)$/.test(new URL(route.request().url()).pathname)) {
+      unrelatedRequested = true;
+      await held;
+    }
+    await route.continue();
+  });
+  try {
+    const { page } = await pageWithPlayback(context, playback([system(1, 0, 2)]));
+    await expect.poll(() => unrelatedRequested).toBe(true);
+    await page.evaluate(() => {
+      Reflect.set(window, 'auditionStarts', 0);
+      const prototype = AudioBufferSourceNode.prototype;
+      const start = Reflect.get(prototype, 'start') as AudioBufferSourceNode['start'];
+      prototype.start = function (this: AudioBufferSourceNode, ...args) {
+        Reflect.set(
+          window,
+          'auditionStarts',
+          (Reflect.get(window, 'auditionStarts') as number) + 1,
+        );
+        start.apply(this, args);
+      };
+    });
+    const overlay = page.locator('.overlay').first();
+    const box = (await overlay.boundingBox())!;
+    await page.mouse.move(box.x + box.width * 0.31, box.y + (box.height * 25) / 140);
+    await page.mouse.down();
+    try {
+      await expect
+        .poll(() => page.evaluate(() => Reflect.get(window, 'auditionStarts')), { timeout: 3000 })
+        .toBe(1);
+    } finally {
+      await page.mouse.up();
+    }
+  } finally {
+    release();
+  }
+});
+
 test('a warm audition starts its sound before the score repaints the highlight', async ({
   context,
 }) => {
@@ -534,15 +631,24 @@ test('a warm audition starts its sound before the score repaints the highlight',
   const starts = () => page.evaluate(() => Reflect.get(window, 'auditionStarts') as boolean[]);
   const overlay = page.locator('.overlay').first();
   const box = (await overlay.boundingBox())!;
-  // The first audition loads and decodes the samples.
-  await overlay.click({ position: { x: box.width * 0.31, y: (box.height * 25) / 140 } });
-  await expect.poll(async () => (await starts()).length, { timeout: 20_000 }).toBe(1);
-  await page.evaluate(() => (Reflect.get(window, 'auditionStarts') as boolean[]).splice(0));
+  // Ensure this exact sample and the context are ready, even on slower decoders.
   await overlay.click({ position: { x: box.width * 0.61, y: (box.height * 25) / 140 } });
+  await expect.poll(async () => (await starts()).length, { timeout: 20_000 }).toBe(1);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.playback-active')).toHaveCount(0);
+  await page.evaluate(() => (Reflect.get(window, 'auditionStarts') as boolean[]).splice(0));
+  await page.mouse.move(box.x + box.width * 0.61, box.y + (box.height * 25) / 140);
+  await page.mouse.down();
+  try {
+    await expect.poll(starts, { timeout: 3000 }).toEqual([false]);
+  } finally {
+    await page.mouse.up();
+  }
   await expect(page.locator('[data-ossia-graphic="second-graphic"].playback-active')).toHaveCount(
     2,
   );
-  // The warm note sounded while it was still unpainted.
+  // Release must not retrigger the note sounded before the highlight painted.
   expect(await starts()).toEqual([false]);
 });
 

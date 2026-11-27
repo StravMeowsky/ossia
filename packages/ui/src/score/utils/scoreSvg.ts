@@ -188,17 +188,20 @@ async function importDrawing(
   return svg;
 }
 
+const PAINTED_LEAVES = 'path,rect,line,polygon,polyline,circle,ellipse,text,tspan,use';
+
+/** Whether a computed fill or stroke actually draws something. */
+function paints(value: string) {
+  return value !== 'none' && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent';
+}
+
 /** Preserve each leaf's paint and restore it verbatim when selection changes. */
 export function scorePainter(svg: SVGSVGElement) {
   const originals = new Map<SVGElement, string | null>();
   const groups = [...svg.querySelectorAll<SVGGElement>('[data-ossia-graphic]')];
   let painted = false;
-  return (
-    ids: Set<string>,
-    annotationColors: ReadonlyMap<string, string>,
-    playbackIds: Set<string>,
-  ) => {
-    if (!painted && !ids.size && !annotationColors.size && !playbackIds.size) return;
+  return (ids: Set<string>, annotationColors: ReadonlyMap<string, string>) => {
+    if (!painted && !ids.size && !annotationColors.size) return;
     painted = false;
     for (const [leaf, style] of originals) {
       if (style === null) leaf.removeAttribute('style');
@@ -209,26 +212,84 @@ export function scorePainter(svg: SVGSVGElement) {
       const id = group.dataset.ossiaGraphic!;
       const selected = ids.has(id);
       const color = annotationColors.get(id);
-      const playing = playbackIds.has(id);
       group.classList.toggle('element-selection', selected || color !== undefined);
-      group.classList.toggle('playback-active', playing);
-      if (!selected && color === undefined && !playing) continue;
+      if (!selected && color === undefined) continue;
       painted = true;
-      const paintColor = playing ? 'var(--playback)' : (color ?? 'var(--sel)');
-      for (const leaf of group.querySelectorAll<SVGElement>(
-        'path,rect,line,polygon,polyline,circle,ellipse,text,tspan,use',
-      )) {
+      const paintColor = color ?? 'var(--sel)';
+      for (const leaf of group.querySelectorAll<SVGElement>(PAINTED_LEAVES)) {
         if (originals.has(leaf)) continue;
         originals.set(leaf, leaf.getAttribute('style'));
         const paint = getComputedStyle(leaf);
         const fill = paint.fill,
           stroke = paint.stroke;
         leaf.style.setProperty('color', paintColor, 'important');
-        if (fill !== 'none' && fill !== 'rgba(0, 0, 0, 0)' && fill !== 'transparent')
-          leaf.style.setProperty('fill', paintColor, 'important');
-        if (stroke !== 'none' && stroke !== 'rgba(0, 0, 0, 0)' && stroke !== 'transparent')
-          leaf.style.setProperty('stroke', paintColor, 'important');
+        if (paints(fill)) leaf.style.setProperty('fill', paintColor, 'important');
+        if (paints(stroke)) leaf.style.setProperty('stroke', paintColor, 'important');
       }
     }
+  };
+}
+
+/**
+ * Draw playback highlights as recoloured copies in a separate small SVG above the page.
+ *
+ * Restyling leaves inside a large page drawing makes WebKit restyle and repaint the whole page
+ * for hundreds of milliseconds, which delays the next click. The page drawing is only read here.
+ */
+export function playbackLayer(svg: SVGSVGElement) {
+  const layer = document.createElementNS(namespace, 'svg');
+  layer.classList.add('score-playback-layer');
+  layer.setAttribute('aria-hidden', 'true');
+  layer.setAttribute('width', '100%');
+  layer.setAttribute('height', '100%');
+  for (const name of ['viewBox', 'preserveAspectRatio']) {
+    const value = svg.getAttribute(name);
+    if (value !== null) layer.setAttribute(name, value);
+  }
+  const groups = new Map<string, SVGGElement[]>();
+  for (const group of svg.querySelectorAll<SVGGElement>('[data-ossia-graphic]')) {
+    const id = group.dataset.ossiaGraphic!;
+    const list = groups.get(id);
+    if (list) list.push(group);
+    else groups.set(id, [group]);
+  }
+  // Copy one graphic with its ancestors' transforms and inherited attributes.
+  const copy = (group: SVGGElement) => {
+    const clone = group.cloneNode(true) as SVGGElement;
+    // Paint is decided from the page's computed style; writes go only to detached copies.
+    const sources = group.querySelectorAll<SVGElement>(PAINTED_LEAVES);
+    const leaves = clone.querySelectorAll<SVGElement>(PAINTED_LEAVES);
+    sources.forEach((source, index) => {
+      const leaf = leaves[index]!;
+      const paint = getComputedStyle(source);
+      leaf.style.setProperty('color', 'var(--playback)', 'important');
+      if (paints(paint.fill)) leaf.style.setProperty('fill', 'var(--playback)', 'important');
+      if (paints(paint.stroke)) leaf.style.setProperty('stroke', 'var(--playback)', 'important');
+    });
+    for (const node of [clone, ...clone.querySelectorAll('[id]')]) node.removeAttribute('id');
+    clone.setAttribute('class', 'playback-active');
+    let wrapped: SVGElement = clone;
+    for (
+      let parent: Element | null = group.parentElement;
+      parent && parent !== svg;
+      parent = parent.parentElement
+    ) {
+      const shell = parent.cloneNode(false) as SVGElement;
+      for (const name of shell.getAttributeNames())
+        if (name === 'id' || name === 'class' || name.startsWith('data-ossia-'))
+          shell.removeAttribute(name);
+      shell.append(wrapped);
+      wrapped = shell;
+    }
+    return wrapped;
+  };
+  let shown = new Set<string>();
+  return {
+    element: layer,
+    paint(ids: Set<string>) {
+      if (ids.size === shown.size && [...ids].every((id) => shown.has(id))) return;
+      shown = new Set(ids);
+      layer.replaceChildren(...[...ids].flatMap((id) => (groups.get(id) ?? []).map(copy)));
+    },
   };
 }

@@ -21,6 +21,8 @@ mod evidence;
 mod jobs;
 mod management;
 mod metadata;
+mod new_score;
+mod note_input;
 mod omr;
 mod storage;
 mod trash;

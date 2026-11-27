@@ -369,6 +369,17 @@ code {
   padding: 0.5rem;
   border-block-end: 1px solid var(--topbar-border);
 }
+.score-assistant-header .segmented {
+  margin-inline-end: auto;
+  background: var(--topbar-group-bg);
+}
+.score-assistant-header .segment-button img {
+  inline-size: 16px;
+  block-size: 16px;
+}
+.score-assistant-header .segment-button[aria-pressed='false']:not(:hover) img {
+  opacity: 0.65;
+}
 .score-assistant-action {
   color: var(--ink-soft);
 }
@@ -1081,6 +1092,16 @@ code {
   object-fit: contain;
 }
 .score-drawing {
+  position: relative;
+  pointer-events: none;
+}
+.score-playback-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
   pointer-events: none;
 }
 .overlay {
@@ -1093,6 +1114,9 @@ code {
 .overlay.interactive {
   pointer-events: auto;
   cursor: default;
+}
+.overlay.interactive.is-over-note {
+  cursor: pointer;
 }
 .score-annotation-layer {
   position: absolute;
@@ -2277,7 +2301,8 @@ dialog::backdrop {
   }
 }
 @media (forced-colors: active) {
-  .score-image {
+  .score-image,
+  .score-playback-layer {
     --sel: Highlight;
     --playback: Highlight;
   }
@@ -2286,4 +2311,126 @@ dialog::backdrop {
     stroke: Highlight;
     fill: transparent;
   }
+}
+
+/* Note input: a quick Verovio preview of the edit with its own toolbar. */
+.note-editor {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+}
+.note-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+  padding: 0.45rem 0.9rem;
+  border-block-end: 1px solid var(--line, rgb(0 0 0 / 10%));
+  background: var(--topbar-bg, transparent);
+}
+.note-editor-group {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.note-editor-end {
+  margin-inline-start: auto;
+  gap: 0.45rem;
+}
+.note-editor-hint {
+  color: var(--topbar-muted);
+  font: 400 0.74rem/1.3 var(--sans);
+}
+.note-editor-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-inline-size: 30px;
+  min-block-size: 30px;
+  padding: 0 0.45rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--topbar-muted);
+  font: 500 0.86rem/1 var(--sans);
+}
+.note-editor-button:hover:not(:disabled) {
+  background: var(--topbar-hover);
+  color: var(--topbar-fg);
+}
+.note-editor-button[aria-pressed='true'] {
+  background: var(--feature-active-bg);
+  color: var(--feature-active-fg);
+}
+.note-editor-button:disabled {
+  opacity: 0.45;
+}
+.note-editor-dynamic {
+  font:
+    italic 700 0.9rem/1 Georgia,
+    'Times New Roman',
+    serif;
+}
+.note-editor-text {
+  padding: 0 0.75rem;
+}
+.note-editor-primary {
+  background: var(--feature-active-bg);
+  color: var(--feature-active-fg);
+}
+.note-editor-button[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-start: 50%;
+  z-index: 10;
+  inline-size: max-content;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: rgb(15 15 19 / 90%);
+  color: rgb(255 255 255 / 95%);
+  font: 500 0.74rem/1.4 var(--sans);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -3px);
+  transition: opacity 120ms ease;
+}
+.note-editor-button[data-tooltip]:hover::after {
+  opacity: 1;
+}
+.note-editor-view {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--paper-surround, #f3f2ef);
+  cursor: default;
+}
+.note-editor-page {
+  margin: 0 auto 1rem;
+  inline-size: fit-content;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+}
+.note-editor-page svg {
+  display: block;
+}
+.note-editor-page g.note,
+.note-editor-page g.rest,
+.note-editor-page g.mRest {
+  cursor: pointer;
+}
+.note-editor-page .is-note-cursor,
+.note-editor-page .is-note-cursor * {
+  fill: #2563eb;
+  stroke: #2563eb;
+}
+.note-editor-loading {
+  display: grid;
+  place-items: center;
+  min-block-size: 12rem;
+  color: var(--topbar-muted);
 }

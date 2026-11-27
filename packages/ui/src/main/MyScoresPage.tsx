@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   List,
   LoaderCircle,
+  Plus,
   RefreshCw,
   Search,
   X,
@@ -15,6 +16,7 @@ import type { ToastKind } from '../components/Toast.tsx';
 import { describe } from '../errors.ts';
 import type { ManagementScorePage, ManagementScoreSummary } from '../generated/protocol.ts';
 import { useI18n } from '../i18n.tsx';
+import { NewScoreDialog } from './NewScoreDialog.tsx';
 import { ScoreCard } from './ScoreCard.tsx';
 import {
   catalogLabel,
@@ -134,6 +136,7 @@ export function MyScoresPage({
   const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set());
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [creatingScore, setCreatingScore] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(SCORE_LAYOUT_KEY, layout);
@@ -346,7 +349,26 @@ export function MyScoresPage({
           <h1>{t('myScores')}</h1>
           <p>{t(browser ? 'browseScoresDescription' : 'myScoresDescription')}</p>
         </div>
+        {native && !browser && (
+          <div className="action-row">
+            <button
+              className="primary"
+              type="button"
+              disabled={!runtimeRunning}
+              onClick={() => setCreatingScore(true)}
+            >
+              <Plus aria-hidden="true" />
+              <span>{t('newScore')}</span>
+            </button>
+          </div>
+        )}
       </div>
+      {creatingScore && (
+        <NewScoreDialog
+          onClose={() => setCreatingScore(false)}
+          onCreated={() => setReloadToken((value) => value + 1)}
+        />
+      )}
 
       <div className="scores-toolbar">
         <label className="score-search">

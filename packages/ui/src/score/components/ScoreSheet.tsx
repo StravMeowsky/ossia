@@ -28,6 +28,7 @@ import { ScoreSvg } from './ScoreSvg.tsx';
 /** Stable page callbacks keep canvas motion separate from page drawing updates. */
 export interface ScoreSheetActions {
   pointerDown: (layout: GeometryPage, event: PointerEvent<SVGSVGElement>) => void;
+  pointerMove: (layout: GeometryPage, event: PointerEvent<SVGSVGElement>) => void;
   click: (layout: GeometryPage, event: MouseEvent<SVGSVGElement>) => void;
   open: (annotation: SelectionAnnotation, bounds: GeometryBounds, page: number) => void;
 }
@@ -204,6 +205,10 @@ export const ScoreSheet = memo(function ScoreSheet({
         onPointerDown={(event) => {
           if (currentDrawing && interactive) actions.pointerDown(displayLayout, event);
         }}
+        onPointerMove={(event) => {
+          if (currentDrawing && interactive) actions.pointerMove(displayLayout, event);
+        }}
+        onPointerLeave={(event) => event.currentTarget.classList.remove('is-over-note')}
         onClick={(event) => {
           if (currentDrawing && interactive) actions.click(displayLayout, event);
         }}

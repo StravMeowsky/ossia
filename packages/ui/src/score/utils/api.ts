@@ -1,5 +1,11 @@
 import type {
   AgentStatus,
+  CheckArgs,
+  CommitArgs,
+  EditSession,
+  NoteInputArgs,
+  NoteInputBeginArgs,
+  NoteInputOutcome,
   DocumentPage,
   Drawing,
   DocumentSummary,
@@ -127,6 +133,14 @@ export function makeApi(language: () => UiLanguage, signal?: AbortSignal) {
     renderVersion: (id: string, version: string) =>
       post<Job>(`/documents/${id}/versions/${version}/render`),
     edit: (args: EditArgs) => post<null>(`/documents/${args.documentId}/edits`, args),
+    noteInputBegin: (documentId: string, args: NoteInputBeginArgs) =>
+      post<EditSession>(`/documents/${documentId}/notes/begin`, args),
+    noteInput: (documentId: string, args: NoteInputArgs) =>
+      post<NoteInputOutcome>(`/documents/${documentId}/notes`, args),
+    check: (documentId: string, args: CheckArgs) =>
+      post<Job>(`/documents/${documentId}/check`, args),
+    commit: (documentId: string, args: CommitArgs) =>
+      post<Version>(`/documents/${documentId}/commit`, args),
     restore: (documentId: string, args: RestoreArgs) =>
       post<Job>(`/documents/${documentId}/restore`, args),
     output: (args: OutputArgs) => post<Job>('/outputs', args),

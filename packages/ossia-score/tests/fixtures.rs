@@ -359,8 +359,15 @@ fn nested_context_order_is_engraving_order_and_composed_music_is_conservative() 
     let v = index.voice("Music").unwrap();
     assert_eq!(v.capability, LocationCapability::AnchorOnly);
     assert!(v.measures.is_empty());
+    // Without any \\time the meter is LilyPond's 4/4; a meter that changes elsewhere is unknown here.
+    let source = "Music = { R1 * 4 | % ordinary comment\n } \\score { \\new Staff \\Music }";
+    assert_eq!(build_index(source).measure_count(), Ok(4));
+    let source = "Global = { \\time 3/4 s2. | \\time 4/4 s1 | } Music = { R1 * 4 | % ordinary comment\n } \\score { \\new Staff << \\Global \\Music >> }";
+    assert_eq!(
+        build_index(source).voice("Music").unwrap().capability,
+        LocationCapability::AnchorOnly
+    );
     for source in [
-        "Music = { R1 * 4 | % ordinary comment\n } \\score { \\new Staff \\Music }",
         "Music = { c'1 | % 4294967296\n } \\score { \\new Staff \\Music }",
         "Music = { c'1 \\customMusic | } \\score { \\new Staff \\Music }",
     ] {
@@ -374,7 +381,14 @@ fn nested_context_order_is_engraving_order_and_composed_music_is_conservative() 
 
 #[test]
 fn document_note_language_cannot_silently_change_pitch_interpretation() {
+    // A verified language is honoured: German b is B flat.
     let source = "\\language \"deutsch\"\nMusic = { b'1 | } \\score { \\new Staff \\Music }";
+    let index = build_index(source);
+    let pitch = resolve_pitches(source, index.voices[0].music_span).unwrap();
+    assert_eq!(pitch.unsupported, None);
+    assert_eq!(pitch.events[0].pitches, vec![70]);
+    // Any other language is never guessed.
+    let source = "\\language \"italiano\"\nMusic = { c'1 | } \\score { \\new Staff \\Music }";
     let index = build_index(source);
     let pitch = resolve_pitches(source, index.voices[0].music_span).unwrap();
     assert!(pitch.unsupported.is_some());

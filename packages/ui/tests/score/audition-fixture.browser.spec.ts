@@ -143,6 +143,11 @@ for (const fixture of fixtures) {
         const play = scoreAudio.play.bind(scoreAudio);
         const calls: number[][] = [];
         Reflect.set(window, 'auditionCalls', calls);
+        const playNow = scoreAudio.playNow.bind(scoreAudio);
+        scoreAudio.playNow = (pitches: number[], duration: number, instrument: string) => {
+          calls.push([...pitches]);
+          playNow(pitches, duration, instrument);
+        };
         scoreAudio.play = async (
           pitches: number[],
           start: number,

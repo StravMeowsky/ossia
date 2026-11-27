@@ -67,12 +67,14 @@ fn rules() -> &'static Vec<(TokenKind, Regex)> {
                 r#"\\(?:[a-zA-Z]+(?:-[a-zA-Z]+)*|[<>(){}\[\]|%;!"/\\])"#,
             ),
             (Seq, r"<<|>>"),
+            // An accent with a direction, `^>` or `_>`, is not a chord close.
+            (Artic, r"[\^_]>"),
             (ChordC, r">(?:\d+(?:\.\d*)?\.{0,2})?"),
             (ChordO, r"<"),
             (Bar, r"\|"),
             (Beam, r"[\[\]]"),
             (Tie, r"~"),
-            (Fing, r"-(?:[0-9]+|\\[a-zA-Z-]+|->|\.)"),
+            (Fing, r"-(?:[0-9]+|\\[a-zA-Z-]+|>|\.)"),
             (
                 Num,
                 r"(?:[0-9]+(?:\.[0-9]*)?\s*/\s*[0-9]+|[0-9]+(?:\.[0-9]*)?)",
@@ -286,7 +288,12 @@ pub fn tokenize(source: &str) -> Vec<Token> {
         let (kind, len) = if let Some(hit) = hit {
             hit
         } else if let Some(m) = word().find(s) {
-            let raw = m.as_str();
+            let mut raw = m.as_str();
+            // `b4_>` is a note with a direction mark, not an identifier `b4_`.
+            let trimmed = raw.trim_end_matches('_');
+            if mode == Mode::Music && trimmed.len() < raw.len() && pitchish(trimmed, chord > 0) {
+                raw = trimmed;
+            }
             let kind = if mode == Mode::Music && !arg_pending && pitchish(raw, chord > 0) {
                 match raw.as_bytes()[0].to_ascii_lowercase() {
                     b'r' => TokenKind::Rest,
@@ -297,7 +304,7 @@ pub fn tokenize(source: &str) -> Vec<Token> {
                 TokenKind::Ident
             };
             arg_pending = false;
-            (kind, m.end())
+            (kind, raw.len())
         } else {
             (TokenKind::Raw, s.chars().next().unwrap().len_utf8())
         };
@@ -315,6 +322,11 @@ pub fn tokenize(source: &str) -> Vec<Token> {
         } else {
             if !matches!(kind, TokenKind::Ws | TokenKind::Comment) {
                 arg_pending = false;
+            }
+            // `\context Voice = "name" { ... }` holds music; only `\context { ... }` in a
+            // layout block holds settings.
+            if last_cmd == "context" && kind == TokenKind::Ident {
+                last_cmd = "";
             }
             if raw == "{" || raw == "<<" {
                 stack.push(mode);

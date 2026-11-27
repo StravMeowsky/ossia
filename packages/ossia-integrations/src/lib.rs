@@ -1,7 +1,6 @@
 mod agent;
 mod antigravity;
 mod claude_code;
-mod claude_desktop;
 mod codex;
 mod command;
 mod dsh;
@@ -68,14 +67,14 @@ impl HostPaths {
     }
 }
 
-/// What the score window's assistant needs to run Claude Code with this instance's Ossia tools.
+/// Local CLI and the Ossia MCP connection to supply to the score assistant.
 #[derive(Debug, Clone)]
 pub struct AssistantLaunch {
-    /// The detected `claude` executable.
-    pub claude: PathBuf,
-    /// `--mcp-config` document that starts this instance's Ossia MCP server.
-    pub mcp_config: serde_json::Value,
-    /// The Ossia skill, given to Claude Code as extra system instructions.
+    pub executable: PathBuf,
+    pub codex_home: PathBuf,
+    pub mcp_command: String,
+    pub mcp_args: Vec<String>,
+    pub mcp_env: BTreeMap<String, String>,
     pub instructions: String,
 }
 
@@ -170,27 +169,27 @@ impl Integrator {
         &self.executable
     }
 
-    /// Locate Claude Code and describe how to give it this instance's Ossia MCP server.
-    pub fn assistant_launch(&self) -> Result<AssistantLaunch, AppError> {
-        // Only locate the executable: the version and plugin probes used for integrations need
-        // `node` on PATH, which apps started from Finder or the Dock usually lack.
-        let claude = claude_code::assistant_executable().ok_or_else(|| {
+    /// Locate the selected CLI without running the management integration probes.
+    pub fn assistant_launch(
+        &self,
+        provider: AssistantProvider,
+    ) -> Result<AssistantLaunch, AppError> {
+        let (name, executable) = match provider {
+            AssistantProvider::Codex => ("Codex", codex::executable(&self.paths)),
+            AssistantProvider::ClaudeCode => ("Claude Code", claude_code::assistant_executable()),
+        };
+        let executable = executable.ok_or_else(|| {
             AppError::new(
                 ErrorCode::NotFound,
-                "Claude Code was not found. Install it and sign in, then try again.",
+                format!("{name} was not found. Install it and sign in, then try again."),
             )
         })?;
         Ok(AssistantLaunch {
-            claude,
-            mcp_config: serde_json::json!({
-                "mcpServers": {
-                    "ossia": {
-                        "command": path_text(&self.executable),
-                        "args": self.mcp_command(),
-                        "env": self.launch_env(),
-                    }
-                }
-            }),
+            executable,
+            codex_home: self.paths.codex_home.clone(),
+            mcp_command: path_text(&self.executable),
+            mcp_args: self.mcp_command(),
+            mcp_env: self.launch_env(),
             instructions: self.skill()?,
         })
     }
@@ -310,62 +309,6 @@ impl Integrator {
         if let Some(agent) = agents.iter_mut().find(|agent| agent.id == "antigravity") {
             antigravity::present_hosts(agent, &antigravity::hosts(&self.paths));
         }
-        let claude: Vec<_> = agents
-            .iter()
-            .filter(|agent| agent.id == "claude")
-            .cloned()
-            .collect();
-        if !claude.is_empty() {
-            agents.retain(|agent| agent.id != "claude");
-            let mut combined = claude[0].clone();
-            combined.profile = None;
-            combined.hosts = claude
-                .iter()
-                .map(|host| AgentHost {
-                    name: if host.profile.as_deref() == Some("desktop") {
-                        "Claude Desktop"
-                    } else {
-                        "Claude Code"
-                    }
-                    .into(),
-                    error: loaded
-                        .store
-                        .group_problems
-                        .get(&record::management_id(
-                            "claude",
-                            host.profile.as_deref().unwrap_or_default(),
-                        ))
-                        .cloned(),
-                    method: host.method,
-                    state: host.state,
-                    version: host.version.clone(),
-                    config_path: host.config_path.clone(),
-                    reload_hint: host.reload_hint.clone(),
-                    conflicts: host.conflicts.clone(),
-                })
-                .collect();
-            combined.name = claude_name(&combined.hosts).into();
-            combined.managed = claude.iter().any(|host| host.managed)
-                || loaded.store.enabled_groups.iter().any(|id| id == "claude");
-            combined.installed = claude.iter().any(|host| host.installed || host.managed);
-            combined.enabled = claude.iter().all(|host| host.enabled && host.installed)
-                && combined.hosts.iter().all(|host| host.error.is_none());
-            combined.conflicts = claude
-                .iter()
-                .flat_map(|host| host.conflicts.clone())
-                .collect();
-            combined.state = if !combined.conflicts.is_empty() {
-                AgentState::Conflict
-            } else if combined.enabled {
-                AgentState::Installed
-            } else if combined.managed {
-                AgentState::Broken
-            } else {
-                AgentState::Available
-            };
-            combined.reload_hint = None;
-            agents.push(combined);
-        }
         Ok(AgentsSnapshot {
             agents,
             connection_order: loaded.store.connection_order,
@@ -383,99 +326,70 @@ impl Integrator {
         let adapters = registry::adapters(&self.paths);
         let mut problems = Vec::new();
         for id in &change.agent_ids {
-            let matching: Vec<_> = adapters
+            let Some(adapter) = adapters
                 .iter()
                 .map(Box::as_ref)
-                .filter(|adapter| adapter.id() == id)
-                .collect();
-            if matching.is_empty() {
+                .find(|adapter| adapter.id() == id)
+            else {
                 problems.push(AgentProblem {
                     agent_id: id.clone(),
                     message: "unknown Agent".into(),
                 });
                 continue;
-            }
-            if id == "claude" {
-                store.enabled_groups.retain(|group| group != id);
-                if change.enabled {
-                    store.enabled_groups.push(id.clone());
-                }
-                record::write(&self.home, &store)?;
-            }
-            for adapter in matching {
-                let management_id = record::management_id(adapter.id(), adapter.profile());
-                let previous = store.records.get(&management_id).cloned();
-                let Some(detected) = adapter.detect(&self.paths) else {
-                    if id == "claude" && (change.enabled || previous.is_none()) {
-                        continue;
-                    }
-                    problems.push(AgentProblem {
-                        agent_id: id.clone(),
-                        message: format!("{} is unavailable", adapter.name()),
-                    });
-                    continue;
-                };
-                let ctx = AgentContext {
-                    integrator: self,
-                    detected: &detected,
-                };
-                let result = if change.enabled {
-                    adapter
-                        .install(&ctx, previous.as_ref(), change.overwrite)
-                        .map(|entries| {
-                            if !store.connection_order.contains(id) {
-                                store.connection_order.push(id.clone());
-                            }
-                            store.records.insert(
-                                management_id.clone(),
-                                ManagedRecord {
-                                    management_id: management_id.clone(),
-                                    agent_id: adapter.id().into(),
-                                    method: adapter.method(),
-                                    profile: adapter.profile().into(),
-                                    template_version: TEMPLATE_VERSION,
-                                    home: self.home.to_string_lossy().into_owned(),
-                                    executable: self.executable.to_string_lossy().into_owned(),
-                                    shared_root: self.shared_root.to_string_lossy().into_owned(),
-                                    updated_at: record::now(),
-                                    entries,
-                                },
-                            );
-                        })
-                } else if let Some(previous) = previous.as_ref() {
-                    adapter.remove(&ctx, previous).map(|()| {
-                        store.records.remove(&management_id);
-                        if !store.records.values().any(|record| record.agent_id == *id) {
-                            store.connection_order.retain(|agent_id| agent_id != id);
+            };
+            let management_id = record::management_id(adapter.id(), adapter.profile());
+            let previous = store.records.get(&management_id).cloned();
+            let Some(detected) = adapter.detect(&self.paths) else {
+                problems.push(AgentProblem {
+                    agent_id: id.clone(),
+                    message: format!("{} is unavailable", adapter.name()),
+                });
+                continue;
+            };
+            let ctx = AgentContext {
+                integrator: self,
+                detected: &detected,
+            };
+            let result = if change.enabled {
+                adapter
+                    .install(&ctx, previous.as_ref(), change.overwrite)
+                    .map(|entries| {
+                        if !store.connection_order.contains(id) {
+                            store.connection_order.push(id.clone());
                         }
+                        store.records.insert(
+                            management_id.clone(),
+                            ManagedRecord {
+                                management_id: management_id.clone(),
+                                agent_id: adapter.id().into(),
+                                method: adapter.method(),
+                                profile: adapter.profile().into(),
+                                template_version: TEMPLATE_VERSION,
+                                home: self.home.to_string_lossy().into_owned(),
+                                executable: self.executable.to_string_lossy().into_owned(),
+                                shared_root: self.shared_root.to_string_lossy().into_owned(),
+                                updated_at: record::now(),
+                                entries,
+                            },
+                        );
                     })
-                } else {
-                    Ok(())
-                };
-                if id == "claude" {
-                    match &result {
-                        Ok(()) => {
-                            store.group_problems.remove(&management_id);
-                        }
-                        Err(error) => {
-                            store
-                                .group_problems
-                                .insert(management_id.clone(), normalize_path(&error.message));
-                        }
+            } else if let Some(previous) = previous.as_ref() {
+                adapter.remove(&ctx, previous).map(|()| {
+                    store.records.remove(&management_id);
+                    if !store.records.values().any(|record| record.agent_id == *id) {
+                        store.connection_order.retain(|agent_id| agent_id != id);
                     }
-                }
-                if let Err(error) = result {
-                    problems.push(AgentProblem {
-                        agent_id: id.clone(),
-                        message: format!(
-                            "{}: {}",
-                            adapter.profile(),
-                            normalize_path(&error.message)
-                        ),
-                    });
-                }
-                record::write(&self.home, &store)?;
+                })
+            } else {
+                Ok(())
+            };
+            if let Err(error) = result {
+                problems.push(AgentProblem {
+                    agent_id: id.clone(),
+                    message: format!("{}: {}", adapter.profile(), normalize_path(&error.message)),
+                });
             }
+            record::write(&self.home, &store)?;
         }
         record::write(&self.home, &store)?;
         drop(_record);
@@ -501,11 +415,7 @@ impl Integrator {
             let loaded = record::load(&self.home)?;
             let mut store = loaded.store.clone();
             let adapters = registry::adapters(&self.paths);
-            let claude_enabled = store.enabled_groups.iter().any(|id| id == "claude");
             for current in store.records.values_mut() {
-                if current.agent_id == "claude" && !claude_enabled {
-                    continue;
-                }
                 let Some(adapter) =
                     registry::find_profile(&adapters, &current.agent_id, &current.profile)
                 else {
@@ -518,69 +428,12 @@ impl Integrator {
                     integrator: self,
                     detected: &detected,
                 };
-                match adapter.sync(&ctx, current) {
-                    Ok(Some(entries)) => {
-                        store.group_problems.remove(&current.management_id);
-                        current.entries = entries;
-                        current.updated_at = record::now();
-                        current.template_version = TEMPLATE_VERSION;
-                        current.executable = self.executable.to_string_lossy().into_owned();
-                        current.shared_root = self.shared_root.to_string_lossy().into_owned();
-                    }
-                    Err(error) if current.agent_id == "claude" => {
-                        store.group_problems.insert(
-                            current.management_id.clone(),
-                            normalize_path(&error.message),
-                        );
-                    }
-                    _ => {}
-                }
-            }
-            if store.enabled_groups.iter().any(|id| id == "claude") {
-                for adapter in adapters
-                    .iter()
-                    .map(Box::as_ref)
-                    .filter(|a| a.id() == "claude")
-                {
-                    let management_id = record::management_id(adapter.id(), adapter.profile());
-                    if store.records.contains_key(&management_id) {
-                        continue;
-                    }
-                    let Some(detected) = adapter.detect(&self.paths) else {
-                        continue;
-                    };
-                    let ctx = AgentContext {
-                        integrator: self,
-                        detected: &detected,
-                    };
-                    match adapter.install(&ctx, None, false) {
-                        Ok(entries) => {
-                            store.group_problems.remove(&management_id);
-                            store.records.insert(
-                                management_id.clone(),
-                                ManagedRecord {
-                                    management_id,
-                                    agent_id: adapter.id().into(),
-                                    method: adapter.method(),
-                                    profile: adapter.profile().into(),
-                                    template_version: TEMPLATE_VERSION,
-                                    home: path_text(&self.home),
-                                    executable: path_text(&self.executable),
-                                    shared_root: path_text(&self.shared_root),
-                                    updated_at: record::now(),
-                                    entries,
-                                },
-                            );
-                            if !store.connection_order.iter().any(|id| id == "claude") {
-                                store.connection_order.push("claude".into());
-                            }
-                        }
-                        Err(error) => {
-                            store
-                                .group_problems
-                                .insert(management_id, normalize_path(&error.message));
-                        }
-                    }
+                if let Ok(Some(entries)) = adapter.sync(&ctx, current) {
+                    current.entries = entries;
+                    current.updated_at = record::now();
+                    current.template_version = TEMPLATE_VERSION;
+                    current.executable = self.executable.to_string_lossy().into_owned();
+                    current.shared_root = self.shared_root.to_string_lossy().into_owned();
                 }
             }
             record::write(&self.home, &store)
@@ -648,17 +501,6 @@ impl Integrator {
             .iter()
             .map(|(key, value)| (key.clone(), normalize_path(value)))
             .collect()
-    }
-}
-
-fn claude_name(hosts: &[AgentHost]) -> &str {
-    let mut available = hosts
-        .iter()
-        .filter(|host| host.state != AgentState::Unavailable);
-    match (available.next(), available.next()) {
-        (Some(host), None) => &host.name,
-        (None, _) if hosts.len() == 1 => &hosts[0].name,
-        _ => "Claude",
     }
 }
 

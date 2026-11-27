@@ -191,6 +191,10 @@ fn main() {
         EmptyArgs,
         RpcRequest,
         RpcResponse,
+        AssistantProvider,
+        AssistantSendArgs,
+        AssistantEvent,
+        AssistantUpdate,
         InstallMethod,
         AgentState,
         AgentConflict,
@@ -205,6 +209,16 @@ fn main() {
         ManagementScorePage,
         ManagementScorePreviewArgs,
         ManagementScorePreview,
+        NewScoreInstrument,
+        NewScoreMode,
+        ManagementCreateScoreArgs,
+        ManagementCreatedScore,
+        ManagementNewScoreArgs,
+        NoteInputValue,
+        NoteInputAction,
+        NoteInputBeginArgs,
+        NoteInputArgs,
+        NoteInputOutcome,
         serde_json::Value
     );
     let mut text =

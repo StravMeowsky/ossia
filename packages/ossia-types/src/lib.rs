@@ -507,6 +507,8 @@ mod storage;
 pub use storage::*;
 mod integration;
 pub use integration::*;
+mod assistant;
+pub use assistant::*;
 
 mod music;
 pub use music::*;
@@ -516,6 +518,8 @@ pub use agent::*;
 
 mod management;
 pub use management::*;
+mod note_input;
+pub use note_input::*;
 
 mod docs;
 pub use docs::*;

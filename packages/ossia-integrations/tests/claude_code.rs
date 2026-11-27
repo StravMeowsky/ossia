@@ -4,7 +4,7 @@ use ossia_types::{AgentState, AgentsChange};
 use std::{collections::BTreeMap, fs, os::unix::fs::PermissionsExt};
 
 #[test]
-fn claude_combines_hosts_and_adds_new_host_on_sync() {
+fn claude_code_is_independent_of_retired_desktop_integration() {
     let temp = tempfile::tempdir().unwrap();
     let home = temp.path().join("home");
     let app = home.join("Applications/Claude.app/Contents/MacOS/Claude");
@@ -30,44 +30,46 @@ fn claude_combines_hosts_and_adds_new_host_on_sync() {
         3212,
     )
     .unwrap();
-    let change = |enabled| AgentsChange {
-        agent_ids: vec!["claude".into()],
-        enabled,
-        overwrite: false,
-    };
-    let first = integrator.set_agents(change(true)).unwrap();
-    assert!(first.problems.is_empty());
-    let group = first
-        .snapshot
-        .agents
+    let desktop_config = home.join("Library/Application Support/Claude/claude_desktop_config.json");
+    fs::create_dir_all(desktop_config.parent().unwrap()).unwrap();
+    let original =
+        r#"{"mcpServers":{"ossia":{"command":"/old/ossia"},"other":{"command":"/other"}}}"#;
+    fs::write(&desktop_config, original).unwrap();
+    let managed = integrator.home().join("integrations/managed.json");
+    fs::create_dir_all(managed.parent().unwrap()).unwrap();
+    fs::write(
+        &managed,
+        serde_json::to_vec(&serde_json::json!({
+            "schemaVersion": 2,
+            "connectionOrder": ["claude"],
+            "enabledGroups": ["claude"],
+            "groupProblems": {"ossia:claude:desktop": "old problem"},
+            "records": {
+                "ossia:claude:desktop": {
+                    "managementId": "ossia:claude:desktop",
+                    "agentId": "claude",
+                    "method": "mcp",
+                    "profile": "desktop",
+                    "templateVersion": 2,
+                    "home": integrator.home(),
+                    "executable": "/old/ossia",
+                    "sharedRoot": "/old/integrations",
+                    "updatedAt": "unix:1",
+                    "entries": []
+                }
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let desktop_only = integrator.agents().unwrap();
+    assert!(desktop_only.agents.iter().all(|agent| agent.id != "claude"));
+    assert!(!desktop_only
+        .connection_order
         .iter()
-        .find(|a| a.id == "claude")
-        .unwrap();
-    assert_eq!(group.state, AgentState::Installed);
-    assert_eq!(group.name, "Claude Desktop");
-    assert_eq!(group.hosts.len(), 1);
-    fs::write(&cli, "#!/bin/sh\ncase \"$1 $2\" in '--version ') echo '2.1.123 (Claude Code)';; 'plugin --help') exit 0;; 'plugin list') echo '[]';; *) exit 1;; esac\n").unwrap();
-    fs::set_permissions(&cli, fs::Permissions::from_mode(0o755)).unwrap();
-    let partial = integrator.set_agents(change(true)).unwrap();
-    assert_eq!(partial.problems.len(), 1);
-    let group = partial
-        .snapshot
-        .agents
-        .iter()
-        .find(|a| a.id == "claude")
-        .unwrap();
-    assert_eq!(group.state, AgentState::Broken);
-    assert_eq!(group.hosts.len(), 2);
-    assert_eq!(group.name, "Claude");
-    assert_eq!(
-        group
-            .hosts
-            .iter()
-            .find(|h| h.name == "Claude Desktop")
-            .unwrap()
-            .state,
-        AgentState::Installed
-    );
+        .any(|id| id == "claude"));
+
     fs::write(&cli, r##"#!/usr/bin/env python3
 import json, os, pathlib, sys
 root=pathlib.Path(os.environ['CLAUDE_CONFIG_DIR']); root.mkdir(parents=True, exist_ok=True)
@@ -84,70 +86,49 @@ elif a[:2] == ['plugin','install']:
 elif a[:2] == ['plugin','uninstall']: installed.unlink(missing_ok=True)
 "##).unwrap();
     fs::set_permissions(&cli, fs::Permissions::from_mode(0o755)).unwrap();
+    let available = integrator.sync_managed().unwrap();
+    let code = available.agents.iter().find(|a| a.id == "claude").unwrap();
+    assert_eq!(code.name, "Claude Code");
+    assert_eq!(code.state, AgentState::Available);
+    assert!(!cli_home.join("list.json").exists());
+    let store: serde_json::Value = serde_json::from_slice(&fs::read(&managed).unwrap()).unwrap();
+    assert!(store["records"].get("ossia:claude:desktop").is_none());
+
+    let change = |enabled| AgentsChange {
+        agent_ids: vec!["claude".into()],
+        enabled,
+        overwrite: false,
+    };
+    let connected = integrator.set_agents(change(true)).unwrap();
+    assert!(connected.problems.is_empty(), "{:?}", connected.problems);
     let snapshot = integrator.sync_managed().unwrap();
-    let group = snapshot.agents.iter().find(|a| a.id == "claude").unwrap();
-    assert_eq!(group.hosts.len(), 2);
-    assert_eq!(group.name, "Claude");
-    assert_eq!(group.state, AgentState::Installed);
-    assert_eq!(
-        group
-            .hosts
-            .iter()
-            .find(|h| h.name == "Claude Code")
-            .unwrap()
-            .version
-            .as_deref(),
-        Some("2.1.123")
-    );
-    assert_eq!(
-        snapshot.agents.iter().filter(|a| a.id == "claude").count(),
-        1
-    );
+    let code = snapshot.agents.iter().find(|a| a.id == "claude").unwrap();
+    assert_eq!(code.name, "Claude Code");
+    assert_eq!(code.state, AgentState::Installed);
+    assert_eq!(code.version.as_deref(), Some("2.1.123"));
+    assert!(code.hosts.is_empty());
+    assert_eq!(snapshot.connection_order, ["claude"]);
+
     let list_path = cli_home.join("list.json");
     let mut installed: serde_json::Value =
         serde_json::from_slice(&fs::read(&list_path).unwrap()).unwrap();
     installed[0]["enabled"] = false.into();
     fs::write(&list_path, serde_json::to_vec(&installed).unwrap()).unwrap();
     let disabled = integrator.sync_managed().unwrap();
-    let group = disabled.agents.iter().find(|a| a.id == "claude").unwrap();
-    assert_eq!(group.state, AgentState::Broken);
-    assert_eq!(
-        group
-            .hosts
-            .iter()
-            .find(|h| h.name == "Claude Code")
-            .unwrap()
-            .state,
-        AgentState::Disabled
-    );
+    let code = disabled.agents.iter().find(|a| a.id == "claude").unwrap();
+    assert_eq!(code.state, AgentState::Disabled);
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&fs::read(&list_path).unwrap()).unwrap()[0]
             ["enabled"],
         false
     );
+
     let removed = integrator.set_agents(change(false)).unwrap();
     assert!(removed.problems.is_empty(), "{:?}", removed.problems);
-    assert_eq!(
-        integrator
-            .sync_managed()
-            .unwrap()
-            .agents
-            .iter()
-            .find(|a| a.id == "claude")
-            .unwrap()
-            .state,
-        AgentState::Available
-    );
-    assert!(
-        !home
-            .join("Library/Application Support/Claude/claude_desktop_config.json")
-            .as_path()
-            .exists()
-            || !fs::read_to_string(
-                home.join("Library/Application Support/Claude/claude_desktop_config.json")
-            )
-            .unwrap()
-            .contains("ossia")
-    );
-    assert!(!cli_home.join("list.json").exists());
+    let snapshot = integrator.sync_managed().unwrap();
+    let code = snapshot.agents.iter().find(|a| a.id == "claude").unwrap();
+    assert_eq!(code.state, AgentState::Available);
+    assert!(!snapshot.connection_order.iter().any(|id| id == "claude"));
+    assert!(!list_path.exists());
+    assert_eq!(fs::read_to_string(desktop_config).unwrap(), original);
 }

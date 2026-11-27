@@ -9,6 +9,7 @@ use std::{
 use crate::resources::Resource;
 
 mod detect;
+pub(crate) use detect::executable;
 mod lifecycle;
 mod status;
 #[cfg(test)]

@@ -40,7 +40,7 @@ impl AgentAdapter for ClaudeCode {
     }
 
     fn name(&self) -> &str {
-        "Claude"
+        "Claude Code"
     }
 
     fn icon(&self) -> &str {
@@ -53,10 +53,6 @@ impl AgentAdapter for ClaudeCode {
 
     fn profile(&self) -> &'static str {
         "code"
-    }
-
-    fn visible_profile(&self) -> Option<&'static str> {
-        Some("code")
     }
 
     fn reload_hint(&self) -> AgentNotice {

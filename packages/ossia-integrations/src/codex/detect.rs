@@ -1,7 +1,11 @@
 use super::*;
 
+pub(crate) fn executable(paths: &HostPaths) -> Option<PathBuf> {
+    scan::find("codex", paths.codex_bin.as_deref(), candidates())
+}
+
 pub(super) fn detect(paths: &HostPaths) -> Option<DetectedAgent> {
-    let executable = scan::find("codex", paths.codex_bin.as_deref(), candidates())?;
+    let executable = executable(paths)?;
     let env = command::host_env("CODEX_HOME", &paths.codex_home);
     let version = command::version(&executable, &env).ok()?;
     command::run(

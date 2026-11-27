@@ -51,10 +51,6 @@ pub struct ManagedStore {
     #[serde(default)]
     pub connection_order: Vec<String>,
     #[serde(default)]
-    pub enabled_groups: Vec<String>,
-    #[serde(default)]
-    pub group_problems: BTreeMap<String, String>,
-    #[serde(default)]
     pub records: BTreeMap<String, ManagedRecord>,
 }
 
@@ -63,8 +59,6 @@ impl Default for ManagedStore {
         Self {
             schema_version: SCHEMA_VERSION,
             connection_order: Vec::new(),
-            enabled_groups: Vec::new(),
-            group_problems: BTreeMap::new(),
             records: BTreeMap::new(),
         }
     }
@@ -115,6 +109,11 @@ pub fn load(home: &Path) -> Result<LoadedStore, AppError> {
                     format!("invalid managed integration record: {error}"),
                 )
             })?;
+            // Retire Claude Desktop records while preserving existing Claude Code ownership.
+            store.records.remove(&management_id("claude", "desktop"));
+            if !store.records.contains_key(&management_id("claude", "code")) {
+                store.connection_order.retain(|id| id != "claude");
+            }
             // Older stores only retain the last write time, not the original connection order.
             let mut existing: Vec<_> = store.records.values().collect();
             existing.sort_by_key(|record| (record.updated_at.len(), &record.updated_at));

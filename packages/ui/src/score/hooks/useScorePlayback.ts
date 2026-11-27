@@ -90,6 +90,7 @@ export function useScorePlayback(
   const anchorRef = useRef(0);
   const scheduledIndexRef = useRef(0);
   const auditionRef = useRef<number | null>(null);
+  const auditionRequest = useRef(0);
   const auditionGroupRef = useRef<PlaybackNoteGroup | null>(null);
   const playheadGroupRef = useRef<PlaybackNoteGroup | null>(null);
   const resumeReadyRef = useRef(false);
@@ -219,6 +220,7 @@ export function useScorePlayback(
     if (starting.current) return starting.current;
     const timeline = timelineRef.current;
     if (!timeline || !enabled) return;
+    auditionRequest.current += 1;
     const run = (async () => {
       try {
         const wasPaused = phaseRef.current === 'paused';
@@ -226,11 +228,14 @@ export function useScorePlayback(
         const fallbackOffset = wasPaused ? positionRef.current : (auditionRef.current ?? 0);
         const instruments = JSON.stringify(settingsRef.current?.instruments ?? {});
         setPhase('loading');
-        await scoreAudio.load(
-          timeline.notes.map(
-            (note) => settingsRef.current?.instruments[note.partId] ?? note.instrument,
+        await Promise.all([
+          wasPaused && canResume ? undefined : scoreAudio.resume(),
+          scoreAudio.load(
+            timeline.notes.map(
+              (note) => settingsRef.current?.instruments[note.partId] ?? note.instrument,
+            ),
           ),
-        );
+        ]);
         if (instruments !== JSON.stringify(settingsRef.current?.instruments ?? {})) {
           publishPosition(fallbackOffset);
           setPhase('paused');
@@ -270,6 +275,7 @@ export function useScorePlayback(
   useEffect(() => {
     if (previousSettingsKey.current === instrumentSettingsKey) return;
     previousSettingsKey.current = instrumentSettingsKey;
+    auditionRequest.current += 1;
     if (phaseRef.current === 'playing') {
       void pause();
       scoreAudio.stopAll();
@@ -300,6 +306,7 @@ export function useScorePlayback(
       options?: { simultaneous?: boolean; highlightElementId?: string },
     ) => {
       if (!enabled) return;
+      const request = ++auditionRequest.current;
       const members = auditionMembers(timelineRef.current, group, options?.simultaneous ?? false);
       const combined = combinedAuditionGroup(members, group);
       const activeGroup =
@@ -322,34 +329,34 @@ export function useScorePlayback(
         resumeReadyRef.current = false;
         scoreAudio.stopAll();
       }
-      const sounds = auditionSounds(members);
-      const instruments = sounds.map((member) =>
-        auditionInstrument(timelineRef.current, settingsRef.current, member),
-      );
-      // Sound before paint: re-rendering a large score must not hold back the note.
-      const immediate = sounds.length > 0 && scoreAudio.ready(instruments);
-      if (immediate) {
+      const sounds = auditionSounds(members).map((member) => ({
+        member,
+        instrument: auditionInstrument(timelineRef.current, settingsRef.current, member),
+      }));
+      const soundNotes = () =>
+        sounds.forEach(({ member, instrument }) =>
+          scoreAudio.playNow(member.pitches, auditionDuration(member), instrument),
+        );
+      // Sound before paint: re-rendering a large score must not hold back decoded notes.
+      if (sounds.every(({ member, instrument }) => scoreAudio.ready(instrument, member.pitches))) {
         try {
-          sounds.forEach((member, index) =>
-            scoreAudio.playNow(member.pitches, auditionDuration(member), instruments[index]!),
-          );
+          soundNotes();
         } catch (error) {
           onError(error);
         }
+        setState((current) => ({ ...current, activeGroup }));
+        return;
       }
-      setState((current) => ({ ...current, activeGroup }));
-      if (!sounds.length || immediate) return;
       try {
-        await scoreAudio.load(instruments);
-        await scoreAudio.resume();
-        const now = scoreAudio.now();
-        await Promise.all(
-          sounds.map((member, index) =>
-            scoreAudio.play(member.pitches, now, auditionDuration(member), instruments[index]!),
-          ),
-        );
+        const prepared = Promise.all([
+          scoreAudio.resume(),
+          ...sounds.map(({ member, instrument }) => scoreAudio.prepare(instrument, member.pitches)),
+        ]);
+        setState((current) => ({ ...current, activeGroup }));
+        await prepared;
+        if (request === auditionRequest.current) soundNotes();
       } catch (error) {
-        onError(error);
+        if (request === auditionRequest.current) onError(error);
       }
     },
     [beginAt, enabled, onError],
@@ -402,6 +409,7 @@ export function useScorePlayback(
   );
 
   const stop = useCallback(() => {
+    auditionRequest.current += 1;
     clearScheduler();
     scoreAudio.stopAll();
     timelineRef.current = null;
@@ -474,6 +482,21 @@ export function useScorePlayback(
       live = false;
     };
   }, [api, enabled, onError, renderKey, stop]);
+
+  useEffect(() => {
+    if (!enabled || !state.timeline) return;
+    const byInstrument = new Map<SampleInstrument, Set<number>>();
+    for (const note of state.timeline.notes) {
+      const instrument = settings?.instruments[note.partId] ?? note.instrument;
+      const pitches = byInstrument.get(instrument) ?? new Set<number>();
+      pitches.add(note.pitch);
+      byInstrument.set(instrument, pitches);
+    }
+    for (const [instrument, pitches] of byInstrument) {
+      // An explicit audition or playback reports loading errors and can retry a failed sample.
+      void scoreAudio.prepare(instrument, [...pitches]).catch(() => {});
+    }
+  }, [enabled, settings, state.timeline]);
 
   const activeElementIds = useMemo(
     () => new Set(state.activeGroup?.elementIds ?? []),

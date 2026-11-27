@@ -236,6 +236,12 @@ pub(super) async fn api(
                 let args: EditArgs = decode(data)?;
                 runtime.edit(args)?
             }
+            ("POST", ["documents", doc, "notes", "begin"]) => {
+                value(runtime.note_input_begin(id(doc)?, decode(data)?)?)?
+            }
+            ("POST", ["documents", doc, "notes"]) => {
+                value(runtime.note_input(id(doc)?, decode(data)?)?)?
+            }
             ("POST", ["documents", doc, "check"]) => {
                 let document_id = id(doc)?;
                 let mut args: CheckArgs = decode(data)?;

@@ -40,9 +40,29 @@ function scoresRoute(): Plugin {
   };
 }
 
+// TEMP(timing): collect audition timings from score windows into ossia-backups/timing.log.
+function timingLog(): Plugin {
+  return {
+    name: 'ossia-timing-log',
+    configureServer(server) {
+      server.middlewares.use('/__ossia-timing', (req, res) => {
+        let body = '';
+        req.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        req.on('end', () => {
+          void import('node:fs').then((fs) => {
+            fs.appendFileSync(new URL('../../ossia-backups/timing.log', import.meta.url), body + '\n');
+            res.statusCode = 204;
+            res.end();
+          });
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [react(), scoresRoute()],
+  plugins: [react(), scoresRoute(), timingLog()],
   build: {
     target: 'es2022',
     outDir: 'dist',

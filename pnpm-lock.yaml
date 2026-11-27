@@ -229,6 +229,9 @@ importers:
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
+      verovio:
+        specifier: 6.4.1
+        version: 6.4.1
     devDependencies:
       '@playwright/test':
         specifier: ^1.65.0
@@ -1991,6 +1994,10 @@ packages:
       '@types/react':
         optional: true
 
+  verovio@6.4.1:
+    resolution: {integrity: sha512-+5exuA63AC0FHFo0L/4BlcF6EpEOWIp81pwz/afMupxss/tsrdVLxX8Pqh9QFzUOXcB4mP9Box4xc+hrkKN+LA==}
+    engines: {node: '>= 14.18.0'}
+
   verror@1.10.0:
     resolution: {integrity: sha512-ZZKSmDAEFOijERBLkmYfJ+vmk3w+7hOLYDNkRCuRuMJGEmqYNCNLyBBFwWKVMhfwaEF3WOd0Zlw86U/WC/+nYw==}
     engines: {'0': node >=0.6.0}
@@ -2115,10 +2122,12 @@ packages:
   yuku-core@0.19.0:
     resolution: {integrity: sha512-kYK9e1XdfirNhkipzW0wmMcSWcVF/CWnuugodfVYRCUwvoBefweL9HzB96OiKEhsx78V5WbUxbJqlizMX869Qg==}
     engines: {node: '>=14.18.0'}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-parser@0.19.0:
     resolution: {integrity: sha512-XrBh9ZiQK5mJVRxZBAvD6LwRyAYrK3MFtH3+onyuxFL5hFD44EC3QOmIC1FjTj6H2MMwq46/NAI+NZxLZPZgxg==}
     engines: {node: '>=14.18.0'}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
 snapshots:
 
@@ -3508,6 +3517,8 @@ snapshots:
       tslib: 2.9.1
     optionalDependencies:
       '@types/react': 19.3.0
+
+  verovio@6.4.1: {}
 
   verror@1.10.0:
     dependencies:

@@ -24,7 +24,6 @@ export const noticeKeys: Record<AgentNotice['kind'], MessageKey> = {
   'restart-session': 'agentRestartSession',
   'pi-reload': 'agentPiReload',
   'pi-mcp-unsupported': 'agentPiMcpUnsupported',
-  'claude-desktop-restart': 'agentClaudeDesktopRestart',
   'codex-plugin-disabled': 'agentCodexDisabled',
   'codex-plugin-missing': 'agentCodexMissing',
   'codex-unmanaged-config': 'agentCodexConflict',

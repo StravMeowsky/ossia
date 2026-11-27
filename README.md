@@ -95,7 +95,6 @@ Ossia currently supports:
 - Antigravity
 - Antigravity CLI
 - Claude Code
-- Claude Desktop
 - WorkBuddy
 - Pi
 

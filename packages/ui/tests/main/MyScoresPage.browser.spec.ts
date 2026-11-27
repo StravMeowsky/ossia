@@ -343,3 +343,79 @@ test('my scores asks for the local service when the backend is stopped', async (
   await expect(page.getByRole('heading', { name: '需要本地服务' })).toBeVisible();
   await expect(page.getByRole('button', { name: '启动服务' })).toBeEnabled();
 });
+
+test('new score dialog creates a blank score and passes the composition brief along', async ({
+  page,
+}) => {
+  await mockManagement(page, { initialRuntime: true, scores: [scores[0]!] });
+  await openScores(page);
+  await page.getByRole('button', { name: '新建乐谱' }).click();
+  const dialog = page.getByRole('dialog', { name: '新建乐谱' });
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole('textbox', { name: '标题' }).fill('晨歌');
+  await dialog.getByRole('textbox', { name: '作曲' }).fill('A.Composer');
+  await dialog.getByRole('combobox', { name: '乐器' }).selectOption('violin');
+  await dialog.getByRole('button', { name: '小调' }).click();
+  await dialog.getByRole('combobox', { name: '调号' }).selectOption('-1');
+  await expect(dialog.getByRole('combobox', { name: '调号' })).toContainText('D 小调 · 1♭');
+  await dialog.getByRole('combobox', { name: '拍号' }).selectOption('6/8');
+  await dialog.getByRole('textbox', { name: '速度' }).fill('Andante');
+
+  // An out-of-range metronome mark keeps the dialog from submitting.
+  const bpm = dialog.getByRole('textbox', { name: '每分钟拍数' });
+  await bpm.fill('5');
+  await expect(dialog.getByRole('button', { name: '创建' })).toBeDisabled();
+  await bpm.fill('60');
+  await dialog.getByRole('textbox', { name: '小节数' }).fill('8');
+  await dialog.getByRole('textbox', { name: '让助手创作' }).fill('一段温柔的旋律');
+  await dialog.getByRole('button', { name: '创建' }).click();
+
+  await expect(dialog).toBeHidden();
+  const requests = await page.evaluate(
+    () => (window as Window & { createScoreRequests?: unknown[] }).createScoreRequests,
+  );
+  expect(requests).toEqual([
+    {
+      score: {
+        title: '晨歌',
+        composer: 'A.Composer',
+        instrument: 'violin',
+        fifths: -1,
+        mode: 'minor',
+        timeNumerator: 6,
+        timeDenominator: 8,
+        tempoText: 'Andante',
+        tempoBpm: 60,
+        measures: 8,
+      },
+      compose: expect.stringContaining('请在这份新建的空白乐谱里创作：一段温柔的旋律'),
+    },
+  ]);
+  await expect(page.locator('.score-card-title')).toContainText(['晨歌']);
+});
+
+test('new score dialog uses defaults when the form is left blank', async ({ page }) => {
+  await mockManagement(page, { initialRuntime: true, scores: [scores[0]!] });
+  await openScores(page);
+  await page.getByRole('button', { name: '新建乐谱' }).click();
+  const dialog = page.getByRole('dialog', { name: '新建乐谱' });
+  await dialog.getByRole('button', { name: '创建' }).click();
+  await expect(dialog).toBeHidden();
+  const requests = await page.evaluate(
+    () => (window as Window & { createScoreRequests?: unknown[] }).createScoreRequests,
+  );
+  expect(requests).toEqual([
+    {
+      score: {
+        title: '未命名乐谱',
+        instrument: 'piano',
+        fifths: 0,
+        mode: 'major',
+        timeNumerator: 4,
+        timeDenominator: 4,
+        measures: 16,
+      },
+    },
+  ]);
+});

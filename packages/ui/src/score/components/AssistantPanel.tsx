@@ -1,11 +1,19 @@
 import { ArrowUp, SquarePen, Square, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { Segmented } from '../../components/segmented.tsx';
 import { Button } from '../../components/ui/button.tsx';
 import type { UiLanguage } from '../../generated/protocol.ts';
 import { translate, useI18n } from '../../i18n.tsx';
 import type { MessageKey } from '../../i18n.tsx';
+import claudeIcon from '../../main/assets/agents/claude.svg';
+import codexIcon from '../../main/assets/agents/codex-app.png';
 import type { AssistantController, AssistantMessage } from '../hooks/useAssistant.ts';
+
+const PROVIDERS = [
+  { value: 'codex', name: 'Codex', icon: codexIcon },
+  { value: 'claude-code', name: 'Claude Code', icon: claudeIcon },
+] as const;
 
 const STEPS: [RegExp, MessageKey][] = [
   [/^ossia_guide$|^ossia_docs$/, 'assistantStepGuide'],
@@ -28,7 +36,7 @@ function currentStep(tools: string[]): MessageKey {
 }
 
 /**
- * Step lines follow the conversation's language rather than the app's: Claude's reply so far,
+ * Step lines follow the conversation's language rather than the app's: the reply so far,
  * or else the message it is answering.
  */
 function conversationLanguage(messages: AssistantMessage[], index: number): UiLanguage {
@@ -37,7 +45,7 @@ function conversationLanguage(messages: AssistantMessage[], index: number): UiLa
   return /[\u3400-\u9fff]/.test(reply || asked) ? 'zh-CN' : 'en-US';
 }
 
-/** Right-hand chat with Claude Code about the open score. */
+/** Right-hand chat with the selected Agent about the open score. */
 export function AssistantPanel({
   assistant,
   onClose,
@@ -68,6 +76,22 @@ export function AssistantPanel({
   return (
     <aside className="score-assistant" aria-label={t('assistantTitle')}>
       <header className="score-assistant-header">
+        <Segmented
+          compact
+          ariaLabel={t('assistantProvider')}
+          value={assistant.provider}
+          disabled={running}
+          options={PROVIDERS.map(({ value, name, icon }) => ({
+            value,
+            ariaLabel: name,
+            title: name,
+            label: <img src={icon} alt="" draggable={false} />,
+          }))}
+          onChange={(value) => {
+            const provider = PROVIDERS.find((option) => option.value === value);
+            if (provider) assistant.selectProvider(provider.value);
+          }}
+        />
         <Button
           type="button"
           variant="ghost"

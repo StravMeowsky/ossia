@@ -61,12 +61,101 @@ struct Pitch {
     marks: i32,
 }
 
-pub(crate) fn transpose_interval(from: &str, to: &str, german: bool) -> Option<i32> {
-    let from = parse_pitch(from, german)?;
-    let to = parse_pitch(to, german)?;
+/// Note-name language in effect for a source region. Other LilyPond
+/// languages are outside the verified pitch subset.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub(crate) enum NoteLanguage {
+    #[default]
+    Nederlands,
+    English,
+    Deutsch,
+}
+
+impl NoteLanguage {
+    /// The language selected by `\language "name"` or `\include "name.ly"`.
+    fn from_directive(command: &str, argument: &str) -> Option<Self> {
+        let name = argument.strip_prefix('"')?.strip_suffix('"')?;
+        let name = match command {
+            "language" => name,
+            "include" => name.strip_suffix(".ly")?,
+            _ => return None,
+        };
+        match name {
+            "nederlands" => Some(Self::Nederlands),
+            "english" => Some(Self::English),
+            "deutsch" => Some(Self::Deutsch),
+            _ => None,
+        }
+    }
+}
+
+/// A note-language directive at `tokens[index]`: `Some(Ok(language))` for a
+/// supported one, `Some(Err(()))` for `\language` with any other name.
+pub(crate) fn language_directive(
+    tokens: &[crate::Token],
+    index: usize,
+) -> Option<Result<NoteLanguage, ()>> {
+    let command = tokens[index].command()?;
+    if !matches!(command, "language" | "include") {
+        return None;
+    }
+    let argument = tokens[index + 1..].iter().find(|t| !t.trivia())?;
+    match NoteLanguage::from_directive(command, &argument.raw) {
+        Some(language) => Some(Ok(language)),
+        None if command == "language" => Some(Err(())),
+        None => None,
+    }
+}
+
+/// The note language in effect before byte `before`, or `None` when an
+/// unsupported `\language` precedes it.
+pub(crate) fn language_before(tokens: &[crate::Token], before: usize) -> Option<NoteLanguage> {
+    let mut language = NoteLanguage::default();
+    for index in 0..tokens.len() {
+        if tokens[index].byte_start >= before {
+            break;
+        }
+        match language_directive(tokens, index) {
+            Some(Ok(next)) => language = next,
+            Some(Err(())) => return None,
+            None => {}
+        }
+    }
+    Some(language)
+}
+
+pub(crate) fn transpose_interval(from: &str, to: &str, language: NoteLanguage) -> Option<i32> {
+    let from = parse_pitch(from, language)?;
+    let to = parse_pitch(to, language)?;
     Some(midi(di(to), to.alter) - midi(di(from), from.alter))
 }
-fn parse_pitch(s: &str, german: bool) -> Option<Pitch> {
+
+/// English names: `s`/`sharp` raise, `f`/`flat` lower, `ss`/`x`/`ff` double.
+fn english_alteration(tail: &str) -> (i32, &str) {
+    for (suffix, alter) in [
+        ("-sharpsharp", 2),
+        ("-flatflat", -2),
+        ("sharpsharp", 2),
+        ("flatflat", -2),
+        ("-sharp", 1),
+        ("-flat", -1),
+        ("sharp", 1),
+        ("flat", -1),
+        ("ss", 2),
+        ("ff", -2),
+        ("x", 2),
+        ("s", 1),
+        ("f", -1),
+    ] {
+        if let Some(rest) = tail.strip_prefix(suffix) {
+            return (alter, rest);
+        }
+    }
+    (0, tail)
+}
+
+fn parse_pitch(s: &str, language: NoteLanguage) -> Option<Pitch> {
+    let german = language == NoteLanguage::Deutsch;
     let step_byte = *s.as_bytes().first()?;
     let step = match step_byte {
         b'c' => 0,
@@ -75,10 +164,15 @@ fn parse_pitch(s: &str, german: bool) -> Option<Pitch> {
         b'f' => 3,
         b'g' => 4,
         b'a' => 5,
-        b'b' | b'h' => 6,
+        b'b' => 6,
+        b'h' if language != NoteLanguage::English => 6,
         _ => return None,
     };
     let mut tail = &s[1..];
+    if language == NoteLanguage::English {
+        let (alter, rest) = english_alteration(tail);
+        return finish_pitch(step, alter, rest);
+    }
     if german && step_byte == b'b' && tail.starts_with(|c: char| c.is_ascii_alphabetic()) {
         return None;
     }
@@ -112,6 +206,11 @@ fn parse_pitch(s: &str, german: bool) -> Option<Pitch> {
         };
         tail = rest;
     }
+    finish_pitch(step, alter, tail)
+}
+
+/// Octave marks, an optional `!`, then nothing but a written duration.
+fn finish_pitch(step: i32, alter: i32, mut tail: &str) -> Option<Pitch> {
     let mut marks = 0i32;
     while let Some(c) = tail.chars().next().filter(|c| *c == '\'' || *c == ',') {
         marks = marks.checked_add(if c == '\'' { 1 } else { -1 })?;
@@ -147,31 +246,40 @@ fn unsupported(reason: impl Into<String>) -> PitchResult {
 /// literal source tokens. Opaque music returns no prediction. Note-on timing,
 /// ties, articulations and duration are outside this interface.
 pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, AppError> {
+    resolve(source, span, false)
+}
+
+/// Resolve pitches in written order for editing: repeats are read once and simultaneous voices
+/// one after another, which is how `\relative` chains them.
+pub(crate) fn resolve_written_pitches(
+    source: &str,
+    span: SourceSpan,
+) -> Result<PitchResult, AppError> {
+    resolve(source, span, true)
+}
+
+fn resolve(source: &str, span: SourceSpan, written: bool) -> Result<PitchResult, AppError> {
     let map = SourceMap::new(source);
     let text = map.slice(span)?;
     let document_tokens = tokenize(source);
-    let mut german = false;
+    let mut language = NoteLanguage::default();
     for (i, token) in document_tokens.iter().enumerate() {
-        if token.command() == Some("language") {
-            return Ok(unsupported(
-                "document note language is outside the verified pitch subset",
-            ));
+        if let Some(directive) = language_directive(&document_tokens, i) {
+            let Ok(next) = directive else {
+                return Ok(unsupported(
+                    "document note language is outside the verified pitch subset",
+                ));
+            };
+            if (span.byte_start..span.byte_end).contains(&token.byte_start) {
+                return Ok(unsupported("note language changes inside pitch expression"));
+            }
+            if token.byte_start < span.byte_start {
+                language = next;
+            }
+            continue;
         }
         if token.command() == Some("include") {
             let next = document_tokens[i + 1..].iter().find(|t| !t.trivia());
-            if next.is_some_and(|t| {
-                matches!(
-                    t.raw.as_str(),
-                    "\"deutsch.ly\"" | "\"english.ly\"" | "\"nederlands.ly\""
-                )
-            }) {
-                if (span.byte_start..span.byte_end).contains(&token.byte_start) {
-                    return Ok(unsupported("note language changes inside pitch expression"));
-                }
-                if token.byte_start < span.byte_start {
-                    german = next.is_some_and(|t| t.raw == "\"deutsch.ly\"");
-                }
-            }
             if !next.is_some_and(|t| pitch_neutral_include(&t.raw)) {
                 return Ok(unsupported(
                     "included definitions may change pitch semantics",
@@ -190,22 +298,27 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
         if t.mode == Mode::Text {
             continue;
         }
-        if unsupported_token(t) {
+        // Written order reads through repeats and Scheme values; strict analysis does not.
+        if unsupported_token(t) && !written {
             return Ok(unsupported(format!(
                 "{} is outside the verified pitch subset",
                 t.raw
             )));
         }
     }
-    if let Some(result) = resolve_simultaneous(source, span, &syntax)? {
-        return Ok(result);
+    if !written {
+        if let Some(result) = resolve_simultaneous(source, span, &syntax)? {
+            return Ok(result);
+        }
     }
     let mut events = Vec::new();
     let mut ref_di = 0i32;
     let mut relative = false;
     let mut transpose = 0i32;
     let mut depth = 0usize;
-    let mut states: Vec<(usize, bool, i32, i32)> = Vec::new();
+    // Depth, relative mode, reference and transposition before the block, and whether the block
+    // is the body of `\relative`, `\absolute` or `\transpose`.
+    let mut states: Vec<(usize, bool, i32, i32, bool)> = Vec::new();
     let mut pending: Option<(bool, i32)> = None;
     let mut pending_transpose = None;
     let mut chord: Option<(usize, Vec<PitchMember>)> = None;
@@ -248,9 +361,11 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
                 i += 1;
                 continue;
             }
-            if !active {
+            if !active && !written {
                 return Ok(unsupported("unbounded markup expression"));
             }
+            // Written order reads on: the markup ended where something else begins.
+            active = true;
         }
         if let Some(cmd) = t.command() {
             if cmd == "relative" {
@@ -258,7 +373,7 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
                 let Some(j) = next else {
                     return Ok(unsupported("relative has no reference pitch"));
                 };
-                let Some(p) = parse_pitch(&tokens[j].raw, german) else {
+                let Some(p) = parse_pitch(&tokens[j].raw, language) else {
                     return Ok(unsupported(
                         "relative reference is outside the verified subset",
                     ));
@@ -275,12 +390,12 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
                 let Some(to_index) = pitches.next() else {
                     return Ok(unsupported("transpose has no target pitch"));
                 };
-                let Some(from) = parse_pitch(&tokens[from_index].raw, german) else {
+                let Some(from) = parse_pitch(&tokens[from_index].raw, language) else {
                     return Ok(unsupported(
                         "transpose source is outside the verified pitch subset",
                     ));
                 };
-                let Some(to) = parse_pitch(&tokens[to_index].raw, german) else {
+                let Some(to) = parse_pitch(&tokens[to_index].raw, language) else {
                     return Ok(unsupported(
                         "transpose target is outside the verified pitch subset",
                     ));
@@ -308,9 +423,46 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
                 }
                 continue;
             }
-            if !known_command(cmd) && !safe_stem_direction_alias(source, cmd) {
+            if written && matches!(cmd, "repeat" | "new" | "context") {
+                // Skip the repeat kind and count, or the context type and an optional name.
+                let mut skip = 2;
+                let mut j = i + 1;
+                while j < tokens.len() && skip > 0 {
+                    if !tokens[j].trivia() {
+                        skip -= 1;
+                        if cmd != "repeat" && skip == 1 {
+                            let named = tokens[j + 1..].iter().find(|t| !t.trivia());
+                            if named.is_none_or(|t| t.raw != "=") {
+                                skip = 0;
+                            }
+                        }
+                    }
+                    j += 1;
+                }
+                if cmd != "repeat" {
+                    // `= "name"` follows the context type.
+                    while j < tokens.len() && (tokens[j].trivia() || tokens[j].raw == "=") {
+                        j += 1;
+                    }
+                    if j < tokens.len() && tokens[j].kind == TokenKind::String {
+                        j += 1;
+                    }
+                }
+                i = j;
+                continue;
+            }
+            if written && cmd == "alternative" {
+                i += 1;
+                continue;
+            }
+            // Editing reads past commands it does not know; strict analysis stops there.
+            if !written && !known_command(cmd) && !safe_stem_direction_alias(source, cmd) {
                 return Ok(unsupported(format!("unresolved music command: \\{cmd}")));
             }
+            i += 1;
+            continue;
+        }
+        if written && (t.raw == "<<" || t.raw == ">>") {
             i += 1;
             continue;
         }
@@ -322,7 +474,12 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
         if t.kind == TokenKind::Brace {
             if t.raw == "{" {
                 depth += 1;
-                states.push((depth, relative, ref_di, transpose));
+                let wrapper = pending.is_some() || pending_transpose.is_some();
+                states.push((depth, relative, ref_di, transpose, wrapper));
+                // An enclosing `\relative` does not reach into transposed music.
+                if pending.is_none() && pending_transpose.is_some() {
+                    relative = false;
+                }
                 if let Some((rel, new_ref)) = pending.take() {
                     relative = rel;
                     ref_di = new_ref;
@@ -331,9 +488,12 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
                     transpose = transpose.saturating_add(offset);
                 }
             } else {
-                if let Some((_, rel, old_ref, old_transpose)) = states.pop_if(|s| s.0 == depth) {
-                    // The outer expression exposes its final reference; nested wrappers restore the parent.
-                    if depth > 1 {
+                if let Some((_, rel, old_ref, old_transpose, wrapper)) =
+                    states.pop_if(|s| s.0 == depth)
+                {
+                    // The outer expression exposes its final reference; nested wrappers restore the
+                    // parent, while plain nested blocks such as tuplets pass their last pitch on.
+                    if depth > 1 && wrapper {
                         relative = rel;
                         ref_di = old_ref;
                         transpose = old_transpose;
@@ -398,7 +558,7 @@ pub fn resolve_pitches(source: &str, span: SourceSpan) -> Result<PitchResult, Ap
                     voice: None,
                 });
             } else {
-                let Some(p) = parse_pitch(&t.raw, german) else {
+                let Some(p) = parse_pitch(&t.raw, language) else {
                     return Ok(unsupported(format!(
                         "unsupported pitch spelling: {}",
                         t.raw

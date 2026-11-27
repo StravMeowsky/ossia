@@ -196,55 +196,21 @@ test('multiple WorkBuddy installs render and toggle independently', async ({ pag
   await expect(page.getByRole('button', { name: '移除 WorkBuddy 插件' })).toHaveCount(1);
 });
 
-test('Claude uses one control and shows each host separately', async ({ page }, testInfo) => {
+test('Claude Code shows its own integration details and can be toggled', async ({ page }) => {
   await mockManagement(page, { claude: true });
   await page.goto('/main.html');
-  const chip = page.locator('.agent-strip').getByRole('button', { name: '移除 Claude 插件' });
-  await expect(chip).toHaveCount(1);
-  const desktop = page.locator('.agent-detail').filter({ hasText: 'Claude Desktop' });
-  const code = page.locator('.agent-detail').filter({ hasText: 'Claude Code' });
-  await expect(desktop.locator('.agent-detail-head')).toContainText('已接入');
-  await expect(desktop).toContainText('/claude/desktop.json');
-  await expect(desktop).toContainText('1');
-  await expect(code.locator('.agent-detail-head')).toContainText('需修复');
-  await expect(code).toContainText('/claude/code.json');
-  await expect(code).toContainText('2');
-  await expect(page.locator('.agent-details button')).toHaveCount(0);
-  await expect(chip).toHaveAttribute('aria-pressed', 'true');
-  await page.screenshot({ path: testInfo.outputPath('claude-details.png') });
-  await chip.click();
+  const remove = page.getByRole('button', { name: '移除 Claude Code 插件' });
+  const detail = page.locator('.agent-detail').filter({ hasText: 'Claude Code' });
+  await expect(remove).toHaveAttribute('aria-pressed', 'true');
+  await expect(detail).toContainText('/claude/plugins/installed_plugins.json');
+  await expect(detail).toContainText('2.1.123');
+  await expect(page.getByText('Claude Desktop', { exact: true })).toHaveCount(0);
+
+  await remove.click();
   await releaseAgentChange(page);
-  expect(
-    await page.evaluate(
-      () =>
-        (
-          window as Window & {
-            managementAgentChanges?: Array<{ agentIds: string[]; enabled: boolean }>;
-          }
-        ).managementAgentChanges?.[0],
-    ),
-  ).toMatchObject({ agentIds: ['claude'], enabled: false });
-  const install = page.getByRole('button', { name: '安装 Claude 插件' });
+  const install = page.getByRole('button', { name: '安装 Claude Code 插件' });
   await expect(install).toHaveAttribute('aria-pressed', 'false');
   await install.click();
   await releaseAgentChange(page);
-  expect(
-    await page.evaluate(
-      () =>
-        (window as Window & { managementAgentChanges?: Array<{ enabled: boolean }> })
-          .managementAgentChanges?.[1],
-    ),
-  ).toMatchObject({ enabled: true });
+  await expect(remove).toHaveAttribute('aria-pressed', 'true');
 });
-
-for (const host of ['desktop', 'code'] as const) {
-  test(`Claude button and details identify ${host} when it is the only host`, async ({ page }) => {
-    await mockManagement(page, { claude: host });
-    await page.goto('/main.html');
-    const name = host === 'desktop' ? 'Claude Desktop' : 'Claude Code';
-    await expect(
-      page.locator('.agent-strip').getByRole('button', { name: `移除 ${name} 插件` }),
-    ).toHaveCount(1);
-    await expect(page.locator('.agent-detail-head').filter({ hasText: name })).toHaveCount(1);
-  });
-}

@@ -237,6 +237,8 @@ export function ScoreWorkspace({
   penColor,
 }: ScoreWorkspaceProps) {
   const { t } = useI18n();
+  // Like Escape, a click on empty score keeps the highlight that follows running playback.
+  const clearAudition = playback.phase === 'playing' ? undefined : playback.clearAuditionHighlight;
   const previous = useRef<{ documentId: string; render: RenderReference } | null>(null);
   useLayoutEffect(() => {
     if (!doc || notFound) previous.current = null;
@@ -321,6 +323,7 @@ export function ScoreWorkspace({
               playhead={playback.playhead}
               playbackSystems={playback.timeline?.systems}
               onAuditionNote={onActivateNote}
+              onClearAudition={clearAudition}
               viewKey={viewKey}
               initialPan={initialPan}
               onPanChange={onPan}
@@ -355,6 +358,7 @@ export function ScoreWorkspace({
             playhead={playback.playhead}
             playbackSystems={playback.timeline?.systems}
             onAuditionNote={render && !stale ? onActivateNote : undefined}
+            onClearAudition={clearAudition}
             viewKey={viewKey}
             initialPan={initialPan}
             onPanChange={onPan}

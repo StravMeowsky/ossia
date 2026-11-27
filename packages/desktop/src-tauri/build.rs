@@ -68,6 +68,7 @@ fn main() {
             "management_restore_score",
             "management_delete_score",
             "management_open_score",
+            "management_create_score",
             "update_state",
             "update_check",
             "release_notes",

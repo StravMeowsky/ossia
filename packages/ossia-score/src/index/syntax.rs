@@ -137,6 +137,7 @@ pub(crate) fn region(
 ) -> VoiceRegion {
     let std::ops::Range { start, end } = range;
     let map = SourceMap::new(source);
+    let inherited = rhythm::inherited_meter(&syntax.tokens);
     let tokens = &syntax.tokens;
     let byte_end = tokens[end - 1].byte_end;
     let span = map.span(tokens[start].byte_start, byte_end).unwrap();
@@ -216,8 +217,14 @@ pub(crate) fn region(
                     );
                     break;
                 };
-                let (measures, branch_reason) =
-                    parse_measure_body(source, body_start, body_end, &map, &repeat_boundaries);
+                let (measures, branch_reason) = parse_measure_body(
+                    source,
+                    body_start,
+                    body_end,
+                    &map,
+                    &repeat_boundaries,
+                    inherited,
+                );
                 if let Some(branch_reason) = branch_reason {
                     reason.get_or_insert(branch_reason);
                 }
@@ -230,8 +237,14 @@ pub(crate) fn region(
             measure_groups.push(Vec::new());
         }
     } else {
-        let (measures, body_reason) =
-            parse_measure_body(source, body_start, body_end, &map, &repeat_boundaries);
+        let (measures, body_reason) = parse_measure_body(
+            source,
+            body_start,
+            body_end,
+            &map,
+            &repeat_boundaries,
+            inherited,
+        );
         if let Some(body_reason) = body_reason {
             reason.get_or_insert(body_reason);
         }
@@ -307,6 +320,7 @@ fn parse_measure_body(
     body_end: usize,
     map: &SourceMap<'_>,
     repeats: &RepeatBoundaries,
+    inherited: Option<rhythm::MeterFraction>,
 ) -> (Vec<super::Measure>, Option<String>) {
     let body = &source[body_start..body_end];
     let events = tokenize(&format!("{{ {body} }}"));
@@ -406,7 +420,9 @@ fn parse_measure_body(
         }
     }
     if trailing_music && has_music {
-        if let Some(boundaries) = rhythm::implicit_measure_boundaries(&events, body_start, from) {
+        if let Some(boundaries) =
+            rhythm::implicit_measure_boundaries(&events, body_start, from, inherited)
+        {
             for boundary in boundaries {
                 measures.push(super::Measure {
                     measure_start: next,
@@ -422,7 +438,7 @@ fn parse_measure_body(
     if measures.is_empty() || trailing_music {
         reason.get_or_insert("music without explicit complete measure boundaries".into());
     }
-    let measures = expand_scaled_measures(&events, body_start, map, measures, &marked)
+    let measures = expand_scaled_measures(&events, body_start, map, measures, &marked, inherited)
         .unwrap_or_else(|| {
             reason.get_or_insert("ambiguous multiplied rest or skip".into());
             Vec::new()
@@ -436,6 +452,7 @@ fn expand_scaled_measures(
     map: &SourceMap<'_>,
     measures: Vec<super::Measure>,
     marked: &HashSet<usize>,
+    inherited: Option<rhythm::MeterFraction>,
 ) -> Option<Vec<super::Measure>> {
     let tokens = events.iter().filter(|t| !t.trivia()).collect::<Vec<_>>();
     let scaled = tokens
@@ -461,7 +478,9 @@ fn expand_scaled_measures(
             .get(scaled.partition_point(|byte| *byte < start))
             .is_some_and(|byte| *byte < end);
         if scaled_here && !marked.contains(&from) {
-            for (boundary, count) in rhythm::scaled_measure_boundaries(events, start, end)? {
+            for (boundary, count) in
+                rhythm::scaled_measure_boundaries(events, start, end, inherited)?
+            {
                 let boundary = body_start + boundary - 2;
                 let last = next.checked_add(count - 1)?;
                 result.push(super::Measure {

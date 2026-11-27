@@ -9,16 +9,20 @@ interface Sample {
 interface AudioCatalog {
   instruments: Record<string, { samples: Sample[]; gain?: number }>;
 }
-interface AudioState {
+interface AudioOutput {
   context: AudioContext;
   master: GainNode;
+}
+interface AudioState extends AudioOutput {
   catalog: AudioCatalog;
   base: URL;
+  extension: 'ogg' | 'mp3';
 }
 interface Bank {
   samples: Sample[];
   gain: number;
   buffers: Map<string, AudioBuffer>;
+  pending: Map<string, Promise<void>>;
 }
 
 const MASTER_GAIN = 0.82;
@@ -32,12 +36,18 @@ function contextConstructor() {
   return ctor;
 }
 
+function nearestSample(bank: Bank, pitch: number) {
+  return bank.samples.reduce((best, candidate) =>
+    Math.abs(candidate.pitch - pitch) < Math.abs(best.pitch - pitch) ? candidate : best,
+  );
+}
+
 /** Lazily loads the sample banks required by the current score. */
 export class ScoreAudio {
+  private output: AudioOutput | null = null;
   private loaded: AudioState | null = null;
   private loading: Promise<AudioState> | null = null;
-  private banks = new Map<SampleInstrument, Promise<Bank>>();
-  private decoded = new Map<SampleInstrument, Bank>();
+  private banks = new Map<SampleInstrument, Bank>();
   private sources = new Set<AudioBufferSourceNode>();
 
   async load(instruments: readonly SampleInstrument[] = []) {
@@ -48,19 +58,27 @@ export class ScoreAudio {
       this.loaded = await this.loading;
     }
     const state = this.loaded;
-    await Promise.all([...new Set(instruments)].map((instrument) => this.bank(state, instrument)));
+    await Promise.all(
+      [...new Set(instruments)].map((instrument) => this.loadSamples(state, instrument)),
+    );
     return state;
   }
 
+  /** Start decoding only the samples needed for these pitches. */
+  async prepare(instrument: SampleInstrument, pitches: readonly number[]) {
+    await this.loadSamples(await this.load(), instrument, pitches);
+  }
+
   async resume() {
-    const { context } = await this.load();
+    // Request resume during user activation, even while the catalog is still loading.
+    const { context } = this.audioOutput();
     if (context.state !== 'running') await context.resume();
   }
   async suspend() {
-    if (this.loaded?.context.state === 'running') await this.loaded.context.suspend();
+    if (this.output?.context.state === 'running') await this.output.context.suspend();
   }
   now() {
-    return this.loaded?.context.currentTime ?? 0;
+    return this.output?.context.currentTime ?? 0;
   }
 
   async play(
@@ -70,22 +88,24 @@ export class ScoreAudio {
     instrument: SampleInstrument,
     exactDuration = false,
   ) {
-    const state = await this.load([instrument]);
-    const bank = await this.bank(state, instrument);
+    const state = await this.load();
+    const bank = await this.loadSamples(state, instrument, pitches);
     this.start(state, bank, instrument, pitches, start, duration, exactDuration);
   }
 
-  /** Whether `playNow` can sound these instruments without waiting for loading or resuming. */
-  ready(instruments: readonly SampleInstrument[]) {
+  /** Whether these pitches can start without waiting for decoding or resuming. */
+  ready(instrument: SampleInstrument, pitches: readonly number[]) {
+    const bank = this.banks.get(instrument);
     return (
-      this.loaded?.context.state === 'running' &&
-      instruments.every((instrument) => this.decoded.has(instrument))
+      this.output?.context.state === 'running' &&
+      !!bank &&
+      pitches.every((pitch) => bank.buffers.has(nearestSample(bank, pitch).name))
     );
   }
 
-  /** Start pitches at once on a running context with a decoded bank; check `ready` first. */
+  /** Start decoded pitches at once on a running context. */
   playNow(pitches: readonly number[], duration: number, instrument: SampleInstrument) {
-    const bank = this.decoded.get(instrument);
+    const bank = this.banks.get(instrument);
     if (!this.loaded || !bank) throw new Error(`${instrument} samples are not loaded`);
     this.start(
       this.loaded,
@@ -110,9 +130,7 @@ export class ScoreAudio {
     const when = Math.max(start, state.context.currentTime);
     const length = exactDuration ? duration : Math.max(0.05, duration);
     for (const pitch of pitches) {
-      const sample = bank.samples.reduce((best, candidate) =>
-        Math.abs(candidate.pitch - pitch) < Math.abs(best.pitch - pitch) ? candidate : best,
-      );
+      const sample = nearestSample(bank, pitch);
       const buffer = bank.buffers.get(sample.name);
       if (!buffer) throw new Error(`missing ${instrument} sample ${sample.name}`);
       const source = state.context.createBufferSource();
@@ -147,41 +165,57 @@ export class ScoreAudio {
     this.sources.clear();
   }
 
-  private async loadCatalog(): Promise<AudioState> {
-    const context = new (contextConstructor())();
-    const master = context.createGain();
-    master.connect(context.destination);
-    const base = new URL(`${import.meta.env.BASE_URL}audio/`, window.location.href);
-    try {
-      const url = new URL('manifest.json', base);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`audio catalog ${url} failed to load`);
-      const catalog: AudioCatalog = await response.json();
-      return { context, master, catalog, base };
-    } catch (error) {
-      await context.close().catch(() => {});
-      throw error;
+  private audioOutput() {
+    if (!this.output) {
+      const context = new (contextConstructor())();
+      const master = context.createGain();
+      master.connect(context.destination);
+      this.output = { context, master };
     }
+    return this.output;
   }
 
-  private bank(state: AudioState, instrument: SampleInstrument) {
-    let promise = this.banks.get(instrument);
-    if (!promise) {
-      promise = (async () => {
-        const entry = state.catalog.instruments[instrument];
-        const samples = entry?.samples;
-        const gain = entry?.gain ?? 1;
-        if (!Number.isFinite(gain) || gain <= 0)
-          throw new Error(`invalid ${instrument} sample gain`);
-        if (!Array.isArray(samples) || !samples.length)
-          throw new Error(`invalid ${instrument} sample catalog`);
-        const audio = document.createElement('audio');
-        const extension = audio.canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';
-        const buffers = new Map<string, AudioBuffer>();
-        await Promise.all(
-          samples.map(async (sample) => {
-            const url = new URL(sample[extension], state.base);
-            const response = await fetch(url);
+  private async loadCatalog(): Promise<AudioState> {
+    const base = new URL(`${import.meta.env.BASE_URL}audio/`, window.location.href);
+    const url = new URL('manifest.json', base);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`audio catalog ${url} failed to load`);
+    const catalog: AudioCatalog = await response.json();
+    const extension = document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"')
+      ? 'ogg'
+      : 'mp3';
+    return { ...this.audioOutput(), catalog, base, extension };
+  }
+
+  private async loadSamples(
+    state: AudioState,
+    instrument: SampleInstrument,
+    pitches?: readonly number[],
+  ) {
+    let bank = this.banks.get(instrument);
+    if (!bank) {
+      const entry = state.catalog.instruments[instrument];
+      const samples = entry?.samples;
+      const gain = entry?.gain ?? 1;
+      if (!Number.isFinite(gain) || gain <= 0) throw new Error(`invalid ${instrument} sample gain`);
+      if (!Array.isArray(samples) || !samples.length)
+        throw new Error(`invalid ${instrument} sample catalog`);
+      bank = { samples, gain, buffers: new Map(), pending: new Map() };
+      this.banks.set(instrument, bank);
+    }
+    const currentBank = bank;
+    const selected = pitches
+      ? new Set(pitches.map((pitch) => nearestSample(currentBank, pitch)))
+      : bank.samples;
+    const { buffers, pending } = bank;
+    const loads: Promise<void>[] = [];
+    for (const sample of selected) {
+      if (buffers.has(sample.name)) continue;
+      let loading = pending.get(sample.name);
+      if (!loading) {
+        const url = new URL(sample[state.extension], state.base);
+        loading = fetch(url)
+          .then(async (response) => {
             if (!response.ok) throw new Error(`${instrument} sample ${url} failed to load`);
             try {
               buffers.set(
@@ -191,18 +225,14 @@ export class ScoreAudio {
             } catch (error) {
               throw new Error(`cannot decode ${instrument} sample ${url}: ${String(error)}`);
             }
-          }),
-        );
-        const bank = { samples, buffers, gain };
-        this.decoded.set(instrument, bank);
-        return bank;
-      })().catch((error) => {
-        this.banks.delete(instrument);
-        throw error;
-      });
-      this.banks.set(instrument, promise);
+          })
+          .finally(() => pending.delete(sample.name));
+        pending.set(sample.name, loading);
+      }
+      loads.push(loading);
     }
-    return promise;
+    await Promise.all(loads);
+    return bank;
   }
 }
 

@@ -23,8 +23,8 @@ plist = "1.10"
 tempfile.workspace = true
 
 [[test]]
-name = "claude_group"
-path = "tests/claude_group.rs"
+name = "claude_code"
+path = "tests/claude_code.rs"
 
 [[test]]
 name = "integration_order"

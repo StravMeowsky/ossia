@@ -195,7 +195,8 @@ pub async fn call(endpoint: &str, method: &str, params: Value) -> Result<Value> 
         | "evidence"
         | "delete"
         | "purge"
-        | "management-archive-score" => Duration::from_secs(45),
+        | "management-archive-score"
+        | "management-create-score" => Duration::from_secs(45),
         "storage-cleanup" => Duration::from_secs(120),
         _ => Duration::from_secs(15),
     };
@@ -275,6 +276,7 @@ pub fn dispatch(runtime: &Runtime, method: &str, params: Value) -> Result<Value>
         "management-score-preview" => value(runtime.management_score_preview(decode(params)?)?),
         "management-archive-score" => value(runtime.management_archive_score(decode(params)?)?),
         "management-score-url" => value(runtime.management_score_url(decode(params)?)?),
+        "management-create-score" => value(runtime.management_create_score(decode(params)?)?),
         "list" => value(runtime.agent_list(decode(params)?)?),
         "update_metadata" => value(runtime.update_metadata(decode(params)?)?),
         "context" => value(runtime.agent_context(decode::<ContextArgs>(params)?.document_id)?),

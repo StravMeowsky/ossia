@@ -65,6 +65,8 @@ interface Props {
   playhead?: boolean;
   playbackSystems?: PlaybackSystemSpan[];
   onAuditionNote?: (element: GeometryElement, simultaneous: boolean) => void;
+  /** Clear the audition highlight when a playable click lands away from any note. */
+  onClearAudition?: () => void;
   viewKey?: string;
   initialPan?: ScoreViewPan;
   onPanChange?: (x: number, y: number) => void;
@@ -81,6 +83,18 @@ const EMPTY_SYSTEMS: PlaybackSystemSpan[] = [];
 const EMPTY_PAGES: GeometryPage[] = [];
 const EMPTY_SELECTION: SelectionTarget[] = [];
 const EMPTY_ANNOTATIONS: SelectionAnnotation[] = [];
+
+function hitAuditionElement(page: GeometryPage, x: number, y: number) {
+  const element = hitElement(page, x, y);
+  if (
+    element?.region.target.kind === 'element' &&
+    ['NoteHead', 'TabNoteHead', 'Rest', 'MultiMeasureRest'].includes(
+      element.region.elementKind ?? '',
+    )
+  ) {
+    return element;
+  }
+}
 
 export function ScoreView({
   api,
@@ -104,6 +118,7 @@ export function ScoreView({
   playhead = false,
   playbackSystems = EMPTY_SYSTEMS,
   onAuditionNote,
+  onClearAudition,
   viewKey,
   initialPan = { x: 0, y: 0 },
   onPanChange,
@@ -262,6 +277,7 @@ export function ScoreView({
     editor,
     dismiss,
     onAuditionNote,
+    onClearAudition,
     onSelect,
     onPoint,
     geometry,
@@ -279,6 +295,7 @@ export function ScoreView({
       editor,
       dismiss,
       onAuditionNote,
+      onClearAudition,
       onSelect,
       onPoint,
       geometry,
@@ -286,25 +303,65 @@ export function ScoreView({
       edit,
     };
   });
+  const auditionedOnPress = useRef(false);
   const actions = useMemo<ScoreSheetActions>(
     () => ({
       pointerDown(pageLayout, event) {
+        auditionedOnPress.current = false;
         const current = interaction.current;
-        if (!current.canAnnotate || event.button !== 0) return;
+        if (event.button !== 0) return;
+        const mouseAudition =
+          current.canPlay && event.pointerType === 'mouse' && !event.metaKey && !event.ctrlKey;
+        if (!current.canAnnotate && !mouseAudition) return;
         const ctm = event.currentTarget.getScreenCTM();
         if (!ctm) return;
         const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
-        if (!hitElement(pageLayout, point.x, point.y)) current.marquee.begin(event);
+        if (current.canAnnotate) {
+          if (!hitElement(pageLayout, point.x, point.y)) current.marquee.begin(event);
+        } else {
+          const element = hitAuditionElement(pageLayout, point.x, point.y);
+          if (element) {
+            auditionedOnPress.current = true;
+            current.dismiss();
+            current.onAuditionNote?.(element, event.altKey);
+          }
+        }
+      },
+      pointerMove(pageLayout, event) {
+        const current = interaction.current;
+        const overlay = event.currentTarget;
+        // Show where a plain mouse click will audition; the class avoids a React render per move.
+        let overNote = false;
+        if (
+          current.canPlay &&
+          !current.canAnnotate &&
+          event.pointerType === 'mouse' &&
+          event.buttons === 0 &&
+          !event.metaKey &&
+          !event.ctrlKey
+        ) {
+          const ctm = overlay.getScreenCTM();
+          if (ctm) {
+            const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
+            overNote = !!hitAuditionElement(pageLayout, point.x, point.y);
+          }
+        }
+        overlay.classList.toggle('is-over-note', overNote);
       },
       click(pageLayout, event) {
         const current = interaction.current;
-        if (current.gesture.consumeClick() || current.marquee.consumeClick()) return;
+        // Mouse notes already sounded on press. Touch and pen wait until gesture handling
+        // has ruled out panning and pinching.
+        const alreadyAuditioned = auditionedOnPress.current && event.detail > 0;
+        auditionedOnPress.current = false;
+        if (current.gesture.consumeClick() || current.marquee.consumeClick() || alreadyAuditioned)
+          return;
         if (!current.canSelect && !current.canAnnotate && !current.canPlay) return;
         const ctm = event.currentTarget.getScreenCTM();
         if (!ctm) return;
         const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
-        const target = hitSelection(pageLayout, point.x, point.y);
         if (current.canAnnotate) {
+          const target = hitSelection(pageLayout, point.x, point.y);
           if (target)
             current.chooseTarget(
               pageLayout.page,
@@ -318,18 +375,14 @@ export function ScoreView({
         current.dismiss();
         if (event.metaKey || event.ctrlKey) return;
         if (current.canPlay) {
-          const element = hitElement(pageLayout, point.x, point.y);
-          if (
-            element &&
-            ['NoteHead', 'TabNoteHead', 'Rest', 'MultiMeasureRest'].includes(
-              element.region.elementKind ?? '',
-            ) &&
-            element.region.target.kind === 'element'
-          ) {
+          const element = hitAuditionElement(pageLayout, point.x, point.y);
+          if (element) {
             current.onAuditionNote?.(element, event.altKey);
             return;
           }
+          current.onClearAudition?.();
         }
+        const target = hitSelection(pageLayout, point.x, point.y);
         if (target && current.onSelect)
           current.onSelect(
             target,

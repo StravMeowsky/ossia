@@ -58,3 +58,79 @@ pub enum ManagementScorePreview {
     Failed { error: AppError },
     Missing,
 }
+
+/// Staff layout of a new blank score.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum NewScoreInstrument {
+    /// Treble and bass staves in a piano staff.
+    Piano,
+    /// One treble-clef staff.
+    Violin,
+    /// One alto-clef staff.
+    Viola,
+    /// One bass-clef staff.
+    Cello,
+}
+
+/// Mode of a new score's key.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum NewScoreMode {
+    Major,
+    Minor,
+}
+
+/// Create a blank score whose source follows the engraving conventions: one music variable per
+/// staff with clef, key and time at its start, empty measures and a final bar line.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ManagementCreateScoreArgs {
+    /// Score title; also the library title.
+    pub title: String,
+    /// Composer as it should appear in the header and the library; omitted when blank.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub composer: Option<String>,
+    pub instrument: NewScoreInstrument,
+    /// Key signature from -7 (seven flats) to 7 (seven sharps).
+    pub fifths: i8,
+    pub mode: NewScoreMode,
+    /// Beats per measure, 1..=32.
+    pub time_numerator: u8,
+    /// Beat unit: 1, 2, 4, 8, 16 or 32.
+    pub time_denominator: u8,
+    /// Tempo marking such as "Andante"; omitted when blank.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tempo_text: Option<String>,
+    /// Metronome mark in beats per minute, 20..=400.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tempo_bpm: Option<u16>,
+    /// Number of empty measures, 1..=999.
+    pub measures: u16,
+}
+
+/// The library document created for a new score.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagementCreatedScore {
+    pub document_id: DocumentId,
+}
+
+/// Desktop request: create a score, open its window and optionally hand the assistant a
+/// composition brief to write into it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, ts_rs::TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ManagementNewScoreArgs {
+    pub score: ManagementCreateScoreArgs,
+    /// What the assistant should compose in the new score; omitted when blank.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub compose: Option<String>,
+}

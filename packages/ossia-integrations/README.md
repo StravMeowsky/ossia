@@ -4,7 +4,7 @@ This crate detects supported Agent hosts and manages the files and host configur
 
 ## Adapters and templates
 
-[`src/registry.rs`](src/registry.rs) registers Antigravity, Claude Desktop, Claude Code, Codex, DeepSeek Harness and dynamically detected WorkBuddy instances. Each implements the lifecycle in [`src/agent.rs`](src/agent.rs): detection, inspection, installation, synchronization and removal. Add a host through this boundary so host-specific behavior stays outside the backend.
+[`src/registry.rs`](src/registry.rs) registers Antigravity, Claude Code, Codex, DeepSeek Harness and dynamically detected WorkBuddy instances. Each implements the lifecycle in [`src/agent.rs`](src/agent.rs): detection, inspection, installation, synchronization and removal. Add a host through this boundary so host-specific behavior stays outside the backend.
 
 [`src/resources.rs`](src/resources.rs) embeds the Skill, score templates, icon and DSH resources from `resources/`. The installed Skill contains a generated CLI guide command for the selected home; MCP launches the Ossia executable with `mcp --home <home> --port <port>`. The full Agent workflow is owned by the backend's runtime guide.
 
@@ -16,7 +16,7 @@ This crate detects supported Agent hosts and manages the files and host configur
 
 Antigravity and Antigravity CLI share a user-level MCP entry and Ossia Skill in `~/.gemini/config`. Restart the app or start a new CLI session to load changes.
 
-Claude uses Desktop MCP configuration and a user-scoped Claude Code plugin. When enabled, synchronization adds newly detected Claude hosts. Quit and restart Desktop, or reload the Code plugin or start a new session after changes. Desktop hosts without a file reader can use existing scores and read the guide through MCP; creating source files and viewing exported images still require host file tools.
+Claude Code uses a user-scoped plugin. Reload the plugin or start a new session after changing the integration.
 
 WorkBuddy hosts are discovered per configuration root and installed through the bundled `codebuddy` plugin CLI. `sync_managed` refreshes detected, managed integrations.
 

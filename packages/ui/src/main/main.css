@@ -618,7 +618,66 @@ code.setting-value {
 }
 
 .scores-heading {
+  display: flex;
   min-width: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.service-dialog.new-score-dialog {
+  width: min(600px, calc(100% - 40px));
+}
+
+.new-score-dialog .settings-row {
+  min-height: 46px;
+}
+
+.github-token-input.new-score-input {
+  inline-size: 260px;
+}
+
+.github-token-input.new-score-number {
+  inline-size: 72px;
+}
+
+.new-score-input[aria-invalid='true'],
+.new-score-number[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.new-score-key,
+.new-score-tempo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-score-tempo .github-token-input.new-score-input {
+  inline-size: 180px;
+}
+
+.new-score-compose {
+  display: grid;
+  gap: 8px;
+}
+
+.new-score-compose textarea {
+  min-block-size: 88px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.new-score-compose textarea:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
 }
 
 .archived-filter {

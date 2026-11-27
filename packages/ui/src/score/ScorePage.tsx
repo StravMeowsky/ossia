@@ -15,12 +15,14 @@ import type {
 } from '../generated/protocol.ts';
 import { I18nProvider, useI18n } from '../i18n.tsx';
 import { AssistantPanel } from './components/AssistantPanel.tsx';
+import { NoteEditor } from './components/NoteEditor.tsx';
 import { ScoreFeatureToolbar } from './components/ScoreFeatureToolbar.tsx';
 import { RestoreDialog, ScorePageHeader, ScoreWorkspace } from './components/ScorePageSections.tsx';
 import { assistantAvailable, useAssistant } from './hooks/useAssistant.ts';
 import { useDrawing } from './hooks/useDrawing.ts';
 import type { DrawingMode } from './hooks/useDrawingInput.ts';
 import { useModalGestureLock } from './hooks/useModalGestureLock.ts';
+import { useNoteInput } from './hooks/useNoteInput.ts';
 import { useScoreFullscreen } from './hooks/useScoreFullscreen.ts';
 import { useScorePlayback } from './hooks/useScorePlayback.ts';
 import { useScoreSettings } from './hooks/useScoreSettings.ts';
@@ -44,11 +46,15 @@ import {
   pushDocumentIdToLocation,
   scoreDebugFlagsFromLocation,
   scoreWindowFromLocation,
+  takeComposeBriefFromLocation,
 } from './utils/endpoint.ts';
 import { loadScorePlayback } from './utils/renderCache.ts';
 import { focusScorePage } from './utils/scoreFocus.ts';
 import { formatDocumentHint } from './utils/scorePageHint.ts';
 import { readRememberedVersion, rememberVersion } from './utils/scoreVersionMemory.ts';
+
+// TEMP(timing)
+if (import.meta.env.DEV) void import('./devTiming.ts');
 
 export function ScorePage({ fallbackLanguage }: { fallbackLanguage: UiLanguage }) {
   const [language, setLanguage] = useState<UiLanguage>(fallbackLanguage);
@@ -232,6 +238,15 @@ function ScoreApp({
   const doc = state.context?.document;
   const assistant = useAssistant(assistantEnabled ? doc?.documentId : undefined, doc?.title ?? '');
   const showAssistant = assistantEnabled && assistantOpen && !!doc && !notFound;
+  // A score created with a composition brief hands it to the assistant once the score is loaded.
+  const composeBrief = useRef(assistantEnabled ? takeComposeBriefFromLocation() : null);
+  useEffect(() => {
+    const brief = composeBrief.current;
+    if (!brief || !assistant.ready || assistant.running) return;
+    composeBrief.current = null;
+    setAssistantOpen(true);
+    assistant.send(brief);
+  }, [assistant, assistant.ready, assistant.running]);
   const documentId = doc?.documentId;
   const scoreSettings = useScoreSettings(api, documentId, onError);
   useEffect(() => {
@@ -431,6 +446,33 @@ function ScoreApp({
     !compareVersion &&
     (historyVersion ? !!historyRender : annotationAvailable);
   const annotationActive = annotationMode && annotationAvailable;
+  const [noteEditing, setNoteEditing] = useState(false);
+  const noteInputAvailable = annotationAvailable && !noteEditing;
+  const finishNoteInput = useCallback(() => {
+    setNoteEditing(false);
+    void refresh().catch(onError);
+  }, [onError, refresh]);
+  const noteInput = useNoteInput(api, doc, noteEditing, finishNoteInput, onError);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        !noteInputAvailable ||
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.key.toLowerCase() !== 'n' ||
+        document.querySelector('dialog[open]') ||
+        isEditableKeyboardTarget(event.target)
+      )
+        return;
+      event.preventDefault();
+      setAnnotationMode(false);
+      setNoteEditing(true);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [noteInputAvailable]);
   const activeDrawingMode = drawingAvailable ? drawingMode : null;
   const playback = useScorePlayback(
     api,
@@ -512,10 +554,11 @@ function ScoreApp({
     }
   }, [fullscreen.active, fullscreen.toggle]);
   const showFeatureToolbar =
-    agentEditing ||
-    annotationAvailable ||
-    (viewingVersion && connected && !working) ||
-    fullscreen.active;
+    !noteEditing &&
+    (agentEditing ||
+      annotationAvailable ||
+      (viewingVersion && connected && !working) ||
+      fullscreen.active);
   const featureToolbar = showFeatureToolbar ? (
     <ScoreFeatureToolbar
       editing={agentEditing}
@@ -543,6 +586,14 @@ function ScoreApp({
       eraserScope={eraserScope}
       penColor={penColor}
       onPenColor={setPenColor}
+      onNoteInput={
+        noteInputAvailable
+          ? () => {
+              setAnnotationMode(false);
+              setNoteEditing(true);
+            }
+          : undefined
+      }
       onPenSize={setPenSize}
       onEraserSize={setEraserSize}
       onEraserScope={setEraserScope}
@@ -591,48 +642,52 @@ function ScoreApp({
       />
       <div className="score-body">
         <div className="score-main">
-          <ScoreWorkspace
-            api={api}
-            doc={doc}
-            notFound={notFound}
-            connected={connected}
-            stale={stale}
-            working={working}
-            versions={state.versions}
-            historyVersion={historyVersion}
-            compareVersion={compareVersion}
-            onCompare={setCompareVersion}
-            render={render ?? null}
-            renderPending={renderPending}
-            agentEditing={agentEditing}
-            layout={layout}
-            onLayout={setLayout}
-            zoom={zoom}
-            onZoom={setZoom}
-            leftZoom={leftZoom}
-            onLeftZoom={setLeftZoom}
-            rightZoom={rightZoom}
-            onRightZoom={setRightZoom}
-            selection={selection}
-            playback={playback}
-            versionRender={versionRender}
-            annotationMode={annotationActive}
-            onAnnotationMode={setAnnotationMode}
-            viewKey={viewKey}
-            initialPan={initialPan}
-            onPan={savePan}
-            showHitBoxes={showHitBoxes}
-            debugAgentRing={debugFlags.has('ring')}
-            onActivateNote={activateNote}
-            onPoint={(page, x, y) => void choosePoint(page, x, y)}
-            featureToolbar={fullscreen.active ? featureToolbar : null}
-            drawing={drawing}
-            drawingMode={activeDrawingMode}
-            penSize={penSize}
-            eraserSize={eraserScope === 'stroke' ? STROKE_ERASER_SIZE : eraserSize}
-            eraserScope={eraserScope}
-            penColor={penColor}
-          />
+          {noteEditing ? (
+            <NoteEditor input={noteInput} />
+          ) : (
+            <ScoreWorkspace
+              api={api}
+              doc={doc}
+              notFound={notFound}
+              connected={connected}
+              stale={stale}
+              working={working}
+              versions={state.versions}
+              historyVersion={historyVersion}
+              compareVersion={compareVersion}
+              onCompare={setCompareVersion}
+              render={render ?? null}
+              renderPending={renderPending}
+              agentEditing={agentEditing}
+              layout={layout}
+              onLayout={setLayout}
+              zoom={zoom}
+              onZoom={setZoom}
+              leftZoom={leftZoom}
+              onLeftZoom={setLeftZoom}
+              rightZoom={rightZoom}
+              onRightZoom={setRightZoom}
+              selection={selection}
+              playback={playback}
+              versionRender={versionRender}
+              annotationMode={annotationActive}
+              onAnnotationMode={setAnnotationMode}
+              viewKey={viewKey}
+              initialPan={initialPan}
+              onPan={savePan}
+              showHitBoxes={showHitBoxes}
+              debugAgentRing={debugFlags.has('ring')}
+              onActivateNote={activateNote}
+              onPoint={(page, x, y) => void choosePoint(page, x, y)}
+              featureToolbar={fullscreen.active ? featureToolbar : null}
+              drawing={drawing}
+              drawingMode={activeDrawingMode}
+              penSize={penSize}
+              eraserSize={eraserScope === 'stroke' ? STROKE_ERASER_SIZE : eraserSize}
+              eraserScope={eraserScope}
+              penColor={penColor}
+            />
+          )}
         </div>
         {showAssistant && (
           <AssistantPanel assistant={assistant} onClose={() => setAssistantOpen(false)} />

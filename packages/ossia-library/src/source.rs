@@ -100,3 +100,20 @@ fn read_snapshot_page(
         line_spans,
     })
 }
+
+impl Library {
+    /// The whole current source, guarded by its hash.
+    pub fn source_text(&self, document: DocumentId, expected: &ContentHash) -> Result<String> {
+        let snapshot = {
+            let conn = self.db()?;
+            let doc = db::document(&conn, document)?;
+            self.expect_snapshot(&doc, expected)?
+        };
+        Ok(snapshot.source().to_owned())
+    }
+
+    /// The document's active or interrupted edit, if any.
+    pub fn active_edit(&self, document: DocumentId) -> Result<Option<EditSession>> {
+        db::active_edit(&*self.db()?, document)
+    }
+}

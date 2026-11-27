@@ -1,6 +1,8 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
-import { parseScoreSvg, scorePainter } from '../utils/scoreSvg.ts';
+import { parseScoreSvg, playbackLayer, scorePainter } from '../utils/scoreSvg.ts';
+
+const EMPTY_PLAYBACK = new Set<string>();
 
 interface Props {
   source: string;
@@ -20,12 +22,13 @@ export const ScoreSvg = memo(function ScoreSvg({
   label,
   graphicIds,
   annotationColors,
-  playbackIds = new Set(),
+  playbackIds = EMPTY_PLAYBACK,
   onError,
   onReady,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const painter = useRef<ReturnType<typeof scorePainter> | null>(null);
+  const playback = useRef<ReturnType<typeof playbackLayer> | null>(null);
   const [prepared, setPrepared] = useState<{
     identity: string;
     source: string;
@@ -40,8 +43,14 @@ export const ScoreSvg = memo(function ScoreSvg({
   const paint = useRef({ graphicIds, annotationColors, playbackIds });
   useLayoutEffect(() => {
     paint.current = { graphicIds, annotationColors, playbackIds };
-    painter.current?.(graphicIds, annotationColors ?? new Map(), playbackIds);
-  }, [graphicIds, annotationColors, playbackIds]);
+  });
+  useLayoutEffect(() => {
+    painter.current?.(graphicIds, annotationColors ?? new Map());
+  }, [graphicIds, annotationColors]);
+  // Playback highlights change on every audition, so they never restyle the page drawing.
+  useLayoutEffect(() => {
+    playback.current?.paint(playbackIds);
+  }, [playbackIds]);
   useEffect(() => {
     const controller = new AbortController();
     void parseScoreSvg(source, prefix, controller.signal)
@@ -64,16 +73,19 @@ export const ScoreSvg = memo(function ScoreSvg({
     const svg = prepared.svg;
     svg.setAttribute('role', 'img');
     svg.setAttribute('aria-label', currentLabel.current);
-    host.current!.replaceChildren(svg);
     painter.current = scorePainter(svg);
+    playback.current = playbackLayer(svg);
+    host.current!.replaceChildren(svg, playback.current.element);
     const current = paint.current;
-    painter.current(current.graphicIds, current.annotationColors ?? new Map(), current.playbackIds);
+    painter.current(current.graphicIds, current.annotationColors ?? new Map());
+    playback.current.paint(current.playbackIds);
     // Geometry and page dimensions commit before the browser can paint this replacement.
     onReady();
   }, [prepared, identity, source, onReady]);
   useLayoutEffect(
     () => () => {
       painter.current = null;
+      playback.current = null;
       host.current?.replaceChildren();
     },
     [],

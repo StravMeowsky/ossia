@@ -180,9 +180,9 @@ fn score_transpositions(index: &ScoreIndex) -> HashMap<String, Option<i32>> {
         _ => return HashMap::new(),
     };
     let (start, end, _) = score;
-    let german = tokens
-        .windows(2)
-        .any(|pair| pair[0].command() == Some("include") && pair[1].raw == "\"deutsch.ly\"");
+    let Some(language) = crate::pitch::language_before(tokens, tokens[start].byte_start) else {
+        return HashMap::new();
+    };
     let mut scopes = Vec::new();
     for i in start..end {
         if tokens[i].command() != Some("transpose") {
@@ -196,7 +196,7 @@ fn score_transpositions(index: &ScoreIndex) -> HashMap<String, Option<i32>> {
         else {
             return HashMap::new();
         };
-        let Some(offset) = crate::pitch::transpose_interval(&from.raw, &to.raw, german) else {
+        let Some(offset) = crate::pitch::transpose_interval(&from.raw, &to.raw, language) else {
             return HashMap::new();
         };
         let body_start = i + 3;
@@ -225,7 +225,7 @@ fn score_transpositions(index: &ScoreIndex) -> HashMap<String, Option<i32>> {
         [] => 0,
         [i] if staff_count == 1 => match tokens
             .get(i + 1)
-            .and_then(|token| crate::pitch::transpose_interval("c'", &token.raw, german))
+            .and_then(|token| crate::pitch::transpose_interval("c'", &token.raw, language))
         {
             Some(value) => value,
             None => return HashMap::new(),

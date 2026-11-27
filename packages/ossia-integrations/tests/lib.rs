@@ -2,31 +2,6 @@ use super::*;
 use std::collections::BTreeMap;
 
 #[test]
-fn claude_name_reflects_detected_hosts() {
-    let host = |name: &str, state| AgentHost {
-        name: name.into(),
-        state,
-        error: None,
-        method: InstallMethod::Mcp,
-        version: None,
-        config_path: String::new(),
-        reload_hint: None,
-        conflicts: Vec::new(),
-    };
-    let desktop = host("Claude Desktop", AgentState::Installed);
-    let code = host("Claude Code", AgentState::Available);
-    assert_eq!(
-        claude_name(std::slice::from_ref(&desktop)),
-        "Claude Desktop"
-    );
-    assert_eq!(claude_name(std::slice::from_ref(&code)), "Claude Code");
-    assert_eq!(claude_name(&[desktop.clone(), code.clone()]), "Claude");
-    let unavailable = host("Claude Desktop", AgentState::Unavailable);
-    assert_eq!(claude_name(&[unavailable.clone(), code]), "Claude Code");
-    assert_eq!(claude_name(&[unavailable]), "Claude Desktop");
-}
-
-#[test]
 fn shared_integration_root_follows_the_runtime_home() {
     let root = tempfile::tempdir().unwrap();
     let home = root.path().join(".ossia");

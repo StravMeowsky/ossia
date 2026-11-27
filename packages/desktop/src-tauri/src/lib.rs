@@ -8,10 +8,11 @@ mod window;
 use ossia_backend::{
     ipc, normalize_outbound_error, path_text, server, AgentsChange, AgentsMutation, AgentsSnapshot,
     AppError, DoctorReport, DocumentIdArgs, DocumentSummary, ErrorCode, ListArgs,
-    ManagementPreferences, ManagementPreferencesChange, ManagementScorePage,
-    ManagementScorePreview, ManagementScorePreviewArgs, ManagementSnapshot, OmrService,
-    OmrSettingsChange, PurgedDocument, Result, StorageCleanupReport, StorageStatus,
-    TrashedDocumentSummary, TrayClickAction, UiLanguage, UiPreferences,
+    ManagementCreatedScore, ManagementNewScoreArgs, ManagementPreferences,
+    ManagementPreferencesChange, ManagementScorePage, ManagementScorePreview,
+    ManagementScorePreviewArgs, ManagementSnapshot, OmrService, OmrSettingsChange, PurgedDocument,
+    Result, StorageCleanupReport, StorageStatus, TrashedDocumentSummary, TrayClickAction,
+    UiLanguage, UiPreferences,
 };
 use serde::de::DeserializeOwned;
 use serde_json::json;
@@ -524,6 +525,38 @@ async fn management_open_score(
     window::open_score(&app, &document_id, &url)
 }
 
+/// Create a blank score, open it in its own window and, when a brief is given, have the score page
+/// hand it to the assistant.
+#[tauri::command]
+async fn management_create_score(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Management>,
+    args: ManagementNewScoreArgs,
+) -> Result<ManagementCreatedScore> {
+    let config = config(&state)?;
+    let created: ManagementCreatedScore =
+        management_runtime_call(&config, "management-create-score", json!(args.score)).await?;
+    let url: String = management_runtime_call(
+        &config,
+        "management-score-url",
+        json!(DocumentIdArgs {
+            document_id: created.document_id
+        }),
+    )
+    .await?;
+    let mut url = tauri::Url::parse(&url).map_err(storage)?;
+    if let Some(compose) = args
+        .compose
+        .as_deref()
+        .map(str::trim)
+        .filter(|compose| !compose.is_empty())
+    {
+        url.query_pairs_mut().append_pair("compose", compose);
+    }
+    window::open_score(&app, &created.document_id.to_string(), url.as_str())?;
+    Ok(created)
+}
+
 pub(crate) fn open_external(target: &str) -> Result<()> {
     #[cfg(target_os = "macos")]
     let mut command = std::process::Command::new("/usr/bin/open");
@@ -627,6 +660,7 @@ pub fn run(config: Result<server::Config>, show_main_window: bool) {
             management_restore_score,
             management_delete_score,
             management_open_score,
+            management_create_score,
             update::runtime::update_state,
             update::runtime::update_check,
             update::runtime::release_notes,

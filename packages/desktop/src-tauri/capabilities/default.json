@@ -23,6 +23,7 @@
     "allow-management-restore-score",
     "allow-management-delete-score",
     "allow-management-open-score",
+    "allow-management-create-score",
     "allow-update-state",
     "allow-update-check",
     "allow-release-notes",

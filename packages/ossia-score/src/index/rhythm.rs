@@ -1,7 +1,7 @@
 use crate::{Mode, Token, TokenKind};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct MeterFraction {
+pub(super) struct MeterFraction {
     numerator: u64,
     denominator: u64,
 }
@@ -219,10 +219,50 @@ fn rhythmic_atoms(events: &[Token]) -> Option<RhythmScan> {
     })
 }
 
+/// The measure length every voice inherits when the score has at most one
+/// distinct time signature. LilyPond defaults to 4/4 without `\time`. Mixed
+/// meters or a hand-set `measureLength` make it depend on position, so it stays unknown.
+pub(super) fn inherited_meter(tokens: &[Token]) -> Option<MeterFraction> {
+    let mut meter = None;
+    for (index, token) in tokens.iter().enumerate() {
+        if token.raw.contains("measureLength") {
+            return None;
+        }
+        if token.command() != Some("time") {
+            continue;
+        }
+        let signature = fraction(&tokens[index + 1..].iter().find(|t| !t.trivia())?.raw)?;
+        match meter {
+            None => meter = Some(signature),
+            Some(known) if known != signature => return None,
+            Some(_) => {}
+        }
+    }
+    meter.or_else(|| MeterFraction::new(1, 1))
+}
+
+/// Measure length at `before`: the voice's own latest `\time`, else the inherited meter.
+fn meter_before(
+    events: &[Token],
+    before: usize,
+    inherited: Option<MeterFraction>,
+) -> Option<Option<MeterFraction>> {
+    let previous = events[..before]
+        .iter()
+        .rposition(|token| token.mode == Mode::Music && token.command() == Some("time"));
+    Some(match previous {
+        Some(time) => Some(fraction(
+            &events[time + 1..].iter().find(|t| !t.trivia())?.raw,
+        )?),
+        None => inherited,
+    })
+}
+
 pub(super) fn implicit_measure_boundaries(
     events: &[Token],
     body_start: usize,
     from: usize,
+    inherited: Option<MeterFraction>,
 ) -> Option<Vec<usize>> {
     let RhythmScan {
         atoms,
@@ -238,16 +278,33 @@ pub(super) fn implicit_measure_boundaries(
         return None;
     }
     let mut measure = MeterFraction::new(1, 1)?;
+    let mut explicitly_timed = inherited.is_some();
+    if let Some(meter) = inherited {
+        measure = meter;
+    }
     for (position, signature) in time_signatures {
         if position < first_tail.byte_start {
             measure = signature;
+            explicitly_timed = true;
         } else {
             return None;
         }
     }
-    let mut elapsed = MeterFraction::new(0, 1)?;
+    let zero = MeterFraction::new(0, 1)?;
+    let mut elapsed = zero;
     let mut boundaries = Vec::new();
     for atom in tail {
+        if atom.compact && atom.explicit && elapsed == zero && atom.duration.exceeds(measure) {
+            // A multiplied full-bar rest or skip; expand_scaled_measures splits it later.
+            let ratio = atom
+                .duration
+                .multiply(MeterFraction::new(measure.denominator, measure.numerator)?)?;
+            if !explicitly_timed || ratio.denominator != 1 {
+                return None;
+            }
+            boundaries.push(body_start.checked_add(atom.byte_end)?.checked_sub(2)?);
+            continue;
+        }
         elapsed = elapsed.add(atom.duration)?;
         if elapsed == measure {
             boundaries.push(body_start.checked_add(atom.byte_end)?.checked_sub(2)?);
@@ -296,6 +353,7 @@ pub(super) fn scaled_measure_boundaries(
     events: &[Token],
     from: usize,
     to: usize,
+    inherited: Option<MeterFraction>,
 ) -> Option<Vec<(usize, u32)>> {
     let start = events.partition_point(|token| token.byte_start < from);
     let end = events.partition_point(|token| token.byte_end <= to);
@@ -304,13 +362,9 @@ pub(super) fn scaled_measure_boundaries(
     if !first.explicit {
         return None;
     }
-    let previous = events[..start]
-        .iter()
-        .rposition(|token| token.mode == Mode::Music && token.command() == Some("time"));
-    let mut meter = previous
-        .map(|time| fraction(&events[time + 1..].iter().find(|t| !t.trivia())?.raw))
-        .unwrap_or_else(|| MeterFraction::new(1, 1))?;
-    let explicitly_timed = previous.is_some() || !scan.time_signatures.is_empty();
+    let known = meter_before(events, start, inherited)?;
+    let mut meter = known.or_else(|| MeterFraction::new(1, 1))?;
+    let explicitly_timed = known.is_some() || !scan.time_signatures.is_empty();
     for (position, signature) in scan.time_signatures {
         if position >= first.byte_start {
             return None;

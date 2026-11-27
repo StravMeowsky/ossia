@@ -180,3 +180,94 @@ async fn archiving_does_not_cancel_a_real_check() {
         .store(false, std::sync::atomic::Ordering::Release);
     f.finish().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn management_create_score_imports_a_blank_score_with_catalog_metadata() {
+    let f = Fixture::new(true).await;
+    // Like a real blank score, the render has no MIDI notes, so the import asks for confirmation.
+    f.engine
+        .midi
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+    // The call waits for the import, so run it off the scheduler's thread as IPC does.
+    let runtime = f.runtime.clone();
+    let created = tokio::task::spawn_blocking(move || {
+        ipc::dispatch(
+            &runtime,
+            "management-create-score",
+            json!({
+                "title": "Morning Song",
+                "composer": "A.Composer",
+                "instrument": "violin",
+                "fifths": -1,
+                "mode": "minor",
+                "timeNumerator": 3,
+                "timeDenominator": 4,
+                "tempoText": "Andante",
+                "measures": 4
+            }),
+        )
+    })
+    .await
+    .unwrap()
+    .unwrap();
+    let created: ManagementCreatedScore = serde_json::from_value(created).unwrap();
+    assert_ne!(created.document_id, f.doc.document_id);
+
+    let page: ManagementScorePage = serde_json::from_value(
+        ipc::dispatch(
+            &f.runtime,
+            "management-scores",
+            json!({"limit": 10, "offset": 0}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let item = page
+        .items
+        .iter()
+        .find(|item| item.document_id == created.document_id)
+        .unwrap();
+    assert_eq!(item.title, "Morning Song");
+    assert_eq!(item.composer.as_deref(), Some("A.Composer"));
+    assert_eq!(
+        item.instruments.as_deref(),
+        Some(&["Violin".to_string()][..])
+    );
+
+    let document = f.runtime.library.get_document(created.document_id).unwrap();
+    let source = std::fs::read_to_string(f.root.path().join(&document.source_path)).unwrap();
+    assert!(source.contains("violin = \\relative c'' {"));
+    assert!(source.contains("\\key d \\minor \\time 3/4"));
+    assert!(source.contains("\\tempo \"Andante\"\n"));
+    assert!(source.contains("R2.*4"));
+}
+
+#[tokio::test]
+async fn management_create_score_refuses_an_invalid_request_without_creating_a_score() {
+    let f = Fixture::new(true).await;
+    let error = ipc::dispatch(
+        &f.runtime,
+        "management-create-score",
+        json!({
+            "title": "",
+            "instrument": "piano",
+            "fifths": 0,
+            "mode": "major",
+            "timeNumerator": 4,
+            "timeDenominator": 4,
+            "measures": 4
+        }),
+    )
+    .unwrap_err();
+    assert!(error.message.contains("title"));
+    let page: ManagementScorePage = serde_json::from_value(
+        ipc::dispatch(
+            &f.runtime,
+            "management-scores",
+            json!({"limit": 10, "offset": 0}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(page.total, 1);
+}

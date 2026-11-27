@@ -44,7 +44,6 @@ pub enum AgentNotice {
     RestartSession { agent: String },
     PiReload,
     PiMcpUnsupported,
-    ClaudeDesktopRestart,
     CodexPluginDisabled,
     CodexPluginMissing,
     CodexUnmanagedConfig,

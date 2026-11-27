@@ -38,7 +38,7 @@ export async function mockManagement(
     omrCustomTokenMasked = null,
     agentPaths = {},
   }: {
-    claude?: boolean | 'desktop' | 'code';
+    claude?: boolean;
     pi?: boolean;
     empty?: boolean;
     initializing?: boolean;
@@ -198,39 +198,13 @@ export async function mockManagement(
   const claudeAgent: AgentIntegration = {
     ...connected,
     id: 'claude',
-    name: 'Claude',
+    name: 'Claude Code',
     icon: 'claude',
-    state: 'broken',
-    enabled: false,
-    hosts: [
-      {
-        name: 'Claude Desktop',
-        error: null,
-        method: 'mcp',
-        state: 'installed',
-        version: '1',
-        configPath: '/claude/desktop.json',
-        reloadHint: { kind: 'claude-desktop-restart' },
-        conflicts: [],
-      },
-      {
-        name: 'Claude Code',
-        error: null,
-        method: 'plugin',
-        state: 'broken',
-        version: '2',
-        configPath: '/claude/code.json',
-        reloadHint: { kind: 'restart-session', agent: 'Claude Code' },
-        conflicts: [],
-      },
-    ],
+    version: '2.1.123',
+    configRoot: '/claude',
+    configPath: '/claude/plugins/installed_plugins.json',
+    reloadHint: { kind: 'restart-session', agent: 'Claude Code' },
   };
-  if (claude === 'desktop' || claude === 'code') {
-    claudeAgent.hosts = claudeAgent.hosts.filter((host) =>
-      claude === 'desktop' ? host.name === 'Claude Desktop' : host.name === 'Claude Code',
-    );
-    claudeAgent.name = claude === 'desktop' ? 'Claude Desktop' : 'Claude Code';
-  }
   const agents: AgentsSnapshot = {
     agents: empty
       ? []
@@ -318,6 +292,7 @@ export async function mockManagement(
     const agentChanges: AgentsChange[] = [];
     const previewCalls: string[] = [];
     const openedScores: string[] = [];
+    const createScoreRequests: unknown[] = [];
     const openedLinks: string[] = [];
     const readyPreview: ManagementScorePreview = {
       state: 'ready',
@@ -520,6 +495,22 @@ export async function mockManagement(
           openedScores.push(documentId);
           return null;
         }
+        if (command === 'management_create_score') {
+          const request = (args as { args?: { score?: { title?: string } } } | undefined)?.args;
+          if (!request?.score?.title) throw new Error('create score requires a title');
+          createScoreRequests.push(request);
+          const documentId = '00000000-0000-4000-8000-0000000000ff';
+          const now = new Date().toISOString();
+          scores.push({
+            documentId,
+            title: request.score.title,
+            createdAt: now,
+            updatedAt: now,
+            archivedAt: null,
+          });
+          outcomes.set(documentId, readyPreview);
+          return { documentId };
+        }
         if (command === 'plugin:event|listen') return 1;
         if (command === 'plugin:event|unlisten') return null;
         throw new Error(`unexpected Tauri command: ${command}`);
@@ -531,6 +522,7 @@ export async function mockManagement(
       managementAgentChanges?: AgentsChange[];
       scorePreviewCalls?: string[];
       openedScores?: string[];
+      createScoreRequests?: unknown[];
       openedLinks?: string[];
       setScores?: (scores: ManagementScoreSummary[]) => void;
       setScorePreview?: (documentId: string, outcome: ManagementScorePreview) => void;
@@ -544,6 +536,7 @@ export async function mockManagement(
     ownWindow.managementAgentChanges = agentChanges;
     ownWindow.scorePreviewCalls = previewCalls;
     ownWindow.openedScores = openedScores;
+    ownWindow.createScoreRequests = createScoreRequests;
     ownWindow.openedLinks = openedLinks;
     ownWindow.setScores = (next) => {
       scores.splice(0, scores.length, ...next);

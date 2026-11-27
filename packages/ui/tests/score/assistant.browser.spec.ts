@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type { BrowserContext, Page } from '@playwright/test';
 
+import type { AssistantEvent, AssistantSendArgs } from '../../src/generated/protocol.ts';
 import { firstId, mockScoreRuntime } from './score-runtime.ts';
 
-type Call = { command: string; args?: { args?: Record<string, unknown> } };
+type Call = { command: string; args?: { args?: AssistantSendArgs } };
 
 /** Stand in for the desktop app's IPC: record commands and let the test emit assistant events. */
 async function mockDesktop(context: BrowserContext) {
@@ -43,12 +44,16 @@ async function mockDesktop(context: BrowserContext) {
 
 const calls = (page: Page) =>
   page.evaluate(() => (window as Window & { assistantCalls?: Call[] }).assistantCalls ?? []);
-const emit = (page: Page, payload: unknown) =>
-  page.evaluate(
-    (event) =>
-      (window as Window & { emitAssistant?: (payload: unknown) => void }).emitAssistant?.(event),
-    payload,
+const sendCalls = async (page: Page) =>
+  (await calls(page)).filter((call) => call.command === 'assistant_send');
+async function emit(page: Page, event: AssistantEvent, runId?: string) {
+  const id = runId ?? (await sendCalls(page)).at(-1)?.args?.args?.runId;
+  await page.evaluate(
+    (update) =>
+      (window as Window & { emitAssistant?: (payload: unknown) => void }).emitAssistant?.(update),
+    { runId: id, event },
   );
+}
 
 test('the score window assistant sends messages to Claude Code and continues the conversation', async ({
   context,
@@ -72,7 +77,14 @@ test('the score window assistant sends messages to Claude Code and continues the
   expect((await calls(page)).at(-1)).toEqual({
     command: 'assistant_send',
     args: {
-      args: { documentId: firstId, title: '合成钢琴练习', message: '移调到 D 大调', session: null },
+      args: {
+        provider: 'claude-code',
+        runId: expect.any(String),
+        documentId: firstId,
+        title: '合成钢琴练习',
+        message: '移调到 D 大调',
+        session: null,
+      },
     },
   });
 
@@ -125,9 +137,104 @@ test('the score window assistant sends messages to Claude Code and continues the
   await expect(page.getByRole('complementary', { name: '助手' })).toHaveCount(0);
 });
 
+test('switching providers preserves separate conversations and resumes the selected one', async ({
+  context,
+  page,
+}) => {
+  await mockScoreRuntime(context);
+  await mockDesktop(context);
+  await page.goto(`/scores?documentId=${firstId}&window=1`);
+  await page.getByRole('button', { name: '打开助手' }).click();
+  const panel = page.getByRole('complementary', { name: '助手' });
+  const provider = panel.getByRole('group', { name: '选择助手' });
+  const claude = provider.getByRole('button', { name: 'Claude Code' });
+  const codex = provider.getByRole('button', { name: 'Codex' });
+  const input = panel.getByRole('textbox', { name: '消息' });
+  const ask = async (message: string) => {
+    await input.fill(message);
+    await input.press('Enter');
+  };
+
+  await expect(claude).toHaveAttribute('aria-pressed', 'true');
+  await expect(codex).toHaveAttribute('aria-pressed', 'false');
+  await expect(claude.locator('img')).toBeVisible();
+  await expect(codex.locator('img')).toBeVisible();
+  const codexBox = await codex.boundingBox();
+  const claudeBox = await claude.boundingBox();
+  expect(codexBox!.x + codexBox!.width).toBeLessThanOrEqual(claudeBox!.x);
+  expect(codexBox!.y).toBe(claudeBox!.y);
+  await ask('Claude message');
+  await expect(claude).toBeDisabled();
+  await expect(codex).toBeDisabled();
+  const claudeRun = (await sendCalls(page)).at(-1)?.args?.args?.runId;
+  await emit(page, { kind: 'session', session: 'claude-thread' });
+  await emit(page, { kind: 'text', text: 'Claude reply' });
+  await emit(page, { kind: 'done', session: null, error: null });
+
+  await expect(codex).toBeEnabled();
+  await codex.press('Space');
+  await expect(codex).toHaveAttribute('aria-pressed', 'true');
+  await expect(claude).toHaveAttribute('aria-pressed', 'false');
+  await expect(panel.getByText('Claude reply')).toHaveCount(0);
+  await ask('Codex message');
+  expect((await sendCalls(page)).at(-1)?.args?.args).toMatchObject({
+    provider: 'codex',
+    session: null,
+  });
+  expect(claudeRun).toBeTruthy();
+  await emit(page, { kind: 'text', text: 'Late Claude reply' }, claudeRun);
+  await emit(page, { kind: 'session', session: 'codex-thread' });
+  await emit(page, { kind: 'text', text: 'Codex reply' });
+  await emit(page, { kind: 'done', session: null, error: null });
+  await expect(panel.getByText('Codex reply')).toBeVisible();
+  await expect(panel.getByText('Late Claude reply')).toHaveCount(0);
+
+  await page.reload();
+  await expect(codex).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.getByText('Codex reply')).toBeVisible();
+  await ask('Continue with Codex');
+  expect((await sendCalls(page)).at(-1)?.args?.args).toMatchObject({
+    provider: 'codex',
+    session: 'codex-thread',
+  });
+  await emit(page, { kind: 'done', session: null, error: null });
+
+  await claude.click();
+  await expect(claude).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.getByText('Claude reply')).toBeVisible();
+  await expect(panel.getByText('Codex reply')).toHaveCount(0);
+  await ask('Continue with Claude');
+  expect((await sendCalls(page)).at(-1)?.args?.args).toMatchObject({
+    provider: 'claude-code',
+    session: 'claude-thread',
+  });
+  await emit(page, { kind: 'done', session: null, error: null });
+});
+
 test('the assistant is only offered in desktop score windows', async ({ context, page }) => {
   await mockScoreRuntime(context);
   await page.goto(`/scores?documentId=${firstId}&window=1`);
   await expect(page.getByRole('button', { name: /版本/ }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: '打开助手' })).toHaveCount(0);
+});
+
+test('a new score window hands its composition brief to the assistant once', async ({
+  context,
+  page,
+}) => {
+  await mockScoreRuntime(context);
+  await mockDesktop(context);
+  const brief = '请在这份新建的空白乐谱里创作：一段温柔的旋律';
+  await page.goto(`/scores?documentId=${firstId}&window=1&compose=${encodeURIComponent(brief)}`);
+  const panel = page.getByRole('complementary', { name: '助手' });
+  await expect(panel).toBeVisible();
+  await expect(panel.locator('.score-assistant-message.is-user')).toHaveText(brief);
+  expect((await sendCalls(page)).map((call) => call.args?.args?.message)).toEqual([brief]);
+  expect(new URL(page.url()).searchParams.has('compose')).toBe(false);
+
+  // Reloading the window does not send the brief again.
+  await page.reload();
+  await expect(panel).toBeVisible();
+  await expect(panel.locator('.score-assistant-message.is-user')).toHaveText(brief);
+  expect(await sendCalls(page)).toEqual([]);
 });

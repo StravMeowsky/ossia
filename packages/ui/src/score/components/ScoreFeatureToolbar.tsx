@@ -1,6 +1,7 @@
 import {
   LoaderCircle,
   Maximize2,
+  Music4,
   Minimize2,
   Pause,
   Play,
@@ -82,6 +83,7 @@ export function ScoreFeatureToolbar({
   onEraserScope,
   penColor,
   onPenColor,
+  onNoteInput,
 }: {
   editing: boolean;
   annotationEnabled: boolean;
@@ -108,6 +110,8 @@ export function ScoreFeatureToolbar({
   onEraserScope: (scope: EraserScope) => void;
   penColor: DrawingColor;
   onPenColor: (color: DrawingColor) => void;
+  /** Present when the score can be opened for note input. */
+  onNoteInput?: () => void;
 }) {
   const { t } = useI18n();
   const modifier = resolveAnnotationModifier();
@@ -165,6 +169,17 @@ export function ScoreFeatureToolbar({
           <Play aria-hidden="true" size={17} fill="currentColor" strokeWidth={1.8} />
         )}
       </button>
+      {onNoteInput && (
+        <button
+          type="button"
+          className="score-feature-toggle score-note-input-toggle"
+          aria-label={t('noteInputOpen')}
+          data-tooltip={`${t('noteInputOpen')} (N)`}
+          onClick={onNoteInput}
+        >
+          <Music4 aria-hidden="true" size={17} strokeWidth={2.1} />
+        </button>
+      )}
       {(annotationAvailable || editing) && (
         <button
           type="button"

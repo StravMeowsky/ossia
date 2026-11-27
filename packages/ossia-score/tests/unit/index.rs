@@ -195,3 +195,72 @@ two = { c''1 | d''1 | }
         ["b'1 |", "c''1 |"]
     );
 }
+
+fn measure_spans(source: &str, voice: &str) -> Vec<(u32, u32, String)> {
+    let index = build_index(source);
+    let voice = index.voice(voice).unwrap();
+    assert_eq!(voice.reason, None);
+    voice
+        .indexed_measures()
+        .map(|m| {
+            (
+                m.measure_start,
+                m.measure_end,
+                source[m.span.byte_start..m.span.byte_end]
+                    .trim()
+                    .to_string(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn scaled_skip_uses_the_meter_from_a_shared_global() {
+    let source = r#"
+global = { \time 3/4 s2.*4 | }
+lower = { c'2. | s2.*2 | d'2. | }
+\score { \new Staff << \global \lower >> }
+"#;
+    assert_eq!(
+        measure_spans(source, "lower"),
+        [
+            (1, 1, "c'2. |".into()),
+            (2, 3, "s2.*2 |".into()),
+            (4, 4, "d'2. |".into()),
+        ]
+    );
+    assert_eq!(build_index(source).measure_count(), Ok(4));
+}
+
+#[test]
+fn scaled_skip_without_any_time_signature_is_common_time() {
+    let source = r#"lower = { c'1 | s1*17 | d'1 | } \score { \new Staff \lower }"#;
+    assert_eq!(
+        measure_spans(source, "lower"),
+        [
+            (1, 1, "c'1 |".into()),
+            (2, 18, "s1*17 |".into()),
+            (19, 19, "d'1 |".into()),
+        ]
+    );
+}
+
+#[test]
+fn trailing_scaled_skip_needs_no_final_bar_check() {
+    let source = r#"lower = { \time 2/4 c'2 | s2*3 } \score { \new Staff \lower }"#;
+    assert_eq!(
+        measure_spans(source, "lower"),
+        [(1, 1, "\\time 2/4 c'2 |".into()), (2, 4, "s2*3".into())]
+    );
+}
+
+#[test]
+fn scaled_skip_stays_ambiguous_when_inherited_meters_differ() {
+    let source = r#"
+global = { \time 3/4 s2.*2 | \time 4/4 s1*2 | }
+lower = { s1*2 | c'1 | }
+\score { \new Staff << \global \lower >> }
+"#;
+    let index = build_index(source);
+    assert!(index.voice("lower").unwrap().reason.is_some());
+}
